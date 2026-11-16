@@ -1,0 +1,40 @@
+{
+  "id": "fighter",
+  "name": "Guerriero",
+  "hitDie": 10,
+  "primaryAbility": ["str", "dex"],
+  "savingThrows": ["str", "con"],
+  "armorProficiencies": ["light", "medium", "heavy", "shield"],
+  "weaponProficiencies": ["simple", "martial"],
+  "toolProficiencies": [],
+  "skillChoices": { "choose": 2, "from": ["acrobatics", "animalHandling", "athletics", "history", "insight", "intimidation", "perception", "survival"] },
+  "features": {
+    "1": [
+      { "id": "fighting-style", "name": "Stile di Combattimento", "description": "Scegli uno stile di combattimento.", "effects": [{ "type": "fightingStyle", "options": ["archery", "defense", "dueling", "great-weapon-fighting", "protection", "two-weapon-fighting"] }] },
+      { "id": "second-wind", "name": "Secondo Fiato", "description": "Recupera 1d10+livello PF come azione bonus.", "effects": [{ "type": "resource", "id": "second-wind", "name": "Secondo Fiato", "dice": "1d10", "uses": 1, "shortRest": true }] }
+    ],
+    "2": [
+      { "id": "action-surge", "name": "Azione Impetuosa", "description": "Ottieni un'azione extra nel turno.", "effects": [{ "type": "resource", "id": "action-surge", "name": "Azione Impetuosa", "uses": 1, "longRest": true }] }
+    ],
+    "3": [
+      { "id": "martial-archetype", "name": "Archetipo Marziale", "description": "Scegli un archetipo marziale.", "effects": [{ "type": "subclass", "options": ["champion", "battle-master"] }] }
+    ],
+    "4": [{ "id": "asi-4", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "5": [{ "id": "extra-attack-1", "name": "Attacco Extra", "description": "Puoi attaccare due volte quando usi l'azione Attacco.", "effects": [{ "type": "extraAttack", "count": 1 }] }],
+    "6": [{ "id": "asi-6", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "8": [{ "id": "asi-8", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "9": [{ "id": "indomitable-1", "name": "Indomabile", "description": "Rilancia un tiro salvezza fallito. 1 uso, recupera con riposo breve o lungo.", "effects": [{ "type": "resource", "id": "indomitable", "name": "Indomabile", "uses": 1, "shortRest": true, "longRest": true }] }],
+    "11": [{ "id": "extra-attack-2", "name": "Attacco Extra (2)", "description": "Tre attacchi con l'azione Attacco.", "effects": [{ "type": "extraAttack", "count": 2 }] }],
+    "12": [{ "id": "asi-12", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "13": [{ "id": "indomitable-2", "name": "Indomabile (2)", "description": "2 usi.", "effects": [{ "type": "resource", "id": "indomitable", "name": "Indomabile", "uses": 2, "shortRest": true, "longRest": true }] }],
+    "14": [{ "id": "asi-14", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "16": [{ "id": "asi-16", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "17": [
+      { "id": "action-surge-2", "name": "Azione Impetuosa (2)", "description": "2 usi.", "effects": [{ "type": "resource", "id": "action-surge", "name": "Azione Impetuosa", "uses": 2, "longRest": true }] },
+      { "id": "indomitable-3", "name": "Indomabile (3)", "description": "3 usi.", "effects": [{ "type": "resource", "id": "indomitable", "name": "Indomabile", "uses": 3, "shortRest": true, "longRest": true }] }
+    ],
+    "19": [{ "id": "asi-19", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "20": [{ "id": "extra-attack-3", "name": "Attacco Extra (3)", "description": "Quattro attacchi con l'azione Attacco.", "effects": [{ "type": "extraAttack", "count": 3 }] }]
+  },
+  "source": "srd"
+}

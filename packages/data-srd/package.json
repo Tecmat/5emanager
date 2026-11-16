@@ -1,0 +1,21 @@
+{
+  "name": "@dnd5e/data-srd",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "types": "src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dnd5e/core": "*"
+  },
+  "devDependencies": {
+    "typescript": "5.9.3",
+    "@types/node": "^22"
+  }
+}

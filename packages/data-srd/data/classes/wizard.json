@@ -1,0 +1,38 @@
+{
+  "id": "wizard",
+  "name": "Mago",
+  "hitDie": 6,
+  "primaryAbility": ["int"],
+  "savingThrows": ["int", "wis"],
+  "armorProficiencies": [],
+  "weaponProficiencies": ["dagger", "dart", "sling", "quarterstaff", "light-crossbow"],
+  "toolProficiencies": [],
+  "skillChoices": { "choose": 2, "from": ["arcana", "history", "insight", "investigation", "medicine", "religion"] },
+  "spellcasting": {
+    "ability": "int",
+    "type": "full",
+    "cantrips": { "1": 3, "2": 3, "3": 3, "4": 4, "5": 4, "6": 4, "7": 4, "8": 4, "9": 4, "10": 5, "11": 5, "12": 5, "13": 5, "14": 5, "15": 5, "16": 5, "17": 5, "18": 6, "19": 6, "20": 6 },
+    "spellsKnown": "levelPlusMod",
+    "prepare": true,
+    "slots": {}
+  },
+  "features": {
+    "1": [
+      { "id": "spellcasting", "name": "Lancio di Incantesimi", "description": "Conosci incantesimi dal grimorio; lanci con slot.", "effects": [{ "type": "spellcasting", "ability": "int", "prepare": true }] },
+      { "id": "arcane-recovery", "name": "Recupero Arcano", "description": "Recupera slot (totale metà del livello, arrotondato per eccesso) con riposo breve.", "effects": [{ "type": "resource", "id": "arcane-recovery", "name": "Recupero Arcano", "shortRest": true }] }
+    ],
+    "2": [
+      { "id": "arcane-tradition", "name": "Tradizione Arcana", "description": "Scegli una scuola arcana.", "effects": [{ "type": "subclass", "options": ["evocation"] }] }
+    ],
+    "4": [{ "id": "asi-4", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "6": [{ "id": "tradition-feature-6", "name": "Privilegio di tradizione", "description": "Privilegio della scuola scelta.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione arcana al 6° livello." }] }],
+    "8": [{ "id": "asi-8", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "10": [{ "id": "tradition-feature-10", "name": "Privilegio di tradizione", "description": "Privilegio della scuola scelta.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione arcana al 10° livello." }] }],
+    "12": [{ "id": "asi-12", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "14": [{ "id": "tradition-feature-14", "name": "Privilegio di tradizione", "description": "Privilegio della scuola scelta.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione arcana al 14° livello." }] }],
+    "16": [{ "id": "asi-16", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti caratteristica o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "18": [{ "id": "spell-mastery", "name": "Maestria negli Incantesimi", "description": "Due incantesimi di 1°-3° livello a volonté.", "effects": [{ "type": "custom", "description": "Maestria negli incantesimi: 2 incantesimi di livello 1-3 lanciabili senza slot." }] }],
+    "20": [{ "id": "signature-spell", "name": "Incantesimo Segreto", "description": "Un incantesimo di 3° livello come incantesimoSignature con slot dedicati.", "effects": [{ "type": "custom", "description": "Incantesimo Signature: un incantesimo di 3° livello con 2 slot dedicati recuperati con riposo breve." }] }]
+  },
+  "source": "srd"
+}

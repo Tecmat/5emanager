@@ -1,0 +1,83 @@
+[
+  {
+    "id": "champion",
+    "classId": "fighter",
+    "name": "Campione",
+    "features": {
+      "3": [{ "id": "improved-critical", "name": "Critico Migliorato", "description": "Critico con 19-20.", "effects": [{ "type": "custom", "description": "Colpi critici con 19 o 20." }] }],
+      "7": [{ "id": "remarkable-athlete", "name": "Atleta Straordinario", "description": "+metà bonus proficiency (min +1) a Str, Dex e Con non già competenti.", "effects": [{ "type": "custom", "description": "Atleta straordinario: metà proficiency alle prove di Str/Dex/Con." }] }],
+      "10": [{ "id": "additional-fighting-style", "name": "Secondo Stile di Combattimento", "description": "Scegli un altro stile.", "effects": [{ "type": "fightingStyle", "options": ["archery", "defense", "dueling", "great-weapon-fighting", "protection", "two-weapon-fighting"] }] }],
+      "15": [{ "id": "superior-critical", "name": "Critico Superiore", "description": "Critico con 18-20.", "effects": [{ "type": "custom", "description": "Colpi critici con 18, 19 o 20." }] }],
+      "18": [{ "id": "survivor", "name": "Sopravvissuto", "description": "Rigenera 5+Con PF all'inizio del turno se hai meno della metà dei PF.", "effects": [{ "type": "custom", "description": "Sopravvissuto: rigenera 5 + mod Con PF a inizio turno sotto metà HP." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "battle-master",
+    "classId": "fighter",
+    "name": "Maestro di Battaglia",
+    "features": {
+      "3": [
+        { "id": "combat-superiority", "name": "Superiorità in Combattimento", "description": "4d8 di superiorità, manovre.", "effects": [{ "type": "resource", "id": "superiority-dice", "name": "Dadi di Superiorità", "dice": "4d8", "shortRest": true, "longRest": true }] },
+        { "id": "maneuvers", "name": "Manovre", "description": "Scegli 3 manovre.", "effects": [{ "type": "custom", "description": "Manovre del maestro di battaglia." }] }
+      ],
+      "7": [{ "id": "know-your-enemy", "name": "Conosci il tuo Nemico", "description": "Studi il bersaglio per Difesa, tiri salvezza o HP.", "effects": [{ "type": "custom", "description": "Conosci il tuo nemico: informazioni su Difesa, TS o HP." }] }],
+      "10": [{ "id": "improved-maneuvers", "name": "Manovre Migliorate", "description": "Scegli altre 2 manovre, dadi d10.", "effects": [{ "type": "resource", "id": "superiority-dice", "name": "Dadi di Superiorità", "dice": "5d10", "shortRest": true, "longRest": true }] }],
+      "15": [{ "id": "superior-maneuvers", "name": "Manovre Superiori", "description": "Dadi d12, 6 manovre.", "effects": [{ "type": "resource", "id": "superiority-dice", "name": "Dadi di Superiorità", "dice": "6d12", "shortRest": true, "longRest": true }] }],
+      "18": [{ "id": "relentless", "name": "Implacabile", "description": "1 dado di superiorità quando inizi il turno senza dadi.", "effects": [{ "type": "custom", "description": "Implacabile: recuperi 1 dado a inizio turno se non ne hai." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "evocation",
+    "classId": "wizard",
+    "name": "Scuola dell'Evocazione",
+    "features": {
+      "2": [{ "id": "sculpt-spells", "name": "Scultura degli Incantesimi", "description": "Gli alleati non subiscono gli effetti dei tuoi incantesimi di evocazione.", "effects": [{ "type": "custom", "description": "Scultura degli incantesimi: gli alleati sono esclusi dagli effetti degli incantesimi di evocazione." }] }],
+      "6": [{ "id": "potent-cantrip", "name": "Truchetto Potente", "description": "I nemici réusscono dimezza i danni dei tuoi trucchetti.", "effects": [{ "type": "custom", "description": "Truchetto potente: dimezza i danni anche a TS riuscito." }] }],
+      "10": [{ "id": "empowered-evocation", "name": "Evocazione Potenziata", "description": "+Int ai danni degli incantesimi di evocazione.", "effects": [{ "type": "custom", "description": "Evocazione potenziata: +mod Int ai danni degli incantesimi di evocazione." }] }],
+      "14": [{ "id": "overchannel", "name": "Sovracanalizzazione", "description": "Danni massimi con incantesimi di evocazione fino a 5° livello, con danni crescenti a te.", "effects": [{ "type": "custom", "description": "Sovracanalizzazione: danni massimi, ma subisci danni crescenti." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "thief",
+    "classId": "rogue",
+    "name": "Ladro delle Ombre",
+    "features": {
+      "3": [{ "id": "fast-hands", "name": "Mani veloci", "description": "Usa Oggetti, Scatto, Disimpegno o Nascondersi come azione bonus.", "effects": [{ "type": "custom", "description": "Mani veloci: interazione con oggetti come azione bonus." }] }],
+      "9": [{ "id": "second-story-work", "name": "Lavoro di Secondo Piano", "description": "Scalare non costa movimento extra; +3m di salto.", "effects": [{ "type": "custom", "description": "Lavoro di secondo piano: scalata senza penalità, salto +3 m." }] }],
+      "13": [{ "id": "supreme-sneak", "name": "Furtività Suprema", "description": "Vantaggio su Furtività se ti muovi a metà velocità.", "effects": [{ "type": "custom", "description": "Furtività suprema: vantaggio su Furtività a metà movimento." }] }],
+      "17": [{ "id": "use-magic-device", "name": "Usare Oggetti Magici", "description": "Ignori restrizioni di classe, razza e allineamento sugli oggetti magici.", "effects": [{ "type": "custom", "description": "Usare oggetti magici: ignori le restrizioni." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "life-domain",
+    "classId": "cleric",
+    "name": "Dominio della Vita",
+    "features": {
+      "1": [{ "id": "disciple-of-life", "name": "Discepolo della Vita", "description": "Gli incantesimi di cura curano +2 + livello.", "effects": [{ "type": "custom", "description": "Discepolo della vita: cura extra di 2 + livello dell'incantesimo." }] }],
+      "2": [{ "id": "preserve-life", "name": "Preservare la Vita", "description": "Canalizzare Divinità: cura 5 x livello del chierico divisa tra alleati.", "effects": [{ "type": "custom", "description": "Preservare la vita: 5 x livello PF di cura distribuibile." }] }],
+      "6": [{ "id": "blessed-healer", "name": "Guaritore Beato", "description": "Curare gli altri ti cura di 2 + livello.", "effects": [{ "type": "custom", "description": "Guaritore beato: curi te stesso di 2 + livello quando curi altri." }] }],
+      "8": [{ "id": "divine-strike-life", "name": "Colpo Divino della Vita", "description": "+1d8 danni radianti agli attacchi con arma una volta per turno.", "effects": [{ "type": "custom", "description": "Colpo divino: +1d8 radianti una volta per turno." }] }],
+      "17": [{ "id": "supreme-healer", "name": "Guaritore Supremo", "description": "Curi invece il massimo dei danni.", "effects": [{ "type": "custom", "description": "Guaritore supremo: curi sempre il massimo." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "oath-of-devotion",
+    "classId": "paladin",
+    "name": "Giuramento della Devozione",
+    "features": {
+      "3": [
+        { "id": "sacred-weapon", "name": "Arma Sacra", "description": "Canalizzare Divinità: arma emana luce e +Cha agli attacchi.", "effects": [{ "type": "custom", "description": "Arma sacra: +mod Cha agli attacchi per 1 minuto." }] },
+        { "id": "turn-unholy", "name": "Scacciare i Maligni", "description": "Canalizzare Divinità: scaccia fiendi e non morti.", "effects": [{ "type": "custom", "description": "Scacciare i maligni: fiendi e non morti doivent superare TS Cha o fuggire." }] }
+      ],
+      "7": [{ "id": "aura-of-devotion", "name": "Aura di Devozione", "description": "Tu e gli alleati non potete essere ammaliati.", "effects": [{ "type": "custom", "description": "Aura di devozione: immunità agli ammaliamenti." }] }],
+      "15": [{ "id": "purity-of-spirit", "name": "Purezza di Spirito", "description": "Protezione contro il male e il bene è sempre attiva.", "effects": [{ "type": "custom", "description": "Purezza di spirito: protezione dal male e dal bene permanente." }] }],
+      "20": [{ "id": "holy-nimbus", "name": "Nimbo Sacro", "description": "Aura 9m: danni radianti e danni ai malvagi.", "effects": [{ "type": "resource", "id": "holy-nimbus", "name": "Nimbo Sacro", "uses": 1, "longRest": true }] }]
+    },
+    "source": "srd"
+  }
+]
