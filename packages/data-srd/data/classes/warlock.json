@@ -1,6 +1,6 @@
 {
   "id": "warlock",
-  "name": "Stregone del Patto",
+  "name": "Warlock",
   "hitDie": 8,
   "primaryAbility": ["cha"],
   "savingThrows": ["wis", "cha"],
