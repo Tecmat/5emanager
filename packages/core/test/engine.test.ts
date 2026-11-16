@@ -67,12 +67,12 @@ function makeWizard(reg: Registry): Character {
 describe('registry SRD', () => {
   const reg = createSrdRegistry();
   it('carica classi, razze, incantesimi, armi, armature', () => {
-    expect(reg.classes.size).toBe(5);
+    expect(reg.classes.size).toBe(12);
     expect(reg.races.size).toBe(9);
     expect(reg.spells.size).toBeGreaterThan(90);
     expect(reg.weapons.size).toBeGreaterThan(30);
     expect(reg.armors.size).toBe(13);
-    expect(reg.subclasses.size).toBe(6);
+    expect(reg.subclasses.size).toBe(13);
   });
   it('i full caster hanno la tabella slot compilata', () => {
     const wiz = reg.classes.get('wizard')!;

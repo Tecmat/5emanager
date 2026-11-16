@@ -8,3 +8,6 @@ export * from './rules/levelup.js';
 export * from './rules/spells.js';
 export * from './rules/inventory.js';
 export * from './rules/mechanics.js';
+export * from './rules/dice.js';
+export * from './rules/conditions.js';
+export * from './rules/combat.js';

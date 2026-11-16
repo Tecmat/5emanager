@@ -1,0 +1,78 @@
+[
+  {
+    "id": "berserker", "classId": "barbarian", "name": "Sentiero del Berserker",
+    "features": {
+      "3": [{ "id": "frenzy", "name": "Frenesia", "description": "Durante la furia puoi attaccare extra come azione bonus.", "effects": [{ "type": "custom", "description": "Frenesia: attacco bonus extra durante la furia." }] }],
+      "6": [{ "id": "mindless-rage", "name": "Furia Irragionevole", "description": "Non puoi essere ammaliato o spaventato durante la furia.", "effects": [{ "type": "custom", "description": "Furia irragionevole: immunità a ammaliamento e paura in furia." }] }],
+      "10": [{ "id": "intimidating-presence", "name": "Presenza Intimidatoria", "description": "Azione: TS Wis ai nemici entro 9 m per spaventarli.", "effects": [{ "type": "custom", "description": "Presenza intimidatoria: TS Wis entro 9 m." }] }],
+      "14": [{ "id": "retaliation", "name": "Ritorsione", "description": "Reazione: atacar chi ti colpisce in mischia.", "effects": [{ "type": "custom", "description": "Ritorsione: attacco di reazione quando vieni colpito." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "lore", "classId": "bard", "name": "Collegio del Sapere",
+    "features": {
+      "3": [
+        { "id": "cutting-words", "name": "Parole Taglienti", "description": "Reazione con ispirazione bardica: -1d6 a un tiro di ataque/danno/TS.", "effects": [{ "type": "custom", "description": "Parole taglienti: -1d6 a un tiro con ispirazione bardica." }] },
+        { "id": "additional-magical-secrets", "name": "Segreti Magici Aggiuntivi", "description": "2 incantesimi extra da qualsiasi lista al 3°.", "effects": [{ "type": "custom", "description": "Segreti magici: +2 incantesimi da qualsiasi lista." }] }
+      ],
+      "6": [{ "id": "peerless-skill", "name": "Abilità Insuperabile", "description": "Puoi aggiungere ispirazione bardica a una prova di characteristic.", "effects": [{ "type": "custom", "description": "Abilità insuperabile: ispirazione su prove di characteristic." }] }],
+      "10": [{ "id": "magical-secrets-lore", "name": "Segreti Magici (10°)", "description": "Altri 2 incantesimi da qualsiasi lista.", "effects": [{ "type": "custom", "description": "Segreti magici: +2 incantesimi." }] }],
+      "14": [{ "id": "peerless-inspiration", "name": "Ispirazione Insuperabile", "description": "Non usi ispirazione quando la usi su te stesso.", "effects": [{ "type": "custom", "description": "Ispirazione insuperabile." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "moon", "classId": "druid", "name": "Cerchio della Luna",
+    "features": {
+      "2": [
+        { "id": "combat-wild-shape", "name": "Forma Selvatica da Combattimento", "description": "CR 1 mentre ti trasformi, +1 CA.", "effects": [{ "type": "custom", "description": "Forma selvatica da combattimento: CR 1, +1 CA." }] },
+        { "id": "primal-strike", "name": "Colpo Primordiale", "description": "Gli attacchi in forma selvatica sono magici.", "effects": [{ "type": "custom", "description": "Colpo primordiale: attacchi magici in forma selvatica." }] }
+      ],
+      "6": [{ "id": "primal-strike-6", "name": "Colpo Primordiale (6°)", "description": "+1d8 danni radianti in forma selvatica.", "effects": [{ "type": "custom", "description": "Colpo primordiale migliorato: +1d8 radianti." }] }],
+      "10": [{ "id": "elemental-wild-shape", "name": "Forma Selvatica Elementale", "description": "CR 2, immune a fuoco/freddo/fulmine/veleno.", "effects": [{ "type": "custom", "description": "Forma selvatica elementale: CR 2 e resistenze elementali." }] }],
+      "14": [{ "id": "thousand-forms", "name": "Mille Forme", "description": "Puoi lanciare Alter Self a voluntad.", "effects": [{ "type": "custom", "description": "Mille forme: Alter Self a volonté." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "open-hand", "classId": "monk", "name": "Tradizione della Mano Aperta",
+    "features": {
+      "3": [{ "id": "open-hand-technique", "name": "Tecnica della Mano Aperta", "description": "Colpo stordente: spingi, prone o togli réactions.", "effects": [{ "type": "custom", "description": "Tecnica della mano aperta: dopo Colpo stordente scegli spingere/pronare/togliere réactions." }] }],
+      "6": [{ "id": "wholeness-of-body", "name": "Integrità del Corpo", "description": "3 ki: recuperi PF = 2 x livello a inizio turno.", "effects": [{ "type": "custom", "description": "Integrità del corpo: 3 ki per rigenera 2x livello PF." }] }],
+      "11": [{ "id": "tranquility", "name": "Tranquillità", "description": "Non puoi essere colto di sorpresa e non puoi essere bersaglio di incantesimi ostili a riposo.", "effects": [{ "type": "custom", "description": "Tranquillità: immunità a sorprese e bersaglio ostile a riposo." }] }],
+      "17": [{ "id": "quivering-palm", "name": "Palmo Vibrante", "description": "3 ki: TS Con, 10d10 danni necrotici o morte.", "effects": [{ "type": "custom", "description": "Palmo vibrante: 3 ki, TS Con, 10d10 necrotici o morte." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "hunter", "classId": "ranger", "name": "Archetipo del Cacciatore",
+    "features": {
+      "3": [{ "id": "hunters-prey", "name": "Preda del Cacciatore", "description": "Scegli: Colossus Slayer (+1d8), Giant Killer, Horde Breaker.", "effects": [{ "type": "custom", "description": "Preda del cacciatore: +1d8 contro creature grandi, réactions contro multiattacco, o attacchi extra contro orde." }] }],
+      "7": [{ "id": "multiattack-defense", "name": "Difesa contro Multiattacco", "description": "+4 CA contro chi ti ha attaccato questo turno.", "effects": [{ "type": "custom", "description": "Difesa contro multiattacco: +4 CA." }] }],
+      "11": [{ "id": "whirlwind-attack", "name": "Attacco a Turbine", "description": "Attacco contro tutte le creature entro 1,5 m.", "effects": [{ "type": "custom", "description": "Attacco a turbina: colpisci tutte le creature entro 1,5 m." }] }],
+      "15": [{ "id": "uncanny-dodge-hunter", "name": "Schivata Prodigiosa", "description": "Reazione: dimezzi i danni di un attacco.", "effects": [{ "type": "custom", "description": "Schivata prodigiosa: dimezza i danni con reazione." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "draconic", "classId": "sorcerer", "name": "Origine Draconica",
+    "features": {
+      "1": [{ "id": "draconic-resilience", "name": "Resilienza Draconica", "description": "PF massimi +1 per livello; CA 13+Des senza armatura.", "effects": [{ "type": "custom", "description": "Resilienza draconica: +1 PF/livello, CA 13+Des senza armatura." }, { "type": "unarmoredDefense", "ability": "dex" }] }],
+      "6": [{ "id": "elemental-affinity", "name": "Affinità Elementale", "description": "Resistenza al tipo del tuo antenato; +Cha ai danni di quel tipo.", "effects": [{ "type": "custom", "description": "Affinità elementale: resistenza e +Cha danni elementali." }] }],
+      "14": [{ "id": "dragon-wings", "name": "Ali del Drago", "description": "Ottieni ali da drago e volo.", "effects": [{ "type": "custom", "description": "Ali del drago: volo." }] }],
+      "18": [{ "id": "draconic-presence", "name": "Presenza Draconica", "description": "5 punti stregoneria: TS Car per ammaliare/spaventare entro 18 m.", "effects": [{ "type": "custom", "description": "Presenza draconica: ammala o spaventa entro 18 m (TS Car)." }] }]
+    },
+    "source": "srd"
+  },
+  {
+    "id": "fiend", "classId": "warlock", "name": "Patto del Fiend",
+    "features": {
+      "1": [{ "id": "dark-ones-blessing", "name": "Benedizione dell'Oscuro", "description": "Uccidendo una creatura: PF temp = Cha + livello.", "effects": [{ "type": "custom", "description": "Benedizione dell'oscuro: PF temporanei = Cha + livello a uccisione." }] }],
+      "6": [{ "id": "dark-ones-own-luck", "name": "Fortuna dell'Oscuro", "description": "1/riposo breve: +1d10 a un tiro di characteristic/TS.", "effects": [{ "type": "custom", "description": "Fortuna dell'oscuro: +1d10 1/riposo breve." }] }],
+      "10": [{ "id": "fiendish-resilience", "name": "Resilienza Demoniaca", "description": "Scegli un tipo di danno (non energia): resistenza.", "effects": [{ "type": "custom", "description": "Resilienza demoniaca: resistenza a un tipo di danno." }] }],
+      "14": [{ "id": "hurl-through-hell", "name": "Scagliare negli Inferi", "description": "1/riposo lungo: il bersaglio scompare e subisce 10d10 danni psychi.", "effects": [{ "type": "custom", "description": "Scagliare negli inferi: 10d10 danni psychi, 1/riposo lungo." }] }]
+    },
+    "source": "srd"
+  }
+]

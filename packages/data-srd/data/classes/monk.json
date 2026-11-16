@@ -1,0 +1,45 @@
+{
+  "id": "monk",
+  "name": "Monaco",
+  "hitDie": 8,
+  "primaryAbility": ["dex", "wis"],
+  "savingThrows": ["str", "dex"],
+  "armorProficiencies": [],
+  "weaponProficiencies": ["simple", "shortsword"],
+  "toolProficiencies": ["one-artisan-tool"],
+  "skillChoices": { "choose": 2, "from": ["acrobatics", "athletics", "history", "insight", "religion", "stealth"] },
+  "features": {
+    "1": [
+      { "id": "unarmored-defense-monk", "name": "Difesa senza Armatura", "description": "CA = 10 + Des + Sag se senza armatura e senza scudo.", "effects": [{ "type": "unarmoredDefense", "ability": "wis" }] },
+      { "id": "martial-arts", "name": "Arti Marziali", "description": "Dado arti marziali che scala col livello; attaque bonus con armi del monaco.", "effects": [{ "type": "custom", "description": "Arti marziali: dado che scala con il livello e attacchi extra come azione bonus (1d4 → 1d10).", "data": { "diceTable": { "1": "1d4", "5": "1d6", "11": "1d8", "17": "1d10" } } }] }
+    ],
+    "2": [
+      { "id": "ki", "name": "Ki", "description": "Punti ki = livello del monaco; recupera con riposo breve.", "effects": [{ "type": "resource", "id": "ki", "name": "Punti Ki", "usesPerLevel": 1, "shortRest": true }] },
+      { "id": "unarmored-movement", "name": "Movimento senz'Armatura", "description": "+3 m di velocità se senza armatura/scudo.", "effects": [{ "type": "custom", "description": "Movimento senz'armatura: +3 m." }] }
+    ],
+    "3": [
+      { "id": "deflect-missiles", "name": "Deviare Proiettili", "description": "Reazione: riduci 1d10 + Des + livello danni da un attacco a distanza.", "effects": [{ "type": "custom", "description": "Deviare proiettili: -1d10+Des+livello danni." }] },
+      { "id": "monastic-tradition", "name": "Tradizione Monastica", "description": "Scegli una tradizione.", "effects": [{ "type": "subclass", "options": ["open-hand"] }] }
+    ],
+    "4": [{ "id": "asi-4", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }, { "id": "slow-fall", "name": "Caduta Lenta", "description": "Reazione per ridurre i danni da caduta.", "effects": [{ "type": "custom", "description": "Caduta lenta: riduci danni da caduta." }] }],
+    "5": [
+      { "id": "extra-attack-monk", "name": "Attacco Extra", "description": "Due attacchi con l'azione Attacco.", "effects": [{ "type": "extraAttack", "count": 1 }] },
+      { "id": "stunning-strike", "name": "Colpo Stordente", "description": "1 ki: TS Con del bersaglio, è stordito.", "effects": [{ "type": "custom", "description": "Colpo stordente: 1 ki per stordire (TS Con)." }] }
+    ],
+    "6": [{ "id": "tradition-feature-6", "name": "Privilegio di tradizione", "description": "Privilegio della tradizione al 6° livello.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione (6°)." }] }],
+    "7": [{ "id": "evasion", "name": "Elusione", "description": "TS Des: nessun danno se fallito, metà se riuscito.", "effects": [{ "type": "custom", "description": "Elusione: TS Des dimezza o annulla." }] }],
+    "8": [{ "id": "asi-8", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "10": [{ "id": "purity-of-body", "name": "Purezza del Corpo", "description": "Immune a malattie e veleni.", "effects": [{ "type": "custom", "description": "Purezza del corpo: immunità a maladies e veleni." }] }],
+    "11": [{ "id": "tradition-feature-11", "name": "Privilegio di tradizione", "description": "Privilegio della tradizione all'11° livello.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione (11°)." }] }],
+    "12": [{ "id": "asi-12", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "13": [{ "id": "tongue-sun-moon", "name": "Lingua del Sole e della Luna", "description": "Parli e comprendi tutte le lingue parlate.", "effects": [{ "type": "custom", "description": "Lingua del sole e della luna." }] }],
+    "14": [{ "id": "diamond-soul", "name": "Anima di Diamante", "description": "Proficiency in tutti i TS; ki per rilanciare un TS fallito.", "effects": [{ "type": "custom", "description": "Anima di diamante: proficiency in tutti i TS e rilancia ki." }] }],
+    "15": [{ "id": "tradition-feature-15", "name": "Privilegio di tradizione", "description": "Privilegio della tradizione al 15° livello.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione (15°)." }] }],
+    "16": [{ "id": "asi-16", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "17": [{ "id": "tradition-feature-17", "name": "Privilegio di tradizione", "description": "Privilegio della tradizione al 17° livello.", "effects": [{ "type": "custom", "description": "Privilegio di tradizione (17°)." }] }],
+    "18": [{ "id": "empty-body", "name": "Corpo Vuoto", "description": "4 ki: invisibilità per 1 minuto.", "effects": [{ "type": "custom", "description": "Corpo vuoto: 4 ki per 1 minuto di invisibilità." }] }],
+    "19": [{ "id": "asi-19", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "20": [{ "id": "perfect-self", "name": "Sé Perfetto", "description": "Se inizi il combattimento con meno di 4 ki, recuperi 4 ki.", "effects": [{ "type": "custom", "description": "Sé perfetto: +4 ki a inizio combattimento." }] }]
+  },
+  "source": "srd"
+}

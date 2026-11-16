@@ -6,7 +6,15 @@ import wizard from '../data/classes/wizard.json';
 import rogue from '../data/classes/rogue.json';
 import cleric from '../data/classes/cleric.json';
 import paladin from '../data/classes/paladin.json';
+import barbarian from '../data/classes/barbarian.json';
+import bard from '../data/classes/bard.json';
+import druid from '../data/classes/druid.json';
+import monk from '../data/classes/monk.json';
+import ranger from '../data/classes/ranger.json';
+import sorcerer from '../data/classes/sorcerer.json';
+import warlock from '../data/classes/warlock.json';
 import subclasses from '../data/subclasses.json';
+import subclassesB from '../data/subclasses-b.json';
 import races from '../data/races.json';
 import spellsA from '../data/spells-a.json';
 import spellsB from '../data/spells-b.json';
@@ -15,7 +23,7 @@ import armors from '../data/armors.json';
 import feats from '../data/feats.json';
 import fightingStyles from '../data/fighting-styles.json';
 
-const classList = [fighter, wizard, rogue, cleric, paladin] as unknown as ClassDef[];
+const classList = [fighter, wizard, rogue, cleric, paladin, barbarian, bard, druid, monk, ranger, sorcerer, warlock] as unknown as ClassDef[];
 
 // i full caster ereditano la tabella slot standard del PHB
 for (const cls of classList) {
@@ -28,7 +36,7 @@ for (const cls of classList) {
 
 export const SRD_DATA: SrdData = {
   classes: classList,
-  subclasses: subclasses as unknown as SrdData['subclasses'],
+  subclasses: [...subclasses, ...subclassesB] as unknown as SrdData['subclasses'],
   races: races as unknown as SrdData['races'],
   spells: [...spellsA, ...spellsB] as unknown as SrdData['spells'],
   weapons: weapons as unknown as SrdData['weapons'],

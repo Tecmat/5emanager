@@ -22,9 +22,10 @@ import {
   type Character,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
-import { DEFAULT_HOUSE_RULES, unlockedMechanics, type HouseRules } from '@dnd5e/core';
+import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
 import { useStore } from './store.js';
 import LevelUpDialog from './LevelUpDialog.js';
+import DiceRoller from './DiceRoller.js';
 
 const RULE_LABELS: [keyof HouseRules, string][] = [
   ['bypassSpellLimit', 'Ignora limite incantesimi appresi'],
@@ -191,6 +192,30 @@ export default function Overview() {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="grid cols2">
+        <DiceRoller />
+        <div className="card">
+          <h3>🩸 Condizioni attive</h3>
+          <div>
+            {CONDITIONS.map((c) => {
+              const on = char.conditions.includes(c.id);
+              return (
+                <span
+                  key={c.id}
+                  className={`tag ${on ? 'custom' : ''}`}
+                  style={{ cursor: 'pointer' }}
+                  title={c.description}
+                  onClick={() => setChar(on ? removeCondition(char, c.id) : addCondition(char, c.id))}
+                >
+                  {c.name}
+                </span>
+              );
+            })}
+          </div>
+          <div className="muted" style={{ marginTop: 6 }}>Clicca per aggiungere/rimuovere. Le condizioni con svantaggio (avvelenato, spaventato, prono...) sono annotate nel tira-dado.</div>
         </div>
       </div>
 

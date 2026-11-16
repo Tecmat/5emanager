@@ -45,11 +45,15 @@ export function unlockedMechanics(char: Character, reg: Registry): MechanicInfo[
               const mod = abilityModifier(char.abilityScores[e.ability]);
               put({ id: `unarmored-${cls.id}-${e.ability}`, name: `Difesa senz'armatura (${e.ability.toUpperCase()})`, source: `${src.name} ${lvl}`, detail: `CA base 10 + Des + ${mod}` }, lvl);
             } else if (e.type === 'resource') {
-              const uses = e.uses ?? (e.usesPerLevel ? e.usesPerLevel * cl.level : 0);
+              const uses = e.uses ?? (e.usesTable ? (e.usesTable[cl.level] ?? 0) : e.usesPerLevel ? e.usesPerLevel * cl.level : 0);
               const rest = [e.shortRest ? 'riposo breve' : null, e.longRest ? 'riposo lungo' : null].filter(Boolean).join(' / ');
               put({ id: `res-${e.id}`, name: e.name, source: `${src.name} ${lvl}`, detail: `${uses > 0 ? `${uses} usi` : '—'}${e.dice ? ` · ${e.dice}` : ''}${rest ? ` · recupera con ${rest}` : ''}` }, lvl);
             } else if (e.type === 'custom') {
-              if (e.data && typeof e.data.damagePerLevel === 'string') {
+              if (e.data && typeof e.data.diceTable === 'object') {
+                const table = e.data.diceTable as Record<number, string>;
+                const dice = table[cl.level] ?? Object.values(table).at(-1) ?? '';
+                put({ id: `scaling-${f.id}`, name: f.name, source: `${src.name} ${lvl}`, detail: `${dice} al livello ${cl.level}` }, lvl);
+              } else if (e.data && typeof e.data.damagePerLevel === 'string') {
                 const step = typeof e.data.stepEvery === 'number' ? e.data.stepEvery : 2;
                 const diceCount = Math.floor((cl.level - 1) / step) + 1;
                 const per = e.data.damagePerLevel as string;

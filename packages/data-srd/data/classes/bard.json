@@ -1,0 +1,44 @@
+{
+  "id": "bard",
+  "name": "Bardo",
+  "hitDie": 8,
+  "primaryAbility": ["cha"],
+  "savingThrows": ["dex", "cha"],
+  "armorProficiencies": ["light"],
+  "weaponProficiencies": ["simple", "hand-crossbow", "longsword", "rapier", "shortsword"],
+  "toolProficiencies": ["three-musical-instruments"],
+  "skillChoices": { "choose": 3, "from": ["acrobatics", "animalHandling", "arcana", "athletics", "deception", "history", "insight", "intimidation", "investigation", "medicine", "nature", "perception", "performance", "persuasion", "religion", "sleightOfHand", "stealth", "survival"] },
+  "spellcasting": {
+    "ability": "cha",
+    "type": "full",
+    "cantrips": { "1": 2, "2": 2, "3": 2, "4": 3, "5": 3, "6": 3, "7": 3, "8": 3, "9": 3, "10": 4, "11": 4, "12": 4, "13": 4, "14": 4, "15": 4, "16": 4, "17": 4, "18": 5, "19": 5, "20": 5 },
+    "spellsKnown": { "1": 4, "2": 5, "3": 6, "4": 7, "5": 8, "6": 9, "7": 10, "8": 11, "9": 12, "10": 14, "11": 15, "12": 16, "13": 17, "14": 18, "15": 18, "16": 19, "17": 20, "18": 21, "19": 22, "20": 22 },
+    "prepare": false,
+    "slots": {}
+  },
+  "features": {
+    "1": [
+      { "id": "spellcasting", "name": "Lancio di Incantesimi", "description": "Incantesimi conosciuti dalla lista del bardo.", "effects": [{ "type": "spellcasting", "ability": "cha", "prepare": false }] },
+      { "id": "bardic-inspiration", "name": "Ispirazione Bardica", "description": "Azione bonus: dai 1d6 a un alleato (usi = mod Carisma).", "effects": [{ "type": "resource", "id": "bardic-inspiration", "name": "Ispirazione Bardica", "dice": "1d6", "usesPerLevel": 0, "shortRest": true, "longRest": true, "data": { "uses": "modCha" } }] }
+    ],
+    "2": [
+      { "id": "jack-of-all-trades", "name": "Factotum", "description": "+metà bonus proficiency a tutte le prove senza proficiency.", "effects": [{ "type": "custom", "description": "Factotum: metà proficiency a tutte le prove senza competenza." }] },
+      { "id": "song-of-rest", "name": "Canzone del Riposo", "description": "1d6 PF extra con riposo breve.", "effects": [{ "type": "custom", "description": "Canzone del riposo: +1d6 PF a riposo breve." }] }
+    ],
+    "3": [{ "id": "bardic-college", "name": "Collegio Bardico", "description": "Scegli un collegio.", "effects": [{ "type": "subclass", "options": ["lore"] }] }],
+    "4": [{ "id": "asi-4", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "5": [
+      { "id": "font-of-inspiration", "name": "Fonte di Ispirazione", "description": "Ispirazione bardica si recupera anche a riposo breve; dado diventa 1d8.", "effects": [{ "type": "resource", "id": "bardic-inspiration", "name": "Ispirazione Bardica", "dice": "1d8", "shortRest": true, "longRest": true }] }
+    ],
+    "6": [{ "id": "college-feature-6", "name": "Privilegio di collegio", "description": "Privilegio del collegio al 6° livello.", "effects": [{ "type": "custom", "description": "Privilegio di collegio (6°)." }] }],
+    "8": [{ "id": "asi-8", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "10": [{ "id": "magical-secrets", "name": "Segreti Magici", "description": "Impara 2 incantesimi da qualsiasi lista (6° livello al 10°).", "effects": [{ "type": "custom", "description": "Segreti magici: 2 incantesimi extra da qualsiasi lista." }] }],
+    "12": [{ "id": "asi-12", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "14": [{ "id": "college-feature-14", "name": "Privilegio di collegio", "description": "Privilegio del collegio al 14° livello.", "effects": [{ "type": "custom", "description": "Privilegio di collegio (14°)." }] }],
+    "16": [{ "id": "asi-16", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "18": [{ "id": "magical-secrets-2", "name": "Segreti Magici (8°)", "description": "Altri 2 incantesimi di 8° livello.", "effects": [{ "type": "custom", "description": "Segreti magici: altri 2 incantesimi di 8° livello." }] }],
+    "19": [{ "id": "asi-19", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "20": [{ "id": "superior-inspiration", "name": "Ispirazione Superiore", "description": "se inizi il combattimento senza usi, ne recuperi uno; dado 1d12.", "effects": [{ "type": "resource", "id": "bardic-inspiration", "name": "Ispirazione Bardica", "dice": "1d12", "shortRest": true, "longRest": true }] }]
+  },
+  "source": "srd"
+}

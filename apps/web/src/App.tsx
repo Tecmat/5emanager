@@ -5,8 +5,9 @@ import Overview from './Overview.js';
 import SpellsTab from './SpellsTab.js';
 import InventoryTab from './InventoryTab.js';
 import CustomTab from './CustomTab.js';
+import CombatTab from './CombatTab.js';
 
-type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'custom';
+type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'custom';
 
 export default function App() {
   const { char } = useStore();
@@ -27,6 +28,7 @@ export default function App() {
               ['panoramica', 'Panoramica'],
               ['incantesimi', 'Incantesimi'],
               ['inventario', 'Inventario'],
+              ['combattimento', '⚔️ Combattimento'],
               ['custom', 'Contenuti custom'],
             ] as [Tab, string][]
           ).map(([id, label]) => (
@@ -38,6 +40,7 @@ export default function App() {
         {tab === 'panoramica' && <Overview />}
         {tab === 'incantesimi' && <SpellsTab />}
         {tab === 'inventario' && <InventoryTab />}
+        {tab === 'combattimento' && <CombatTab />}
         {tab === 'custom' && <CustomTab />}
       </main>
     </>

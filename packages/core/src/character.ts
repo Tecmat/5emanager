@@ -66,6 +66,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     inventory: [],
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     hp: { current: 0, temp: 0 },
+    conditions: [],
     notes: '',
     createdAt: now,
     updatedAt: now,
@@ -77,7 +78,11 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
 
 /** riempie i campi nuovi mancanti nelle schede salvate con versioni precedenti */
 export function migrateCharacter(char: Character): Character {
-  return { ...char, houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) } };
+  return {
+    ...char,
+    houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) },
+    conditions: char.conditions ?? [],
+  };
 }
 
 export function addXp(char: Character, amount: number): Character {

@@ -41,7 +41,7 @@ export type FeatureEffect =
   | { type: 'extraAttack'; count: number }
   | { type: 'unarmoredDefense'; ability: Ability }
   | { type: 'expertise'; choose: number; from: string[] }
-  | { type: 'resource'; id: string; name: string; dice?: string; uses?: number; usesPerLevel?: number; shortRest?: boolean; longRest?: boolean }
+  | { type: 'resource'; id: string; name: string; dice?: string; uses?: number; usesPerLevel?: number; usesTable?: Record<number, number>; shortRest?: boolean; longRest?: boolean }
   | { type: 'custom'; description: string; data?: Record<string, unknown> };
 
 export interface Feature {
@@ -262,6 +262,8 @@ export interface Character {
   inventory: InventoryItem[];
   currency: Currency;
   hp: { current: number; temp: number };
+  /** condizioni attive (es. 'avvelenato', 'invisibile') */
+  conditions: string[];
   notes: string;
   createdAt: string;
   updatedAt: string;
