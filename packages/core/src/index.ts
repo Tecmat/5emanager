@@ -7,3 +7,4 @@ export * from './rules/derived.js';
 export * from './rules/levelup.js';
 export * from './rules/spells.js';
 export * from './rules/inventory.js';
+export * from './rules/mechanics.js';

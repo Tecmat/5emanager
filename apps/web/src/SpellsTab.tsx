@@ -3,7 +3,10 @@ import {
   addSpellKnown,
   castersOf,
   castSpell,
+  forgetSpell,
+  knownSpellCount,
   learnableSpells,
+  maxSpellsKnown,
   prepareSpell,
   type SpellDef,
 } from '@dnd5e/core';
@@ -14,8 +17,10 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
   const known = char.spellsKnown.includes(spell.id);
   const prepared = char.spellsPrepared.includes(spell.id);
   const [slotLevel, setSlotLevel] = useState(Math.max(1, spell.level));
-  const castable = known && (char.spellsKnown.includes(spell.id));
+  const castable = known;
   const slot = char.spellSlots[slotLevel];
+  const maxKnown = maxSpellsKnown(char, reg);
+  const atLimit = spell.level > 0 && maxKnown !== Infinity && !char.houseRules.bypassSpellLimit && knownSpellCount(char, reg) >= maxKnown;
 
   return (
     <tr>
@@ -24,7 +29,20 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
       <td className="muted">{spell.school}{spell.concentration ? ' · conc.' : ''}{spell.ritual ? ' · rituale' : ''}</td>
       <td>
         {!known && (
-          <button onClick={() => onChange(addSpellKnown(char, spell.id, reg).character)}>Impara</button>
+          <button
+            disabled={atLimit}
+            title={atLimit ? `Limite raggiunto (${knownSpellCount(char, reg)}/${maxKnown})` : ''}
+            onClick={() => {
+              const r = addSpellKnown(char, spell.id, reg);
+              if (r.error) alert(r.error);
+              else onChange(r.character);
+            }}
+          >
+            Impara
+          </button>
+        )}
+        {known && spell.level > 0 && (
+          <button className="danger" style={{ marginLeft: 4 }} onClick={() => onChange(forgetSpell(char, spell.id).character)}>Dimentica</button>
         )}
         {known && castersOf(char, reg).some((c) => c.prepare) && (
           <button onClick={() => onChange(prepareSpell(char, spell.id, reg).character)}>{prepared ? '✓ preparato' : 'prepara'}</button>
@@ -60,6 +78,7 @@ export default function SpellsTab() {
   if (!char) return null;
 
   const casters = castersOf(char, reg);
+  const maxKnown = maxSpellsKnown(char, reg);
   const learnable = useMemo(() => learnableSpells(char, reg), [char, reg]);
   const known = char.spellsKnown.map((id) => reg.spells.get(id)).filter(Boolean) as SpellDef[];
   const q = filter.trim().toLowerCase();
@@ -98,7 +117,15 @@ export default function SpellsTab() {
       </div>
 
       <div className="card">
-        <h3>Incantesimi conosciuti ({known.length})</h3>
+        <h3>
+          Incantesimi conosciuti ({known.length})
+          {maxKnown !== Infinity && (
+            <span className="muted"> — non-trucchetti {knownSpellCount(char, reg)}/{maxKnown}{char.houseRules.bypassSpellLimit ? ' (limite ignorato)' : ''}</span>
+          )}
+        </h3>
+        {maxKnown !== Infinity && !char.houseRules.bypassSpellLimit && knownSpellCount(char, reg) >= maxKnown && (
+          <div className="error">Limite raggiunto: dimentica un incantesimo per imparne uno nuovo (o attiva l'house-rule).</div>
+        )}
         {known.length === 0 && <div className="muted">Nessun incantesimo conosciuto.</div>}
         <table>
           <tbody>

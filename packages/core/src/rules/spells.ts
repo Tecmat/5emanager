@@ -1,7 +1,7 @@
 import type { Character, SpellDef } from '../types.js';
 import type { Registry } from '../registry.js';
 import { casterLevel, cantripsKnown } from './levelup.js';
-import { maxHp } from './derived.js';
+import { abilityModifier, maxHp } from './derived.js';
 
 export interface CasterSummary {
   classId: string;
@@ -40,11 +40,46 @@ export function isSpellKnown(char: Character, spellId: string): boolean {
   return char.spellsKnown.includes(spellId);
 }
 
+/** massimo di incantesimi di livello >= 1 conoscibili, secondo le regole delle classi del personaggio */
+export function maxSpellsKnown(char: Character, reg: Registry): number {
+  let max = 0;
+  for (const cl of char.classLevels) {
+    const sc = reg.classes.get(cl.classId)?.spellcasting;
+    if (!sc || cl.level === 0) continue;
+    const sk = sc.spellsKnown;
+    if (sk === 'all' || sk === undefined) return Infinity;
+    if (sk === 'levelPlusMod') max += Math.max(1, cl.level + abilityModifier(char.abilityScores[sc.ability]));
+    else max += sk[cl.level] ?? 0;
+  }
+  return max;
+}
+
+export function knownSpellCount(char: Character, reg: Registry): number {
+  return char.spellsKnown.filter((id) => (reg.spells.get(id)?.level ?? 0) > 0).length;
+}
+
 export function addSpellKnown(char: Character, spellId: string, reg: Registry): { character: Character; error?: string } {
   const spell = reg.spells.get(spellId);
   if (!spell) return { character: char, error: 'Incantesimo non trovato: ' + spellId };
   if (char.spellsKnown.includes(spellId)) return { character: char, error: 'Incantesimo già conosciuto' };
+  if (spell.level > 0 && !char.houseRules.bypassSpellLimit) {
+    const max = maxSpellsKnown(char, reg);
+    if (max !== Infinity && knownSpellCount(char, reg) >= max) {
+      return { character: char, error: `Limite raggiunto: ${knownSpellCount(char, reg)}/${max} incantesimi conosciuti (dimenticane uno o attiva l'house-rule)` };
+    }
+  }
   const next = { ...char, spellsKnown: [...char.spellsKnown, spellId], updatedAt: new Date().toISOString() };
+  return { character: next };
+}
+
+export function forgetSpell(char: Character, spellId: string): { character: Character; error?: string } {
+  if (!char.spellsKnown.includes(spellId)) return { character: char, error: 'Incantesimo non conosciuto' };
+  const next: Character = {
+    ...char,
+    spellsKnown: char.spellsKnown.filter((s) => s !== spellId),
+    spellsPrepared: char.spellsPrepared.filter((s) => s !== spellId),
+    updatedAt: new Date().toISOString(),
+  };
   return { character: next };
 }
 

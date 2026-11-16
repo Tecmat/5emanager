@@ -1,4 +1,4 @@
-import type { AbilityScores, Character } from './types.js';
+import { DEFAULT_HOUSE_RULES, type AbilityScores, type Character } from './types.js';
 import type { Registry } from './registry.js';
 import { computeSpellSlots } from './rules/levelup.js';
 import { maxHp } from './rules/derived.js';
@@ -40,6 +40,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
   const char: Character = {
     id: `char-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: input.name,
+    houseRules: { ...DEFAULT_HOUSE_RULES },
     raceId: race!.id,
     subraceId: subrace?.id,
     background: input.background,

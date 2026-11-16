@@ -22,8 +22,17 @@ import {
   type Character,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
+import { unlockedMechanics, type HouseRules } from '@dnd5e/core';
 import { useStore } from './store.js';
 import LevelUpDialog from './LevelUpDialog.js';
+
+const RULE_LABELS: [keyof HouseRules, string][] = [
+  ['bypassSpellLimit', 'Ignora limite incantesimi appresi'],
+  ['bypassAsiCap', 'Ignora cap 20 delle caratteristiche'],
+  ['bypassAttunementLimit', 'Ignora sintonizzazione max 3'],
+  ['bypassXpCheck', 'Level-up senza requisiti XP'],
+  ['bypassLevelCap', 'Supera il livello 20'],
+];
 
 const ABILITY_IT: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
 
@@ -182,6 +191,36 @@ export default function Overview() {
               })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <div className="grid cols2">
+        <div className="card">
+          <h3>⚙️ Selettore regole (house-rules: eludi le regole)</h3>
+          {RULE_LABELS.map(([key, label]) => (
+            <div key={key}>
+              <label style={{ margin: '6px 0 0', color: 'var(--text)' }}>
+                <input
+                  type="checkbox"
+                  checked={char.houseRules[key]}
+                  onChange={() => setChar({ ...char, houseRules: { ...char.houseRules, [key]: !char.houseRules[key] }, updatedAt: new Date().toISOString() })}
+                  style={{ width: 'auto', marginRight: 6 }}
+                />
+                {label}
+              </label>
+            </div>
+          ))}
+          <div className="muted" style={{ marginTop: 8 }}>Utile per testare o per campagne con regole della casa.</div>
+        </div>
+        <div className="card">
+          <h3>🔓 Meccaniche sbloccate (scalano col livello)</h3>
+          {unlockedMechanics(char, reg).length === 0 && <div className="muted">Nessuna.</div>}
+          {unlockedMechanics(char, reg).map((m) => (
+            <div key={m.id} style={{ marginBottom: 6 }}>
+              <b>{m.name}</b> <span className="muted">— {m.source}</span>
+              <div className="muted">{m.detail}</div>
+            </div>
+          ))}
         </div>
       </div>
 

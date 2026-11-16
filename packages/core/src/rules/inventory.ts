@@ -46,7 +46,7 @@ export function setAttuned(char: Character, itemId: string, attuned: boolean, re
   const item = char.inventory.find((i) => i.id === itemId);
   if (!item) return { character: char, error: 'Oggetto non trovato' };
   if (!item.magic) return { character: char, error: 'Solo oggetti magici richiedono sintonizzazione' };
-  if (attuned && attunedCount(char) >= MAX_ATTUNEMENT && !item.attuned) {
+  if (attuned && !char.houseRules.bypassAttunementLimit && attunedCount(char) >= MAX_ATTUNEMENT && !item.attuned) {
     return { character: char, error: `Sintonizzazione massima (${MAX_ATTUNEMENT}) raggiunta` };
   }
   const next: Character = {

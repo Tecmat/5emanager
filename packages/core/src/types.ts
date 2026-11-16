@@ -222,8 +222,26 @@ export interface SpellSlotState {
   used: number;
 }
 
+/** selettore house-rules: ogni flag permette di eludere la relativa regola */
+export interface HouseRules {
+  bypassSpellLimit: boolean;
+  bypassAsiCap: boolean;
+  bypassAttunementLimit: boolean;
+  bypassXpCheck: boolean;
+  bypassLevelCap: boolean;
+}
+
+export const DEFAULT_HOUSE_RULES: HouseRules = {
+  bypassSpellLimit: false,
+  bypassAsiCap: false,
+  bypassAttunementLimit: false,
+  bypassXpCheck: false,
+  bypassLevelCap: false,
+};
+
 export interface Character {
   id: string;
+  houseRules: HouseRules;
   name: string;
   raceId: string;
   subraceId?: string;

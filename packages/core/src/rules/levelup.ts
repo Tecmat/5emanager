@@ -139,12 +139,12 @@ export function applyLevelUp(char: Character, reg: Registry, choices: LevelUpCho
   if (!cls) return { character: char, grantedFeatures: [], errors: ['Classe non trovata: ' + choices.classId] };
 
   const current = totalLevel(char);
-  if (current >= 20) errors.push('Livello massimo (20) raggiunto');
-  if (levelForXp(char.xp) <= current) errors.push('XP insufficienti per salire di livello');
+  if (current >= 20 && !char.houseRules.bypassLevelCap) errors.push('Livello massimo (20) raggiunto');
+  if (!char.houseRules.bypassXpCheck && levelForXp(char.xp) <= current) errors.push('XP insufficienti per salire di livello');
 
   let cl = char.classLevels.find((c) => c.classId === choices.classId);
   const newLevel = (cl?.level ?? 0) + 1;
-  if (newLevel > 20) errors.push('La classe non può superare il livello 20');
+  if (newLevel > 20 && !char.houseRules.bypassLevelCap) errors.push('La classe non può superare il livello 20');
   if (errors.length > 0) return { character: char, grantedFeatures: [], errors };
 
   const next: Character = {
@@ -197,8 +197,8 @@ export function applyLevelUp(char: Character, reg: Registry, choices: LevelUpCho
         for (const [ab, pts] of Object.entries(asi) as [Ability, number][]) {
           if (pts < 0 || pts > 2) errors.push(`ASI: ${ab} può aumentare al massimo di 2`);
           const newScore = next.abilityScores[ab] + pts;
-          if (newScore > 20) errors.push(`ASI: ${ab} supererebbe 20`);
-          next.abilityScores[ab] = Math.min(20, newScore);
+          if (newScore > 20 && !char.houseRules.bypassAsiCap) errors.push(`ASI: ${ab} supererebbe 20`);
+          next.abilityScores[ab] = char.houseRules.bypassAsiCap ? newScore : Math.min(20, newScore);
         }
       } else if (e.type === 'feat') {
         if (!wantsFeat) continue;
