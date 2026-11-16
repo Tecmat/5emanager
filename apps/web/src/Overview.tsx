@@ -22,7 +22,7 @@ import {
   type Character,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
-import { unlockedMechanics, type HouseRules } from '@dnd5e/core';
+import { DEFAULT_HOUSE_RULES, unlockedMechanics, type HouseRules } from '@dnd5e/core';
 import { useStore } from './store.js';
 import LevelUpDialog from './LevelUpDialog.js';
 
@@ -202,8 +202,8 @@ export default function Overview() {
               <label style={{ margin: '6px 0 0', color: 'var(--text)' }}>
                 <input
                   type="checkbox"
-                  checked={char.houseRules[key]}
-                  onChange={() => setChar({ ...char, houseRules: { ...char.houseRules, [key]: !char.houseRules[key] }, updatedAt: new Date().toISOString() })}
+                  checked={char.houseRules?.[key] ?? false}
+                  onChange={() => setChar({ ...char, houseRules: { ...DEFAULT_HOUSE_RULES, ...char.houseRules, [key]: !(char.houseRules?.[key] ?? false) }, updatedAt: new Date().toISOString() })}
                   style={{ width: 'auto', marginRight: 6 }}
                 />
                 {label}

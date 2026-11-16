@@ -75,6 +75,11 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
   return { character: char, errors: [] };
 }
 
+/** riempie i campi nuovi mancanti nelle schede salvate con versioni precedenti */
+export function migrateCharacter(char: Character): Character {
+  return { ...char, houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) } };
+}
+
 export function addXp(char: Character, amount: number): Character {
   return { ...char, xp: Math.max(0, char.xp + amount), updatedAt: new Date().toISOString() };
 }

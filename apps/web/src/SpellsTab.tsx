@@ -20,7 +20,7 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
   const castable = known;
   const slot = char.spellSlots[slotLevel];
   const maxKnown = maxSpellsKnown(char, reg);
-  const atLimit = spell.level > 0 && maxKnown !== Infinity && !char.houseRules.bypassSpellLimit && knownSpellCount(char, reg) >= maxKnown;
+  const atLimit = spell.level > 0 && maxKnown !== Infinity && !(char.houseRules?.bypassSpellLimit ?? false) && knownSpellCount(char, reg) >= maxKnown;
 
   return (
     <tr>
@@ -120,10 +120,10 @@ export default function SpellsTab() {
         <h3>
           Incantesimi conosciuti ({known.length})
           {maxKnown !== Infinity && (
-            <span className="muted"> — non-trucchetti {knownSpellCount(char, reg)}/{maxKnown}{char.houseRules.bypassSpellLimit ? ' (limite ignorato)' : ''}</span>
+            <span className="muted"> — non-trucchetti {knownSpellCount(char, reg)}/{maxKnown}{(char.houseRules?.bypassSpellLimit ?? false) ? ' (limite ignorato)' : ''}</span>
           )}
         </h3>
-        {maxKnown !== Infinity && !char.houseRules.bypassSpellLimit && knownSpellCount(char, reg) >= maxKnown && (
+        {maxKnown !== Infinity && !(char.houseRules?.bypassSpellLimit ?? false) && knownSpellCount(char, reg) >= maxKnown && (
           <div className="error">Limite raggiunto: dimentica un incantesimo per imparne uno nuovo (o attiva l'house-rule).</div>
         )}
         {known.length === 0 && <div className="muted">Nessun incantesimo conosciuto.</div>}

@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useMemo, useState, type ReactNode
 import {
   createRegistry,
   loadData,
+  migrateCharacter,
   type Character,
   type Registry,
   type SrdData,
@@ -14,7 +15,7 @@ const CUSTOM_KEY = 'dnd5e.custom.v1';
 function loadStoredCharacter(): Character | null {
   try {
     const raw = localStorage.getItem(CHAR_KEY);
-    return raw ? (JSON.parse(raw) as Character) : null;
+    return raw ? migrateCharacter(JSON.parse(raw) as Character) : null;
   } catch {
     return null;
   }

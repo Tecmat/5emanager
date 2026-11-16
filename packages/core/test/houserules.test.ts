@@ -141,3 +141,16 @@ describe('meccaniche sbloccate con il livello', () => {
     expect(surge?.detail).toContain('riposo lungo');
   });
 });
+
+describe('migrazione schede vecchie', () => {
+  it('migrateCharacter riempie houseRules mancante', async () => {
+    const { migrateCharacter, DEFAULT_HOUSE_RULES } = await import('../src/index.js');
+    const reg = createSrdRegistry();
+    const c = makeWizard(reg);
+    const old = { ...c } as Partial<Character>;
+    delete old.houseRules;
+    const migrated = migrateCharacter(old as Character);
+    expect(migrated.houseRules).toEqual(DEFAULT_HOUSE_RULES);
+    expect(migrated.name).toBe('Elara');
+  });
+});
