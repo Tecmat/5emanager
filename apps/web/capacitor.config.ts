@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.tecmat.5emanager',
+  appId: 'com.tecmat.emanager',
   appName: '5e Manager',
   webDir: 'dist',
   server: {

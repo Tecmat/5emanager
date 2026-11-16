@@ -1,47 +1,70 @@
 # D&D 5e — Gestore di Schede
 
 Gestore di schede per Dungeons & Dragons 5e: level-up automatizzato, liste incantesimi,
-inventario e contenuti custom (incantesimi, armi, armature, archetipi, classi intere).
+inventario, combattimento, tiri dado e contenuti custom (incantesimi, armi, armature,
+archetipi, classi intere). Disponibile come **WebApp/PWA**, **app desktop (Tauri)** e
+**Android (Capacitor)** — un unico codebase.
 
-## Target
+## Avvio rapido (web)
 
-- **WebApp** (PWA) — `apps/web`, React + TypeScript + Vite
-- **Desktop** — wrapper Tauri v2 della stessa web app (da aggiungere in `src-tauri/`)
-- **Android** — wrapper Capacitor (`npx cap add android` dentro `apps/web`)
+Richiede Node.js ≥ 22.12 (per i test) — la web app gira anche con Node 18+.
 
-Un unico codebase web, dati local-first (localStorage/IndexedDB) + export/import JSON.
+```bash
+npm install
+npm run dev        # http://127.0.0.1:5173
+npm test           # test del motore regole (vitest)
+npm run typecheck  # tsc su tutti i package
+```
 
 ## Struttura
 
 ```
-packages/core       # motore regole in TS puro: tipi, level-up, slot, CA, inventario, validazione
-packages/data-srd   # contenuti base 5e SRD (OGL) in JSON: 5 classi, 6 archetipi, 9 razze,
-                    # ~100 incantesimi, 37 armi, 13 armature, talenti, stili di combattimento
-apps/web            # interfaccia React: Panoramica / Incantesimi / Inventario / Contenuti custom
+packages/core       # motore regole TS puro: tipi, level-up, slot, CA, dadi, condizioni,
+                    # combattimento, inventario, house-rules, validazione custom
+packages/data-srd   # contenuti SRD (OGL) in JSON: 12 classi, 13 archetipi, 9 razze,
+                    # ~100 incantesimi, 37 armi, 13 armature, talenti, stili
+apps/web            # React + Vite + PWA (manifest + service worker)
+src-tauri/          # wrapper desktop Tauri v2
 ```
 
-## Comandi
+## Funzionalità
+
+- **Level-up guidato**: XP → dado vita → ASI/talento → stile → archetipo → expertise → slot (multiclasse inclusa)
+- **Stat derivate automatiche**: modificatori, TS, CA, bonus attacco, PF, initiative, percezione passiva, carico
+- **Incantesimi**: conosciuti/preparati, **limite appreso regolabile** (scambia con "Dimentica"), slot con upcast, concentration, riposo lungo
+- **Meccaniche sbloccate col livello**: risorse con usi calcolati, attacchi extra, dado dell'attacco furtivo scalato
+- **House-rules**: selettore per eludere regole (limite incantesimi, cap 20, sintonizzazione max 3, XP, livello 20)
+- **Tira dado** con vantaggio/svantaggio; **condizioni** (avvelenato, prono, invisibile...)
+- **Combattimento**: initiative, turni/round, PF e condizioni dei nemici
+- **Inventario**: peso, equipaggiamento, sintonizzazione, valuta
+- **Contenuti custom** validati, salvati in localStorage e separati dai dati SRD; scheda esportabile/importabile in JSON
+
+## Desktop (Tauri v2)
+
+Prerequisiti: [Rust toolchain](https://rustup.rs) + dipendenze di sistema (su Linux: `libwebkit2gtk-4.1-dev`, `libgtk-3-dev`, ecc. — vedi [tauri.app/prerequisites](https://v2.tauri.app/start/prerequisites/)).
 
 ```bash
-npm install
-npm test          # 23 test del motore regole (vitest)
-npm run typecheck # tsc su tutti i package
-npm run dev       # avvia la web app su http://127.0.0.1:5173
+npm run tauri:dev     # finestra di sviluppo con hot-reload
+npm run tauri:build   # pacchetti installabili (msi/deb/appimage/dmg/...)
 ```
 
-## Come funziona il level-up
+## Android (Capacitor)
 
-`applyLevelUp` (in `packages/core/src/rules/levelup.ts`) applica dado vita, feature
-della classe/sottoclasse, ASI o talento, stile di combattimento, archetipo, expertise
-e ricalcola gli slot incantesimo (anche in multiclasse, con la regola del livello caster).
+Prerequisiti: Android Studio + SDK (vedi [capacitorjs.com/docs/android](https://capacitorjs.com/docs/android)).
 
-## Contenuti custom
+```bash
+cd apps/web
+npx cap add android        # prima volta: crea apps/web/android
+npm run build:android      # build web + cap sync
+npx cap open android       # apre Android Studio → genera APK/AAB
+```
 
-Dalla tab "Contenuti custom" si aggiungono incantesimi/armi/armature (form) e classi
-intere (JSON, validato). I custom restano separati dai dati SRD e sono salvati in
-localStorage; si esportano con `exportCustomContent(reg)`.
+## PWA (installabile da browser)
+
+In produzione (`npm run build -w @dnd5e/web` + `vite preview`) il service worker è
+registrato automaticamente: dal browser scegli "Aggiungi a schermata Home" / "Installa app".
 
 ## Licenze
 
-I contenuti SRD 5e sono sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti
-non-SRD vanno inserted solo come custom dall'utente.
+Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
+vanno inseriti solo come custom dall'utente.
