@@ -22,6 +22,7 @@ import weapons from '../data/weapons.json';
 import armors from '../data/armors.json';
 import feats from '../data/feats.json';
 import fightingStyles from '../data/fighting-styles.json';
+import enemies from '../data/enemies.json';
 
 const classList = [fighter, wizard, rogue, cleric, paladin, barbarian, bard, druid, monk, ranger, sorcerer, warlock] as unknown as ClassDef[];
 
@@ -43,6 +44,7 @@ export const SRD_DATA: SrdData = {
   armors: armors as unknown as SrdData['armors'],
   feats: feats as unknown as SrdData['feats'],
   fightingStyles: fightingStyles as unknown as SrdData['fightingStyles'],
+  enemies: enemies as unknown as SrdData['enemies'],
 };
 
 export function createSrdRegistry(): Registry {

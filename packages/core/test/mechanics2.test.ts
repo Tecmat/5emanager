@@ -2,17 +2,22 @@ import { describe, expect, it } from 'vitest';
 import {
   addCombatant,
   addCondition,
+  addEnemy,
+  attack,
   currentCombatant,
   damageCombatant,
   hasDisadvantageFromConditions,
   healCombatant,
+  moveCombatant,
   nextTurn,
   parseDice,
   removeCondition,
   rerollInitiatives,
+  resolveAttack,
   rollDice,
   setCombatantCondition,
   startCombat,
+  useAction,
   createCharacter,
   type Character,
 } from '../src/index.js';
@@ -90,13 +95,16 @@ describe('combattimento', () => {
     }
   });
   it('nextTurn gira i turni e i round', () => {
+    const mk = (id: string, name: string, initiative: number): import('../src/index.js').Combatant => ({
+      id, name, hp: 10, maxHp: 10, initiative, conditions: [], conditionRounds: {},
+      isPlayer: false, ac: 12, speed: 30, movement: 30, attacks: [{ name: 'Stoccata', bonus: 4, dice: '1d6+2' }],
+      actionUsed: false, bonusUsed: false, reactionUsed: false,
+    });
     let s: import('../src/index.js').CombatState = {
-      combatants: [
-        { id: 'a', name: 'A', hp: 10, maxHp: 10, initiative: 20, conditions: [], isPlayer: false },
-        { id: 'b', name: 'B', hp: 10, maxHp: 10, initiative: 5, conditions: [], isPlayer: false },
-      ],
+      combatants: [mk('a', 'A', 20), mk('b', 'B', 5)],
       round: 1,
       turnIndex: 0,
+      log: [],
     };
     expect(currentCombatant(s)?.name).toBe('A');
     s = nextTurn(s);
@@ -118,5 +126,76 @@ describe('combattimento', () => {
     expect(s.combatants.find((c) => c.id === gob.id)?.conditions).toContain('prone');
     s = rerollInitiatives(s);
     expect(s.turnIndex).toBe(0);
+  });
+});
+
+describe('action economy e attaques', () => {
+  const mkState = (): import('../src/index.js').CombatState => {
+    const mk = (id: string, name: string, initiative: number, ac: number, attacks: import('../src/index.js').AttackDef[]): import('../src/index.js').Combatant => ({
+      id, name, hp: 20, maxHp: 20, initiative, conditions: [], conditionRounds: {},
+      isPlayer: false, ac, speed: 30, movement: 30, attacks,
+      actionUsed: false, bonusUsed: false, reactionUsed: false,
+    });
+    return {
+      combatants: [mk('att', 'Attaccante', 20, 12, [{ name: 'Spada', bonus: 5, dice: '1d8+3' }]), mk('def', 'Bersaglio', 5, 15, [])],
+      round: 1, turnIndex: 0, log: [],
+    };
+  };
+
+  it('attack() tira contro la CA, scala danni e consuma l\'azione', () => {
+    let s = mkState();
+    s = attack(s, 'att', 'def', 0);
+    const att = s.combatants.find((c) => c.id === 'att')!;
+    const def = s.combatants.find((c) => c.id === 'def')!;
+    expect(att.actionUsed).toBe(true);
+    expect(s.log.some((l) => l.includes('Spada'))).toBe(true);
+    // danno 0 solo se mancato; se colpito hp < 20
+    if (def.hp < 20) expect(def.hp).toBeLessThanOrEqual(20 - 4); // min 1d8+3 = 4
+  });
+
+  it('resolveAttack: contro CA 30 colpisce solo con 20 naturali (critici)', () => {
+    const attacker = mkState().combatants[0];
+    const target = { ...mkState().combatants[1], ac: 30 };
+    for (let i = 0; i < 100; i++) {
+      const o = resolveAttack(attacker, target, attacker.attacks[0]);
+      if (o.hit) expect(o.crit).toBe(true);
+    }
+  });
+
+  it('economia d\'azione: useAction/move decrementano e non vanno sotto zero', () => {
+    let s = mkState();
+    s = useAction(s, 'att');
+    s = moveCombatant(s, 'att', 12);
+    s = moveCombatant(s, 'att', 999);
+    const att = s.combatants.find((c) => c.id === 'att')!;
+    expect(att.actionUsed).toBe(true);
+    expect(att.movement).toBe(0);
+  });
+
+  it('nextTurn resetta azione/movimento e decrementa le condizioni a round', () => {
+    let s = mkState();
+    s = setCombatantCondition(s, 'att', 'stunned', true, 2);
+    s = useAction(s, 'att');
+    s = moveCombatant(s, 'att', 30);
+    s = nextTurn(s); // turno di B
+    s = nextTurn(s); // torna ad A (round 2): reset + cond stunned 2->1
+    const att = s.combatants.find((c) => c.id === 'att')!;
+    expect(s.round).toBe(2);
+    expect(att.actionUsed).toBe(false);
+    expect(att.movement).toBe(30);
+    expect(att.conditions).toContain('stunned');
+    expect(att.conditionRounds['stunned']).toBe(1);
+    s = nextTurn(s);
+    s = nextTurn(s); // round 3: stunned scade
+    const att2 = s.combatants.find((c) => c.id === 'att')!;
+    expect(att2.conditions).not.toContain('stunned');
+  });
+
+  it('addEnemy aggiunge nemici dallo statblock', () => {
+    let s = mkState();
+    s = addEnemy(s, reg, 'goblin', 3);
+    expect(s.combatants.filter((c) => c.name.startsWith('Goblin'))).toHaveLength(3);
+    expect(s.combatants.find((c) => c.name === 'Goblin 1')!.ac).toBe(15);
+    expect(s.combatants.find((c) => c.name === 'Goblin 1')!.attacks[0].dice).toBe('1d6+2');
   });
 });

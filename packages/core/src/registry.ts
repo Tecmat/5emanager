@@ -1,6 +1,7 @@
 import type {
   ArmorDef,
   ClassDef,
+  EnemyDef,
   FeatDef,
   RaceDef,
   SpellDef,
@@ -23,6 +24,7 @@ export interface Registry {
   armors: Map<string, ArmorDef>;
   feats: Map<string, FeatDef>;
   fightingStyles: Map<string, FightingStyleDef>;
+  enemies: Map<string, EnemyDef>;
 }
 
 export function createRegistry(): Registry {
@@ -35,6 +37,7 @@ export function createRegistry(): Registry {
     armors: new Map(),
     feats: new Map(),
     fightingStyles: new Map(),
+    enemies: new Map(),
   };
 }
 
@@ -47,6 +50,7 @@ export interface SrdData {
   armors: ArmorDef[];
   feats: FeatDef[];
   fightingStyles: FightingStyleDef[];
+  enemies: EnemyDef[];
 }
 
 export function loadData(reg: Registry, data: SrdData): void {
@@ -58,6 +62,7 @@ export function loadData(reg: Registry, data: SrdData): void {
   for (const a of data.armors) reg.armors.set(a.id, a);
   for (const f of data.feats) reg.feats.set(f.id, f);
   for (const f of data.fightingStyles) reg.fightingStyles.set(f.id, f);
+  for (const e of data.enemies ?? []) reg.enemies.set(e.id, e);
 }
 
 /** esporta solo i contenuti custom (source === 'custom') per salvataggio/backup */
@@ -71,6 +76,7 @@ export function exportCustomContent(reg: Registry): SrdData {
     armors: [...reg.armors.values()].filter((a) => a.source === 'custom'),
     feats: [...reg.feats.values()].filter((f) => f.source === 'custom'),
     fightingStyles: [...reg.fightingStyles.values()],
+    enemies: [...reg.enemies.values()].filter((e) => e.source === 'custom'),
   };
 }
 
@@ -84,5 +90,6 @@ export function exportAll(reg: Registry): SrdData {
     armors: [...reg.armors.values()],
     feats: [...reg.feats.values()],
     fightingStyles: [...reg.fightingStyles.values()],
+    enemies: [...reg.enemies.values()],
   };
 }

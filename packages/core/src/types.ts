@@ -174,6 +174,25 @@ export interface ArmorDef {
   source: 'srd' | 'custom';
 }
 
+export interface AttackDef {
+  name: string;
+  bonus: number;
+  dice: string;
+  type?: string;
+}
+
+export interface EnemyDef {
+  id: string;
+  name: string;
+  hp: number;
+  ac: number;
+  speed: number;
+  attacks: AttackDef[];
+  cr?: string;
+  abilities?: Partial<Record<Ability, number>>;
+  source: 'srd' | 'custom';
+}
+
 export interface FeatDef {
   id: string;
   name: string;
