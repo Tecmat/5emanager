@@ -57,3 +57,15 @@ details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .modal h2 { margin-top: 0; font-size: 16px; }
 .xpbar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
 .xpbar > div { height: 100%; background: var(--accent); }
+
+:root[data-theme='light'] {
+  --bg: #f5f1e8;
+  --panel: #fffdf7;
+  --panel2: #ece5d3;
+  --border: #d8cfba;
+  --text: #2a2519;
+  --muted: #6f6753;
+  --accent: #a07d10;
+  --accent2: #5f43d6;
+}
+:root[data-theme='light'] body { background: var(--bg); }

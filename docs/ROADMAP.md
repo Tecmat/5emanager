@@ -1,5 +1,16 @@
 # Roadmap — espansione di 5e Manager
 
+## ✅ Già implementato (nov 2026)
+
+- **Server multiplayer self-hosted** (`packages/server`, WS + campagne JSON, docs/SERVER.md) — fase 2
+- **Combattimento live con action economy** (azione/bonus/reazione/movimento, attaques vs CA, durate condizioni in round) — core + server + tab Campagna — fasi 1–3
+- **Statblock nemici** (`enemies.json`: goblin, orco, lupo, scheletro, bandito, ogre) + addEnemy dal master
+- Tab "🌐 Campagna": crea/unisciti, carica scheda locale, pannello master, log
+- Tema chiaro/scuro, toggle ispirazione
+- CI GitHub Actions (test/typecheck/build) + release su tag `v*` (web, Tauri, APK)
+
+---
+
 Idee per espandere drasticamente il gestore di schede. Ogni voce indica **dove si innesta**
 nell'architettura attuale: `packages/core` (regole), `packages/data-srd` (dati JSON),
 `apps/web` (UI), `src-tauri` / Capacitor (piattaforme).

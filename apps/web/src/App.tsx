@@ -13,6 +13,14 @@ type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'camp
 export default function App() {
   const { char } = useStore();
   const [tab, setTab] = useState<Tab>('panoramica');
+  const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
+
+  const toggleTheme = () => {
+    const t = theme === 'dark' ? 'light' : 'dark';
+    setTheme(t);
+    localStorage.setItem('dnd5e-theme', t);
+    document.documentElement.dataset.theme = t;
+  };
 
   if (!char) return <CreateForm />;
 
@@ -20,7 +28,10 @@ export default function App() {
     <>
       <header className="top">
         <h1>⚔️ D&D 5e — {char.name}</h1>
-        <span className="muted">Gestore schede</span>
+        <span className="row">
+          <span className="muted">Gestore schede</span>
+          <button onClick={toggleTheme} title="Cambia tema">{theme === 'dark' ? '🌙' : '☀️'}</button>
+        </span>
       </header>
       <main>
         <nav className="tabs">

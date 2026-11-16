@@ -4,6 +4,9 @@ import App from './App.js';
 import { StoreProvider } from './store.js';
 import './styles.css';
 
+const savedTheme = localStorage.getItem('dnd5e-theme');
+if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <StoreProvider>

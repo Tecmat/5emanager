@@ -117,7 +117,14 @@ export default function Overview() {
             <span className="tag">Iniziativa {fmt(initiativeBonus(char))}</span>
             <span className="tag">Percezione passiva {passivePerception(char)}</span>
             <span className="tag">Bonus proficiency {fmt(pb)}</span>
-            {char.inspiration && <span className="tag custom">Ispirazione</span>}
+            <button
+              className={`tag ${char.inspiration ? 'custom' : ''}`}
+              style={{ cursor: 'pointer', background: 'var(--panel2)', color: 'inherit', border: '1px solid var(--border)' }}
+              onClick={() => setChar({ ...char, inspiration: !char.inspiration, updatedAt: new Date().toISOString() })}
+              title="Attiva/disattiva ispirazione"
+            >
+              ⭐ {char.inspiration ? 'Ispirazione attiva' : 'Ispirazione'}
+            </button>
           </div>
           <div className="muted" style={{ marginTop: 6 }} title={breakdown.join('\n')}>CA: {breakdown.join(' · ')}</div>
           <div className="row" style={{ marginTop: 10 }}>
