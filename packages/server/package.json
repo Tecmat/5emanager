@@ -1,0 +1,24 @@
+{
+  "name": "@dnd5e/server",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx watch src/index.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json"
+  },
+  "dependencies": {
+    "@dnd5e/core": "*",
+    "@dnd5e/data-srd": "*",
+    "ws": "^8"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/ws": "^8",
+    "tsx": "^4",
+    "typescript": "5.9.3",
+    "vitest": "5.1.0"
+  }
+}

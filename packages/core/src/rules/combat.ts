@@ -65,6 +65,43 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
   return { combatants: [player], round: 1, turnIndex: 0, log: [`⚔️ Combattimento iniziato! ${char.name} entra con CA ${ac}.`] };
 }
 
+/** combattimento con tutta la party: un combattente per personaggio */
+export function startPartyCombat(chars: Character[], reg: Registry): CombatState {
+  const combatants: Combatant[] = chars.map((char) => {
+    const ac = armorClass(char, reg).ac;
+    const speed = reg.races.get(char.raceId)?.speed ?? DEFAULT_SPEED;
+    const attacks: AttackDef[] = [];
+    for (const item of char.inventory) {
+      if (!item.equipped || item.kind !== 'weapon' || !item.refId) continue;
+      const w = reg.weapons.get(item.refId);
+      if (w) attacks.push({ name: w.name, bonus: attackBonus(char, w).bonus, dice: w.damage, type: w.damageType });
+    }
+    return {
+      id: char.id,
+      name: char.name,
+      hp: char.hp.current,
+      maxHp: char.hp.current,
+      initiative: rollDice('1d20')?.total ?? 10,
+      conditions: [...char.conditions],
+      conditionRounds: {},
+      isPlayer: true,
+      ac,
+      speed,
+      movement: speed,
+      attacks,
+      actionUsed: false,
+      bonusUsed: false,
+      reactionUsed: false,
+    };
+  });
+  return {
+    combatants: sortByInitiative(combatants),
+    round: 1,
+    turnIndex: 0,
+    log: [`⚔️ Combattimento iniziato con ${combatants.length} PG!`],
+  };
+}
+
 let seq = 0;
 
 function baseCombatant(input: { name: string; hp: number; initiative?: number; ac?: number; speed?: number; attacks?: AttackDef[]; isPlayer?: boolean }): Combatant {
