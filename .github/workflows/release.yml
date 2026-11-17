@@ -39,7 +39,7 @@ jobs:
         with:
           tagName: ${{ github.ref_name }}
           distDir: apps/web/dist
-          bundler: ${{ runner.os }}
+          githubToken: ${{ secrets.GITHUB_TOKEN }}
 
   android:
     runs-on: ubuntu-latest
@@ -53,7 +53,12 @@ jobs:
         with:
           distribution: temurin
           java-version: 17
-      - uses: android-actions/setup-android@v3
+      - name: Android SDK (preinstallato sul runner)
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       - run: cd apps/web && npx cap add android && npx cap sync
