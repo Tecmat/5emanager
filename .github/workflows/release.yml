@@ -35,13 +35,14 @@ jobs:
       - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
       - run: npm ci
       - run: npm run build -w @dnd5e/web
-      - uses: tauri-apps/tauri-action@v0
+      - run: npm run tauri:build
+      - uses: actions/upload-artifact@v4
         with:
-          tagName: ${{ github.ref_name }}
-          distDir: apps/web/dist
-          githubToken: ${{ secrets.GITHUB_TOKEN }}
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          name: desktop-bundles
+          path: src-tauri/target/release/bundle
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: src-tauri/target/release/bundle/**/*
 
   android:
     runs-on: ubuntu-latest
@@ -59,7 +60,7 @@ jobs:
         env:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
-          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
           "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
       - run: npm ci
       - run: npm run build -w @dnd5e/web
@@ -69,3 +70,6 @@ jobs:
         with:
           name: app-debug-apk
           path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
