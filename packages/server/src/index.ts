@@ -2,6 +2,7 @@ import { createServer, type IncomingMessage, type ServerResponse } from 'node:ht
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { randomUUID } from 'node:crypto';
+import { networkInterfaces } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
 import { createRegistry, loadData, type Registry } from '@dnd5e/core';
 import { SRD_DATA } from '@dnd5e/data-srd';
@@ -207,10 +208,22 @@ export function createDndServer(port = PORT, host = HOST) {
 }
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop() ?? '');
+export function lanAddresses(port: number): string[] {
+  const out: string[] = [];
+  for (const ifaces of Object.values(networkInterfaces())) {
+    for (const i of ifaces ?? []) {
+      if (i.family === 'IPv4' && !i.internal) out.push(`${i.address}:${port}`);
+    }
+  }
+  return out;
+}
+
 if (process.argv[1]?.includes('server/src/index')) {
   createDndServer().then(({ port }) => {
     console.log(`🎲 5e Manager server in ascolto su http://${HOST}:${port}`);
-    console.log(`   Web app: http://<host>:${port}/  (build: npm run build -w @dnd5e/web)`);
-    console.log(`   WebSocket: ws://<host>:${port}`);
+    for (const addr of lanAddresses(port)) {
+      console.log(`   📱 LAN: http://${addr}/   (WebSocket: ws://${addr})`);
+    }
+    console.log(`   Web app: http://localhost:${port}/  (build: npm run build -w @dnd5e/web)`);
   });
 }
