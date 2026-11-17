@@ -1,0 +1,17 @@
+[Unit]
+Description=5e Manager server (web + websocket)
+After=network.target
+
+[Service]
+Type=simple
+User=5eapp
+WorkingDirectory=/opt/5emanager/app
+Environment=PORT=3001
+Environment=HOST=0.0.0.0
+Environment=DND5E_DATA_DIR=/var/lib/5emanager/data
+ExecStart=/usr/bin/npx tsx packages/server/src/index.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

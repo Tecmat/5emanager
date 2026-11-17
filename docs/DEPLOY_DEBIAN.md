@@ -42,29 +42,10 @@ sudo -u 5eapp npm run build -w @dnd5e/web
 
 ## 3. Servizio systemd
 
-`/etc/systemd/system/5emanager.service`:
-
-```ini
-[Unit]
-Description=5e Manager server (web + websocket)
-After=network.target
-
-[Service]
-Type=simple
-User=5eapp
-WorkingDirectory=/opt/5emanager/app
-Environment=PORT=3001
-Environment=HOST=0.0.0.0
-Environment=DND5E_DATA_DIR=/var/lib/5emanager/data
-ExecStart=/usr/bin/npx tsx packages/server/src/index.ts
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-```
+Il file unit è nel repo: `deploy/5emanager.service`. Copialo e avvia:
 
 ```bash
+sudo cp /opt/5emanager/app/deploy/5emanager.service /etc/systemd/system/
 sudo systemctl daemon-reload
 sudo systemctl enable --now 5emanager
 sudo systemctl status 5emanager

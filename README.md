@@ -74,3 +74,7 @@ registrato automaticamente: dal browser scegli "Aggiungi a schermata Home" / "In
 
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
 vanno inseriti solo come custom dall'utente.
+
+## Nota sicurezza
+
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 45/45 verdi.
