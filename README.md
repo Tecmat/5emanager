@@ -61,7 +61,7 @@ npx cap open android       # apre Android Studio → genera APK/AAB
 
 ## Multiplayer (server self-hosted)
 
-Il server gira anche **direttamente su Android via Termux**: vedi [docs/ANDROID_SERVER.md](docs/ANDROID_SERVER.md).
+Il server gira anche **direttamente su Android via Termux** ([docs/ANDROID_SERVER.md](docs/ANDROID_SERVER.md)) o su un **server Debian con systemd** ([docs/DEPLOY_DEBIAN.md](docs/DEPLOY_DEBIAN.md)).
 
 `npm run build -w @dnd5e/web && npm run server` → apre http://localhost:3001 con web app + WebSocket: campagne condivise master/giocatori, combattimento live con action economy (vedi [docs/SERVER.md](docs/SERVER.md)).
 
