@@ -33,20 +33,35 @@ Apri `http://<host>:3001/` da più dispositivi (stessa rete) → tab **🌐 Camp
 
 ## Protocollo (JSON su WebSocket)
 
-Client→Server: `create`, `join`, `list`, `action` (setCharacter, startCombat, addEnemy,
+Client→Server: `create`, `join`, `list`, `ping` (check connessione, con `id` ecoato),
+`register` / `login` (account per username), `action` (setCharacter, startCombat, addEnemy,
 rollInitiative, attack, move, useBonus, useReaction, setCondition, damage, heal, nextTurn,
-endCombat, addCustom, leave)
+endCombat, addCustom, leave, **saveCharacter**, **deleteCharacter**, **useCharacter**)
 
-Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`, `error`
+Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`, `auth`
+(token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`), `error`
+
+## Account e libreria schede
+
+- `register { username }` / `login { username }` → `auth { token, username, characters }`;
+  le sessioni sono in memoria (token → username) e si perdono al riavvio del server
+- **Le password degli account per ora sono SOLO lato client**: il server registra/accede
+  per username e non le vede mai (TODO verifica lato server). L'hash sha256 resta nel
+  localStorage del browser.
+- `saveCharacter` / `deleteCharacter` salvano la scheda nella libreria dell'account
+  (persistente in `accounts.data` dentro la data dir); `useCharacter` la carica in campagna
+  al posto di `setCharacter`
 
 ## Persistenza e regole per campagna
 
-- Campagne salvate in `data/campaigns/<id>.json` (modifica con `DND5E_DATA_DIR`)
+- Campagne salvate in `data/campaigns/<id>.json` (modifica con `DND5E_DATA_DIR`);
+  gli account in `accounts.data` nella stessa cartella (override con `DND5E_ACCOUNTS_FILE`)
 - Ogni campagna ha i suoi **contenuti custom** (`addCustom` dal master) che vengono
   uniti al set SRD nel registry del server — la campagna può avere il "suo set di regole, classi e razze"
 - Le house-rules della campagna sono nel modello (`campaign.houseRules`)
 
 ## Sicurezza
 
-Pensato per **LAN / rete privata / tailscale**: password di campagna (sha256), niente account.
-Non esporlo su Internet pubblico senza un reverse proxy con TLS + auth aggiuntiva.
+Pensato per **LAN / rete privata / tailscale**: password di campagna (sha256) e account per
+username (password ancora solo lato client). Non esporlo su Internet pubblico senza un
+reverse proxy con TLS + auth aggiuntiva.

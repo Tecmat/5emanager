@@ -2,39 +2,364 @@
   "id": "barbarian",
   "name": "Barbaro",
   "hitDie": 12,
-  "primaryAbility": ["str"],
-  "savingThrows": ["str", "con"],
-  "armorProficiencies": ["light", "medium", "shield"],
-  "weaponProficiencies": ["simple", "martial"],
+  "primaryAbility": [
+    "str"
+  ],
+  "savingThrows": [
+    "str",
+    "con"
+  ],
+  "armorProficiencies": [
+    "light",
+    "medium",
+    "shield"
+  ],
+  "weaponProficiencies": [
+    "simple",
+    "martial"
+  ],
   "toolProficiencies": [],
-  "skillChoices": { "choose": 2, "from": ["animalHandling", "athletics", "intimidation", "nature", "perception", "survival"] },
+  "skillChoices": {
+    "choose": 2,
+    "from": [
+      "animalHandling",
+      "athletics",
+      "intimidation",
+      "nature",
+      "perception",
+      "survival"
+    ]
+  },
   "features": {
     "1": [
-      { "id": "rage", "name": "Furia", "description": "Azione bonus: +danni, resistenza a contundente/perforante/taglio, non puoi lanciare incantesimi.", "effects": [{ "type": "resource", "id": "rage", "name": "Furia", "usesTable": { "1": 2, "2": 2, "3": 3, "4": 3, "5": 3, "6": 4, "7": 4, "8": 4, "9": 4, "10": 4, "11": 5, "12": 5, "13": 5, "14": 5, "15": 5, "16": 6, "17": 6, "18": 6, "19": 6, "20": 999 }, "longRest": true, "data": { "damageBonus": 2 } }] },
-      { "id": "unarmored-defense-barbarian", "name": "Difesa senza Armatura", "description": "CA = 10 + Des + Con se senza armatura.", "effects": [{ "type": "unarmoredDefense", "ability": "con" }] }
+      {
+        "id": "rage",
+        "name": "Furia",
+        "description": "Azione bonus: +danni, resistenza a contundente/perforante/taglio, non puoi lanciare incantesimi.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "rage",
+            "name": "Furia",
+            "usesTable": {
+              "1": 2,
+              "2": 2,
+              "3": 3,
+              "4": 3,
+              "5": 3,
+              "6": 4,
+              "7": 4,
+              "8": 4,
+              "9": 4,
+              "10": 4,
+              "11": 5,
+              "12": 5,
+              "13": 5,
+              "14": 5,
+              "15": 5,
+              "16": 6,
+              "17": 6,
+              "18": 6,
+              "19": 6,
+              "20": 999
+            },
+            "longRest": true,
+            "data": {
+              "damageBonus": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "unarmored-defense-barbarian",
+        "name": "Difesa senza Armatura",
+        "description": "CA = 10 + Des + Con se senza armatura.",
+        "effects": [
+          {
+            "type": "unarmoredDefense",
+            "ability": "con"
+          }
+        ]
+      }
     ],
-    "2": [{ "id": "reckless-attack", "name": "Attacco Temerario", "description": "Vantaggio agli attacchi in mischia, ma gli attacchi contro di te hanno vantaggio.", "effects": [{ "type": "custom", "description": "Attacco temerario: vantaggio agli attacchi corpo a corpo, svantaggio alla CA contro gli altri." }] }],
-    "3": [{ "id": "primal-path", "name": "Sentiero Primordiale", "description": "Scegli un sentiero.", "effects": [{ "type": "subclass", "options": ["berserker"] }] }],
-    "4": [{ "id": "asi-4", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
+    "2": [
+      {
+        "id": "reckless-attack",
+        "name": "Attacco Temerario",
+        "description": "Vantaggio agli attacchi in mischia, ma gli attacchi contro di te hanno vantaggio.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Attacco temerario: vantaggio agli attacchi corpo a corpo, svantaggio alla CA contro gli altri."
+          }
+        ]
+      }
+    ],
+    "3": [
+      {
+        "id": "primal-path",
+        "name": "Sentiero Primordiale",
+        "description": "Scegli un sentiero.",
+        "effects": [
+          {
+            "type": "subclass",
+            "options": [
+              "berserker"
+            ]
+          }
+        ]
+      }
+    ],
+    "4": [
+      {
+        "id": "asi-4",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
     "5": [
-      { "id": "extra-attack", "name": "Attacco Extra", "description": "Due attacchi con l'azione Attacco.", "effects": [{ "type": "extraAttack", "count": 1 }] },
-      { "id": "fast-movement", "name": "Movimento Veloce", "description": "+3 m di velocità se non indossi armatura pesante.", "effects": [{ "type": "custom", "description": "Movimento veloce: +3 m." }] }
+      {
+        "id": "extra-attack",
+        "name": "Attacco Extra",
+        "description": "Due attacchi con l'azione Attacco.",
+        "effects": [
+          {
+            "type": "extraAttack",
+            "count": 1
+          }
+        ]
+      },
+      {
+        "id": "fast-movement",
+        "name": "Movimento Veloce",
+        "description": "+3 m di velocità se non indossi armatura pesante.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Movimento veloce: +3 m."
+          }
+        ]
+      }
     ],
-    "6": [{ "id": "path-feature-6", "name": "Privilegio del sentiero", "description": "Privilegio del sentiero al 6° livello.", "effects": [{ "type": "custom", "description": "Privilegio del sentiero (6°)." }] }],
-    "7": [{ "id": "danger-sense", "name": "Sesto della Pericolo", "description": "Vantaggio ai TS Des contro effetti che puoi vedere.", "effects": [{ "type": "custom", "description": "Sesto del pericolo: vantaggio su TS Des contro minacce visibili." }] }],
-    "8": [{ "id": "asi-8", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
-    "9": [{ "id": "brutal-critical-1", "name": "Critico Brutale (1)", "description": "1 dado arma extra sui critici.", "effects": [{ "type": "custom", "description": "Critico brutale: +1 dado arma sui colpi critici." }] }],
-    "10": [{ "id": "path-feature-10", "name": "Privilegio del sentiero", "description": "Privilegio del sentiero al 10° livello.", "effects": [{ "type": "custom", "description": "Privilegio del sentiero (10°)." }] }],
-    "11": [{ "id": "relentless-rage", "name": "Furia Inestinguibile", "description": "A 1 PF puoi restare a 1 PF invece di 0 (TS Con CD 10+).", "effects": [{ "type": "custom", "description": "Furia inestinguibile: a 1 PF resti in piedi con TS Con." }] }],
-    "12": [{ "id": "asi-12", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
-    "13": [{ "id": "brutal-critical-2", "name": "Critico Brutale (2)", "description": "2 dadi arma extra sui critici.", "effects": [{ "type": "custom", "description": "Critico brutale: +2 dadi arma sui critici." }] }],
-    "14": [{ "id": "path-feature-14", "name": "Privilegio del sentiero", "description": "Privilegio del sentiero al 14° livello.", "effects": [{ "type": "custom", "description": "Privilegio del sentiero (14°)." }] }],
-    "15": [{ "id": "persistent-rage", "name": "Furia Persistente", "description": "La furia non finisce prima del tempo a 1 PF.", "effects": [{ "type": "custom", "description": "Furia persistente." }] }],
-    "16": [{ "id": "asi-16", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
-    "17": [{ "id": "brutal-critical-3", "name": "Critico Brutale (3)", "description": "3 dadi arma extra sui critici.", "effects": [{ "type": "custom", "description": "Critico brutale: +3 dadi arma sui critici." }] }],
-    "18": [{ "id": "indomitable-might", "name": "Possanza Indomabile", "description": "Prova di Forza con bonus pari al modificatore di Forza.", "effects": [{ "type": "custom", "description": "Possanza indomabile: prova di Forza con bonus = mod Forza, 1 uso a riposo lungo." }] }],
-    "19": [{ "id": "asi-19", "name": "Aumento dei punteggi caratteristica", "description": "+2 punti o un talento.", "effects": [{ "type": "asi", "points": 2 }, { "type": "feat" }] }],
-    "20": [{ "id": "unlimited-rage", "name": "Furia Illimitata", "description": "Nessun limite di utilizzi della furia.", "effects": [{ "type": "custom", "description": "Furia illimitata." }] }]
+    "6": [
+      {
+        "id": "path-feature-6",
+        "name": "Privilegio del sentiero",
+        "description": "Privilegio del sentiero al 6° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio del sentiero (6°)."
+          }
+        ]
+      }
+    ],
+    "7": [
+      {
+        "id": "danger-sense",
+        "name": "Sesto della Pericolo",
+        "description": "Vantaggio ai TS Des contro effetti che puoi vedere.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Sesto del pericolo: vantaggio su TS Des contro minacce visibili."
+          }
+        ]
+      }
+    ],
+    "8": [
+      {
+        "id": "asi-8",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "9": [
+      {
+        "id": "brutal-critical-1",
+        "name": "Critico Brutale (1)",
+        "description": "1 dado arma extra sui critici.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Critico brutale: +1 dado arma sui colpi critici."
+          }
+        ]
+      }
+    ],
+    "10": [
+      {
+        "id": "path-feature-10",
+        "name": "Privilegio del sentiero",
+        "description": "Privilegio del sentiero al 10° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio del sentiero (10°)."
+          }
+        ]
+      }
+    ],
+    "11": [
+      {
+        "id": "relentless-rage",
+        "name": "Furia Inestinguibile",
+        "description": "A 1 PF puoi restare a 1 PF invece di 0 (TS Con CD 10+).",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Furia inestinguibile: a 1 PF resti in piedi con TS Con."
+          }
+        ]
+      }
+    ],
+    "12": [
+      {
+        "id": "asi-12",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "13": [
+      {
+        "id": "brutal-critical-2",
+        "name": "Critico Brutale (2)",
+        "description": "2 dadi arma extra sui critici.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Critico brutale: +2 dadi arma sui critici."
+          }
+        ]
+      }
+    ],
+    "14": [
+      {
+        "id": "path-feature-14",
+        "name": "Privilegio del sentiero",
+        "description": "Privilegio del sentiero al 14° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio del sentiero (14°)."
+          }
+        ]
+      }
+    ],
+    "15": [
+      {
+        "id": "persistent-rage",
+        "name": "Furia Persistente",
+        "description": "La furia non finisce prima del tempo a 1 PF.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Furia persistente."
+          }
+        ]
+      }
+    ],
+    "16": [
+      {
+        "id": "asi-16",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "17": [
+      {
+        "id": "brutal-critical-3",
+        "name": "Critico Brutale (3)",
+        "description": "3 dadi arma extra sui critici.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Critico brutale: +3 dadi arma sui critici."
+          }
+        ]
+      }
+    ],
+    "18": [
+      {
+        "id": "indomitable-might",
+        "name": "Possanza Indomabile",
+        "description": "Prova di Forza con bonus pari al modificatore di Forza.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Possanza indomabile: prova di Forza con bonus = mod Forza, 1 uso a riposo lungo."
+          }
+        ]
+      }
+    ],
+    "19": [
+      {
+        "id": "asi-19",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "20": [
+      {
+        "id": "unlimited-rage",
+        "name": "Furia Illimitata",
+        "description": "Nessun limite di utilizzi della furia.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Furia illimitata."
+          }
+        ]
+      }
+    ]
   },
-  "source": "srd"
+  "source": "srd",
+  "multiclassPrereq": {
+    "str": 13
+  }
 }

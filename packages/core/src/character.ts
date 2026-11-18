@@ -1,7 +1,67 @@
-import { DEFAULT_HOUSE_RULES, type AbilityScores, type Character } from './types.js';
+import { ABILITIES, DEFAULT_HOUSE_RULES, type Ability, type AbilityScores, type Character } from './types.js';
 import type { Registry } from './registry.js';
 import { computeSpellSlots } from './rules/levelup.js';
 import { maxHp } from './rules/derived.js';
+import { rollDice } from './rules/dice.js';
+
+export type StatGenMode = 'standard' | 'pointbuy' | 'roll';
+
+export const STANDARD_ARRAY = [15, 14, 13, 12, 10, 8] as const;
+
+export const POINT_BUY_BUDGET = 27;
+export const POINT_BUY_MIN = 8;
+export const POINT_BUY_MAX = 15;
+
+const POINT_BUY_COST: Record<number, number> = { 8: 0, 9: 1, 10: 2, 11: 3, 12: 4, 13: 5, 14: 7, 15: 9 };
+
+export function pointCostTo(score: number): number {
+  if (score < POINT_BUY_MIN) return Infinity;
+  if (score > POINT_BUY_MAX) return Infinity;
+  return POINT_BUY_COST[score];
+}
+
+export function pointBuySpent(scores: Partial<AbilityScores>): number {
+  let spent = 0;
+  for (const v of Object.values(scores)) {
+    if (typeof v === 'number') spent += pointCostTo(v);
+  }
+  return spent;
+}
+
+export function isPointBuyValid(scores: Partial<AbilityScores>): boolean {
+  for (const ab of ABILITIES) {
+    const v = scores[ab];
+    if (typeof v !== 'number' || v < POINT_BUY_MIN || v > POINT_BUY_MAX) return false;
+  }
+  return pointBuySpent(scores) <= POINT_BUY_BUDGET;
+}
+
+/** tira 4d6 e scarta il dado più basso */
+export function roll4d6DropLowest(): number {
+  const r = rollDice('4d6');
+  if (!r || r.rolls.length < 4) return 10;
+  return r.total - Math.min(...r.rolls);
+}
+
+export function generateAbilityScores(mode: StatGenMode): AbilityScores {
+  if (mode === 'standard') {
+    const scores = {} as AbilityScores;
+    ABILITIES.forEach((ab, i) => { scores[ab] = STANDARD_ARRAY[i]; });
+    return scores;
+  }
+  if (mode === 'roll') {
+    const scores = {} as AbilityScores;
+    for (const ab of ABILITIES) scores[ab] = roll4d6DropLowest();
+    return scores;
+  }
+  const scores = {} as AbilityScores;
+  for (const ab of ABILITIES) scores[ab] = POINT_BUY_MIN;
+  return scores;
+}
+
+export function abilityForIndex(i: number): Ability {
+  return ABILITIES[i];
+}
 
 export interface CreateCharacterInput {
   name: string;
@@ -40,6 +100,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
   const char: Character = {
     id: `char-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: input.name,
+    portrait: undefined,
     houseRules: { ...DEFAULT_HOUSE_RULES },
     raceId: race!.id,
     subraceId: subrace?.id,
@@ -66,6 +127,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     inventory: [],
     currency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     hp: { current: 0, temp: 0 },
+    deathSaves: { successes: 0, failures: 0 },
     conditions: [],
     notes: '',
     createdAt: now,
@@ -82,6 +144,7 @@ export function migrateCharacter(char: Character): Character {
     ...char,
     houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) },
     conditions: char.conditions ?? [],
+    deathSaves: char.deathSaves ?? { successes: 0, failures: 0 },
   };
 }
 
@@ -102,5 +165,30 @@ export function damage(char: Character, amount: number): Character {
 }
 
 export function heal(char: Character, amount: number, max: number): Character {
-  return { ...char, hp: { ...char.hp, current: Math.min(max, char.hp.current + amount) }, updatedAt: new Date().toISOString() };
+  const wasDown = char.hp.current <= 0;
+  const next = { ...char, hp: { ...char.hp, current: Math.min(max, char.hp.current + amount) }, updatedAt: new Date().toISOString() };
+  // curare da 0 PF: risveglia con 1 PF e resetta i tiri della morte
+  if (wasDown && next.hp.current > 0) {
+    next.hp.current = Math.max(1, next.hp.current);
+    next.deathSaves = { successes: 0, failures: 0 };
+  }
+  return next;
+}
+
+/** registra un tiro della morte (a 0 PF): 3 successi = torni a 1 PF, 3 fallimenti = morto */
+export function recordDeathSave(char: Character, success: boolean): Character {
+  const ds = { ...(char.deathSaves ?? { successes: 0, failures: 0 }) };
+  if (success) ds.successes = Math.min(3, ds.successes + 1);
+  else ds.failures = Math.min(3, ds.failures + 1);
+  const revived = ds.successes >= 3;
+  return {
+    ...char,
+    deathSaves: ds,
+    hp: revived ? { current: 1, temp: char.hp.temp } : char.hp,
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+export function isDead(char: Character): boolean {
+  return char.hp.current <= 0 && (char.deathSaves?.failures ?? 0) >= 3;
 }

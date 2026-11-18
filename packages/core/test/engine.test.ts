@@ -254,6 +254,7 @@ describe('incantesimi e slot', () => {
   });
   it('multiclasse paladino 5 + mago 5: livello caster 7', () => {
     let c = addXp(makeWizard(reg), 355000);
+    c = { ...c, houseRules: { ...c.houseRules, bypassPrereq: true } }; // il test verifica gli slot, non i prerequisiti
     const wizChoices = [
       { hpRoll: 4, subclassId: 'evocation' }, // liv 2
       { hpRoll: 4 }, // liv 3

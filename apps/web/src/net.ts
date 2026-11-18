@@ -21,6 +21,30 @@ export class NetClient {
   send(m: unknown): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m));
   }
+  /** misura il round-trip verso il server; reject se non connesso o scaduto */
+  ping(timeoutMs = 5000): Promise<{ rtt: number; serverTime: number }> {
+    return new Promise((resolve, reject) => {
+      if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+        reject(new Error('Non connesso'));
+        return;
+      }
+      const id = Math.random().toString(36).slice(2);
+      const t0 = performance.now();
+      const timer = setTimeout(() => {
+        this.handlers = this.handlers.filter((h) => h !== h2);
+        reject(new Error('Ping scaduto (timeout)'));
+      }, timeoutMs);
+      const h2: Handler = (m) => {
+        if (m.t === 'pong' && m.id === id) {
+          clearTimeout(timer);
+          this.handlers = this.handlers.filter((h) => h !== h2);
+          resolve({ rtt: performance.now() - t0, serverTime: m.serverTime });
+        }
+      };
+      this.onMessage(h2);
+      this.send({ t: 'ping', id });
+    });
+  }
   close(): void {
     this.ws?.close();
     this.ws = null;

@@ -25,6 +25,11 @@ export type ClientMessage =
   | { t: 'create'; name: string; password: string; campaignName: string }
   | { t: 'join'; campaignId: string; password: string; name: string; role?: 'master' | 'player' }
   | { t: 'list' }
+  // TODO: verifica password lato server. Per ora le password degli account restano SOLO lato client:
+  // il server registra/accede per username e non vede mai la password.
+  | { t: 'register'; username: string }
+  | { t: 'login'; username: string }
+  | { t: 'ping'; id: string }
   | { t: 'action'; action: ClientAction };
 
 export type ClientAction =
@@ -42,10 +47,15 @@ export type ClientAction =
   | { kind: 'nextTurn' }
   | { kind: 'endCombat' }
   | { kind: 'addCustom'; data: Partial<SrdData> }
-  | { kind: 'leave' };
+  | { kind: 'leave' }
+  | { kind: 'saveCharacter'; character: Character }
+  | { kind: 'deleteCharacter'; characterId: string }
+  | { kind: 'useCharacter'; characterId: string };
 
 export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
   | { t: 'campaigns'; list: { id: string; name: string; players: number }[] }
   | { t: 'state'; campaign: Campaign }
+  | { t: 'auth'; token: string; username: string; characters: Character[] }
+  | { t: 'pong'; id: string; serverTime: number }
   | { t: 'error'; message: string };

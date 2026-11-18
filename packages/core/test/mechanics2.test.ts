@@ -199,3 +199,102 @@ describe('action economy e attaques', () => {
     expect(s.combatants.find((c) => c.name === 'Goblin 1')!.attacks[0].dice).toBe('1d6+2');
   });
 });
+
+describe('nuove funzioni (fase P0)', () => {
+  it('initiative include il modificatore Des', () => {
+    const c = makeChar(); // dex 15 -> +2
+    const s = startCombat(c, reg);
+    expect(s.combatants[0].initiative).toBeGreaterThanOrEqual(1 + 2);
+    expect(s.combatants[0].initiative).toBeLessThanOrEqual(20 + 2);
+  });
+
+  it('spellcastingInfo: mago liv 1 int 17 -> +7 attacco, CD 15', async () => {
+    const { spellcastingInfo, createCharacter: cc } = await import('../src/index.js');
+    const wiz = cc({
+      name: 'W', raceId: 'elf', subraceId: 'high-elf', classId: 'wizard',
+      abilityScores: { str: 8, dex: 14, con: 13, int: 16, wis: 12, cha: 10 },
+    }, reg).character!;
+    const info = spellcastingInfo(wiz, reg)!;
+    expect(info.attackBonus).toBe(8 + 2 + 3); // 17 int -> +3
+    expect(info.saveDC).toBe(13);
+  });
+
+  it('tiri della morte: 3 successi → 1 PF, 3 fallimenti → morto; cura da 0 resetta', async () => {
+    const { damage, heal, recordDeathSave, isDead } = await import('../src/index.js');
+    let c = makeChar();
+    c = damage(c, 999);
+    expect(c.hp.current).toBe(0);
+    c = recordDeathSave(c, false);
+    c = recordDeathSave(c, false);
+    c = recordDeathSave(c, true);
+    expect(isDead(c)).toBe(false);
+    c = recordDeathSave(c, false);
+    c = recordDeathSave(c, false);
+    expect(isDead(c)).toBe(true); // 3 fallimenti
+    let d = heal(c, 5, 13);
+    expect(d.hp.current).toBeGreaterThanOrEqual(1);
+    expect(d.deathSaves).toEqual({ successes: 0, failures: 0 });
+    // 3 successi → risveglio a 1 PF
+    let e = damage(makeChar(), 999);
+    e = recordDeathSave(e, true); e = recordDeathSave(e, true); e = recordDeathSave(e, true);
+    expect(e.hp.current).toBe(1);
+    expect(e.deathSaves.successes).toBe(3);
+  });
+
+  it('prerequisiti multiclasse: mago con Int 10 non può prendere il guerriero (serve Str/Dex 13)', async () => {
+    const { createCharacter: cc, addXp, applyLevelUp } = await import('../src/index.js');
+    const wiz = cc({
+      name: 'W', raceId: 'human', subraceId: 'human-standard', classId: 'wizard',
+      abilityScores: { str: 8, dex: 10, con: 13, int: 16, wis: 12, cha: 10 },
+    }, reg).character!;
+    let c = addXp(wiz, 355000);
+    const r = applyLevelUp(c, reg, { classId: 'fighter', hpRoll: 6, fightingStyleId: 'defense' });
+    expect(r.errors.some((e) => e.includes('Multiclasse'))).toBe(true);
+    // con house-rule bypassPrereq passa
+    const c2 = { ...c, houseRules: { ...c.houseRules, bypassPrereq: true } };
+    const ok = applyLevelUp(c2, reg, { classId: 'fighter', hpRoll: 6, fightingStyleId: 'defense' });
+    expect(ok.errors).toEqual([]);
+  });
+});
+
+describe('generazione statistiche (standard / point-buy / tiri)', () => {
+  it('array standard assegna 15,14,13,12,10,8 nell\'ordine delle abilità', async () => {
+    const { generateAbilityScores, STANDARD_ARRAY } = await import('../src/index.js');
+    const s = generateAbilityScores('standard');
+    expect(Object.values(s)).toEqual([...STANDARD_ARRAY]);
+  });
+
+  it('point-buy: costo, budget e validité', async () => {
+    const { generateAbilityScores, pointBuySpent, isPointBuyValid, pointCostTo, POINT_BUY_BUDGET } = await import('../src/index.js');
+    const base = generateAbilityScores('pointbuy');
+    expect(pointBuySpent(base)).toBe(0);
+    expect(isPointBuyValid(base)).toBe(true);
+    const maxed = { str: 15, dex: 15, con: 15, int: 8, wis: 8, cha: 8 };
+    expect(pointBuySpent(maxed)).toBe(27);
+    expect(isPointBuyValid(maxed)).toBe(true);
+    const tooMuch = { str: 15, dex: 15, con: 15, int: 14, wis: 8, cha: 8 };
+    expect(pointBuySpent(tooMuch)).toBeGreaterThan(POINT_BUY_BUDGET);
+    expect(isPointBuyValid(tooMuch)).toBe(false);
+    expect(pointCostTo(7)).toBe(Infinity);
+    expect(pointCostTo(16)).toBe(Infinity);
+    expect(pointCostTo(10)).toBe(2);
+  });
+
+  it('4d6 scarta il più basso: risultato nel range 3-18', async () => {
+    const { roll4d6DropLowest } = await import('../src/index.js');
+    for (let i = 0; i < 200; i++) {
+      const v = roll4d6DropLowest();
+      expect(v).toBeGreaterThanOrEqual(3);
+      expect(v).toBeLessThanOrEqual(18);
+    }
+  });
+
+  it('roll mode genera 6 punteggi validi', async () => {
+    const { generateAbilityScores } = await import('../src/index.js');
+    const s = generateAbilityScores('roll');
+    for (const v of Object.values(s)) {
+      expect(v).toBeGreaterThanOrEqual(3);
+      expect(v).toBeLessThanOrEqual(18);
+    }
+  });
+});

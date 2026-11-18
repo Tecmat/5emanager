@@ -79,6 +79,10 @@ export interface ClassDef {
   weaponProficiencies: string[];
   toolProficiencies: string[];
   skillChoices: { choose: number; from: string[] };
+  /** prerequisiti per il multiclasse (PHB): caratteristica minima richiesta (tutte) */
+  multiclassPrereq?: Partial<Record<Ability, number>>;
+  /** prerequisiti multiclasse in alternativa (almeno uno richiesto, es. guerriero: Str OPPURE Dex 13) */
+  multiclassPrereqAny?: Partial<Record<Ability, number>>;
   spellcasting?: SpellcastingDef;
   /** feature per livello 1-20 */
   features: Record<number, Feature[]>;
@@ -248,6 +252,7 @@ export interface HouseRules {
   bypassAttunementLimit: boolean;
   bypassXpCheck: boolean;
   bypassLevelCap: boolean;
+  bypassPrereq: boolean;
 }
 
 export const DEFAULT_HOUSE_RULES: HouseRules = {
@@ -256,6 +261,7 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   bypassAttunementLimit: false,
   bypassXpCheck: false,
   bypassLevelCap: false,
+  bypassPrereq: false,
 };
 
 export interface Character {
@@ -281,6 +287,10 @@ export interface Character {
   inventory: InventoryItem[];
   currency: Currency;
   hp: { current: number; temp: number };
+  /** ritratto del PG come data URL (immagine ridimensionata) */
+  portrait?: string;
+  /** tiri della morte quando a 0 PF */
+  deathSaves: { successes: number; failures: number };
   /** condizioni attive (es. 'avvelenato', 'invisibile') */
   conditions: string[];
   notes: string;

@@ -1,18 +1,49 @@
 import { useMemo, useState } from 'react';
-import { ABILITIES, createCharacter, SKILLS, type Ability, type AbilityScores } from '@dnd5e/core';
+import {
+  ABILITIES, createCharacter, generateAbilityScores, isPointBuyValid,
+  POINT_BUY_BUDGET, POINT_BUY_MAX, POINT_BUY_MIN, pointBuySpent, pointCostTo,
+  rollDice, SKILLS, STANDARD_ARRAY, type Ability, type AbilityScores, type StatGenMode,
+} from '@dnd5e/core';
 import { useStore } from './store.js';
 
 const DEFAULT_SCORES: AbilityScores = { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 };
 
-export default function CreateForm() {
-  const { reg, setChar } = useStore();
+export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
+  const { reg, createSheet } = useStore();
   const [name, setName] = useState('');
   const [raceId, setRaceId] = useState('human');
   const [subraceId, setSubraceId] = useState<string>('');
   const [classId, setClassId] = useState('fighter');
   const [scores, setScores] = useState<AbilityScores>(DEFAULT_SCORES);
+  const [mode, setMode] = useState<StatGenMode>('standard');
   const [skills, setSkills] = useState<string[]>([]);
   const [errors, setErrors] = useState<string[]>([]);
+
+  const switchMode = (m: StatGenMode) => {
+    setMode(m);
+    setScores(generateAbilityScores(m));
+  };
+
+  const bumpScore = (ab: Ability, delta: number) => {
+    setScores((s) => {
+      const next = Math.min(POINT_BUY_MAX, Math.max(POINT_BUY_MIN, s[ab] + delta));
+      if (next === s[ab]) return s;
+      if (pointBuySpent(s) - pointCostTo(s[ab]) + pointCostTo(next) > POINT_BUY_BUDGET) return s;
+      return { ...s, [ab]: next };
+    });
+  };
+
+  const canBumpUp = (ab: Ability) => {
+    const next = scores[ab] + 1;
+    if (next > POINT_BUY_MAX) return false;
+    return pointBuySpent(scores) - pointCostTo(scores[ab]) + pointCostTo(next) <= POINT_BUY_BUDGET;
+  };
+
+  const rollOne = (ab: Ability) => {
+    const r = rollDice('4d6');
+    if (!r) return;
+    setScores((s) => ({ ...s, [ab]: r.total - Math.min(...r.rolls) }));
+  };
 
   const race = reg.races.get(raceId);
   const cls = reg.classes.get(classId);
@@ -27,6 +58,10 @@ export default function CreateForm() {
   };
 
   const submit = () => {
+    if (mode === 'pointbuy' && !isPointBuyValid(scores)) {
+      setErrors([`Point-buy non valido: punteggi 8-15, budget ${POINT_BUY_BUDGET} (usati ${pointBuySpent(scores)})`]);
+      return;
+    }
     const res = createCharacter(
       { name: name.trim() || 'Senza nome', raceId, subraceId: subraceId || undefined, classId, abilityScores: scores, skillChoices: skills },
       reg,
@@ -35,7 +70,7 @@ export default function CreateForm() {
       setErrors(res.errors.length ? res.errors : ['Errore sconosciuto']);
       return;
     }
-    setChar(res.character);
+    createSheet(res.character);
   };
 
   const races = useMemo(() => [...reg.races.values()], [reg]);
@@ -74,19 +109,49 @@ export default function CreateForm() {
             </select>
           </div>
         </div>
-        <label>Punteggi caratteristica</label>
+        <label>Metodo statistiche</label>
+        <div className="segmented">
+          {([['standard', 'Array standard'], ['pointbuy', 'Point-buy (27 pt)'], ['roll', 'Tiri 4d6']] as [StatGenMode, string][]).map(([m, label]) => (
+            <button key={m} type="button" className={mode === m ? 'seg active' : 'seg'} onClick={() => switchMode(m)}>{label}</button>
+          ))}
+        </div>
+        <label>
+          Punteggi caratteristica
+          {mode === 'pointbuy' && ` — punti usati: ${pointBuySpent(scores)} / ${POINT_BUY_BUDGET}`}
+        </label>
         <div className="grid cols3">
           {ABILITIES.map((ab: Ability) => (
             <div key={ab}>
               <label>{ab.toUpperCase()}</label>
-              <input
-                type="number" min={1} max={20}
-                value={scores[ab]}
-                onChange={(e) => setScores({ ...scores, [ab]: Number(e.target.value) })}
-              />
+              {mode === 'standard' && (
+                <select value={scores[ab]} onChange={(e) => setScores({ ...scores, [ab]: Number(e.target.value) })}>
+                  {STANDARD_ARRAY.map((v) => {
+                    const usedElsewhere = ABILITIES.some((a) => a !== ab && scores[a] === v);
+                    return <option key={v} value={v} disabled={usedElsewhere && scores[ab] !== v}>{v}</option>;
+                  })}
+                </select>
+              )}
+              {mode === 'pointbuy' && (
+                <div className="pb-row">
+                  <button type="button" disabled={scores[ab] <= POINT_BUY_MIN} onClick={() => bumpScore(ab, -1)}>−</button>
+                  <span className="pb-val">{scores[ab]} <small>({pointCostTo(scores[ab])} pt)</small></span>
+                  <button type="button" disabled={!canBumpUp(ab)} onClick={() => bumpScore(ab, +1)}>+</button>
+                </div>
+              )}
+              {mode === 'roll' && (
+                <div className="pb-row">
+                  <input type="number" readOnly value={scores[ab]} />
+                  <button type="button" onClick={() => rollOne(ab)}>Tira 4d6</button>
+                </div>
+              )}
             </div>
           ))}
         </div>
+        {mode === 'roll' && (
+          <div style={{ marginTop: 6 }}>
+            <button type="button" onClick={() => setScores(generateAbilityScores('roll'))}>Tira tutti (4d6, scarta il peggiore)</button>
+          </div>
+        )}
         <label>Abilità della classe ({choose} a scelta)</label>
         <div>
           {(cls?.skillChoices.from ?? []).map((sid) => {
@@ -99,8 +164,9 @@ export default function CreateForm() {
           })}
         </div>
         {errors.length > 0 && <div className="error">{errors.join('\n')}</div>}
-        <div style={{ marginTop: 14 }}>
+        <div style={{ marginTop: 14 }} className="row">
           <button className="primary" onClick={submit}>Crea personaggio</button>
+          {onCancel && <button onClick={onCancel}>Annulla</button>}
         </div>
       </div>
     </main>

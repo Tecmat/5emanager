@@ -155,6 +155,19 @@ export function maxHp(char: Character, reg: Registry): number {
   return hp;
 }
 
+/** bonus attacco e CD dei tiri salvezza degli incantesimi (8 + proficiency + mod caratteristica) */
+export function spellcastingInfo(char: Character, reg: Registry): { classId: string; ability: Ability; attackBonus: number; saveDC: number } | null {
+  for (const cl of char.classLevels) {
+    const sc = reg.classes.get(cl.classId)?.spellcasting;
+    if (sc && cl.level > 0) {
+      const mod = modifierOf(char, sc.ability);
+      const pb = proficiencyBonus(totalLevel(char));
+      return { classId: cl.classId, ability: sc.ability, attackBonus: 8 + pb + mod, saveDC: 8 + pb + mod };
+    }
+  }
+  return null;
+}
+
 export function carryingCapacity(char: Character): { normal: number; encumbered: number; heavyLoad: number; pushDrag: number } {
   const str = char.abilityScores.str;
   return { normal: str * 15, encumbered: str * 5, heavyLoad: str * 10, pushDrag: str * 30 };

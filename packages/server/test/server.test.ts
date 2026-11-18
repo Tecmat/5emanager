@@ -3,7 +3,7 @@ import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import WebSocket from 'ws';
-import { createCharacter, type Character } from '@dnd5e/core';
+import { addItem, createCharacter, type Character } from '@dnd5e/core';
 import { createSrdRegistry } from '@dnd5e/data-srd';
 
 process.env.DND5E_DATA_DIR = mkdtempSync(join(tmpdir(), 'dnd5e-test-'));
@@ -76,7 +76,11 @@ function makeChar(name: string, classId: string): Character {
     abilityScores: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 8 },
   }, reg);
   if (!res.character) throw new Error(res.errors.join(','));
-  return res.character;
+  // equipaggia un'arma così il combattente ha attacchi disponibili
+  const withWeapon = addItem(res.character, {
+    name: 'Spada lunga', kind: 'weapon', quantity: 1, weight: 3, equipped: true, refId: 'longsword', magic: false, attuned: false,
+  });
+  return withWeapon.character;
 }
 
 describe('server multiplayer', () => {
@@ -133,5 +137,60 @@ describe('server multiplayer', () => {
 
     master.ws.close();
     player.ws.close();
+  }, 15000);
+
+  it('account: ping, register/login, salva scheda in libreria e usala in campagna', async () => {
+    const c = await connect();
+    c.send({ t: 'ping', id: 'p1' });
+    const pong = await c.waitFor((m) => m.t === 'pong' && m.id === 'p1');
+    expect(typeof pong.serverTime).toBe('number');
+
+    c.send({ t: 'register', username: 'tecmat' });
+    let auth = await c.waitFor((m) => m.t === 'auth');
+    expect(auth.username).toBe('tecmat');
+    expect(auth.characters).toEqual([]);
+    expect(auth.token).toBeTruthy();
+
+    // username duplicato (case-insensitive) -> errore
+    const dup = await connect();
+    dup.send({ t: 'register', username: 'TECMAT' });
+    const err = await dup.waitFor((m) => m.t === 'error');
+    expect(err.message).toContain('registrato');
+    dup.ws.close();
+
+    // login da un'altra connessione: la password non viene mai inviata al server
+    const c2 = await connect();
+    c2.send({ t: 'login', username: 'tecmat' });
+    auth = await c2.waitFor((m) => m.t === 'auth');
+    expect(auth.token).toBeTruthy();
+
+    // salva una scheda nella libreria dell'account (senza essere in campagna)
+    const ch = makeChar('Biblioteca-Mago', 'wizard');
+    c2.send({ t: 'action', action: { kind: 'saveCharacter', character: ch } });
+    auth = await c2.waitFor((m) => m.t === 'auth' && m.characters.length === 1);
+    expect(auth.characters[0].name).toBe('Biblioteca-Mago');
+
+    // entra in una campagna e carica la scheda dalla libreria dell'account
+    const master = await connect();
+    master.send({ t: 'create', name: 'DM', password: 'x', campaignName: 'Campagna account' });
+    const w = await master.waitFor((m) => m.t === 'welcome');
+    const cid: string = w.campaign.id;
+    c2.send({ t: 'join', campaignId: cid, password: 'x', name: 'PG' });
+    await c2.waitFor((m) => m.t === 'welcome');
+    c2.send({ t: 'action', action: { kind: 'useCharacter', characterId: ch.id } });
+    const st = await master.waitFor((m) => m.t === 'state' && Object.keys(m.campaign.characters).length === 1);
+    const chars = st.campaign.characters as Record<string, Character>;
+    expect(Object.values(chars)[0].name).toBe('Biblioteca-Mago');
+
+    // senza login, saveCharacter viene rifiutato
+    const anon = await connect();
+    anon.send({ t: 'action', action: { kind: 'saveCharacter', character: ch } });
+    const err2 = await anon.waitFor((m) => m.t === 'error');
+    expect(err2.message).toContain('login');
+
+    c.ws.close();
+    c2.ws.close();
+    master.ws.close();
+    anon.ws.close();
   }, 15000);
 });

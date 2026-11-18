@@ -143,6 +143,18 @@ export function applyLevelUp(char: Character, reg: Registry, choices: LevelUpCho
   if (!char.houseRules.bypassXpCheck && levelForXp(char.xp) <= current) errors.push('XP insufficienti per salire di livello');
 
   let cl = char.classLevels.find((c) => c.classId === choices.classId);
+  const isNewClass = !cl && char.classLevels.length > 0;
+  if (isNewClass && !char.houseRules.bypassPrereq) {
+    if (cls.multiclassPrereq) {
+      for (const [ab, min] of Object.entries(cls.multiclassPrereq) as [Ability, number][]) {
+        if (char.abilityScores[ab] < min) errors.push(`Multiclasse in ${cls.name}: richiede ${ab.toUpperCase()} ${min} (hai ${char.abilityScores[ab]})`);
+      }
+    }
+    if (cls.multiclassPrereqAny) {
+      const any = Object.entries(cls.multiclassPrereqAny).some(([ab, min]) => char.abilityScores[ab as Ability] >= (min as number));
+      if (!any) errors.push(`Multiclasse in ${cls.name}: richiede almeno una tra ${Object.entries(cls.multiclassPrereqAny).map(([ab, min]) => `${ab.toUpperCase()} ${min}`).join(', ')}`);
+    }
+  }
   const newLevel = (cl?.level ?? 0) + 1;
   if (newLevel > 20 && !char.houseRules.bypassLevelCap) errors.push('La classe non può superare il livello 20');
   if (errors.length > 0) return { character: char, grantedFeatures: [], errors };

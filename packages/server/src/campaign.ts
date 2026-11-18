@@ -8,7 +8,7 @@ export function hashPassword(pw: string): string {
   return createHash('sha256').update('5e-' + pw).digest('hex');
 }
 
-const DATA_DIR = process.env.DND5E_DATA_DIR ?? join(process.cwd(), 'data', 'campaigns');
+export const DATA_DIR = process.env.DND5E_DATA_DIR ?? join(process.cwd(), 'data', 'campaigns');
 
 export function ensureDataDir(): void {
   if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
@@ -35,8 +35,12 @@ export function listCampaigns(): { id: string; name: string; players: number }[]
   return readdirSync(DATA_DIR)
     .filter((f) => f.endsWith('.json'))
     .map((f) => {
-      const c = loadCampaign(f.replace(/\.json$/, ''));
-      return c ? { id: c.id, name: c.name, players: c.players.length } : null;
+      try {
+        const c = loadCampaign(f.replace(/\.json$/, ''));
+        return c && typeof c.id === 'string' ? { id: c.id, name: c.name, players: c.players.length } : null;
+      } catch {
+        return null;
+      }
     })
     .filter(Boolean) as { id: string; name: string; players: number }[];
 }

@@ -1,7 +1,7 @@
 import type { AttackDef, Character } from '../types.js';
 import type { Registry } from '../registry.js';
 import { rollDice } from './dice.js';
-import { armorClass, attackBonus, carryingCapacity } from './derived.js';
+import { armorClass, attackBonus, carryingCapacity, modifierOf } from './derived.js';
 
 export interface Combatant {
   id: string;
@@ -50,7 +50,7 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
     name: char.name,
     hp: char.hp.current,
     maxHp: char.hp.current,
-    initiative: rollDice('1d20')?.total ?? 10,
+    initiative: (rollDice('1d20')?.total ?? 10) + modifierOf(char, 'dex'),
     conditions: [...char.conditions],
     conditionRounds: {},
     isPlayer: true,
@@ -81,7 +81,7 @@ export function startPartyCombat(chars: Character[], reg: Registry): CombatState
       name: char.name,
       hp: char.hp.current,
       maxHp: char.hp.current,
-      initiative: rollDice('1d20')?.total ?? 10,
+      initiative: (rollDice('1d20')?.total ?? 10) + modifierOf(char, 'dex'),
       conditions: [...char.conditions],
       conditionRounds: {},
       isPlayer: true,

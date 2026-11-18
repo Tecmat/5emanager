@@ -18,6 +18,15 @@ import {
   removePlayer,
   saveCampaign,
 } from './campaign.js';
+import {
+  accountCharacters,
+  createSession,
+  deleteAccountCharacter,
+  getAccount,
+  registerAccount,
+  saveAccountCharacter,
+  sessionUsername,
+} from './accounts.js';
 import { applyAction } from './combat-ops.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
@@ -73,6 +82,8 @@ interface Conn {
   ws: WebSocket;
   campaignId?: string;
   playerId?: string;
+  /** token di sessione account (dopo register/login) */
+  token?: string;
 }
 
 const conns = new Set<Conn>();
@@ -99,6 +110,34 @@ function handleMessage(conn: Conn, raw: string): void {
 
   if (msg.t === 'list') {
     send(conn.ws, { t: 'campaigns', list: listCampaigns() });
+    return;
+  }
+
+  if (msg.t === 'ping') {
+    send(conn.ws, { t: 'pong', id: msg.id, serverTime: Date.now() });
+    return;
+  }
+
+  if (msg.t === 'register') {
+    try {
+      const acc = registerAccount(msg.username.trim());
+      conn.token = createSession(acc.username);
+      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+    }
+    return;
+  }
+
+  if (msg.t === 'login') {
+    // TODO: verificare la password lato server. Per ora solo username (la password vive solo lato client).
+    const acc = getAccount(msg.username.trim());
+    if (!acc) {
+      send(conn.ws, { t: 'error', message: 'Account non trovato: prima devi registrarti' });
+      return;
+    }
+    conn.token = createSession(acc.username);
+    send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
     return;
   }
 
@@ -134,11 +173,42 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
-  if (msg.t === 'action' && conn.campaignId && conn.playerId) {
+  if (msg.t === 'action') {
+    if (msg.action.kind === 'saveCharacter' || msg.action.kind === 'deleteCharacter') {
+      const token = conn.token;
+      const username = token ? sessionUsername(token) : undefined;
+      if (!token || !username) {
+        send(conn.ws, { t: 'error', message: 'Devi fare login (account) prima di salvare le schede' });
+        return;
+      }
+      try {
+        if (msg.action.kind === 'saveCharacter') saveAccountCharacter(username, msg.action.character);
+        else deleteAccountCharacter(username, msg.action.characterId);
+      } catch (e) {
+        send(conn.ws, { t: 'error', message: (e as Error).message });
+        return;
+      }
+      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username) });
+      return;
+    }
+    if (!conn.campaignId || !conn.playerId) {
+      send(conn.ws, { t: 'error', message: 'Non sei dentro una campagna: entra o creane una' });
+      return;
+    }
     let c = campaigns.get(conn.campaignId);
     if (!c) {
       send(conn.ws, { t: 'error', message: 'Campagna non caricata' });
       return;
+    }
+    if (msg.action.kind === 'useCharacter') {
+      const username = conn.token ? sessionUsername(conn.token) : undefined;
+      const lib = username ? getAccount(username)?.characters ?? {} : {};
+      const ch = lib[msg.action.characterId];
+      if (!ch) {
+        send(conn.ws, { t: 'error', message: 'Scheda non trovata nella libreria dell\'account' });
+        return;
+      }
+      msg.action = { kind: 'setCharacter', character: ch };
     }
     if (msg.action.kind === 'addCustom') {
       const player = c.players.find((p) => p.id === conn.playerId);

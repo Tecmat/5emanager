@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
 import CreateForm from './CreateForm.js';
 import Overview from './Overview.js';
@@ -11,9 +12,14 @@ import CampaignTab from './CampaignTab.js';
 type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
 
 export default function App() {
-  const { char } = useStore();
+  const { char, sheets, selectSheet } = useStore();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
+  const [creating, setCreating] = useState(false);
+
+  useEffect(() => {
+    if (char) setCreating(false);
+  }, [char]);
 
   const toggleTheme = () => {
     const t = theme === 'dark' ? 'light' : 'dark';
@@ -22,14 +28,32 @@ export default function App() {
     document.documentElement.dataset.theme = t;
   };
 
-  if (!char) return <CreateForm />;
+  if (!char || creating) {
+    return <CreateForm onCancel={char ? () => setCreating(false) : undefined} />;
+  }
 
   return (
     <>
       <header className="top">
-        <h1>⚔️ D&D 5e — {char.name}</h1>
         <span className="row">
-          <span className="muted">Gestore schede</span>
+          {char.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
+          <h1>⚔️ D&D 5e — {char.name}</h1>
+          {sheets.length > 1 && (
+            <select
+              value={char.id}
+              onChange={(e) => selectSheet(e.target.value)}
+              title="Cambia scheda personaggio"
+              style={{ maxWidth: 180 }}
+            >
+              {sheets.map((s) => (
+                <option key={s.id} value={s.id}>{s.name} (liv {totalLevel(s)})</option>
+              ))}
+            </select>
+          )}
+          <button onClick={() => setCreating(true)} title="Crea un nuovo personaggio">＋ Nuovo</button>
+        </span>
+        <span className="row">
+          <span className="muted">Gestore schede{sheets.length > 1 ? ` · ${sheets.length} schede` : ''}</span>
           <button onClick={toggleTheme} title="Cambia tema">{theme === 'dark' ? '🌙' : '☀️'}</button>
         </span>
       </header>

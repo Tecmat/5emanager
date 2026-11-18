@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import {
   ABILITIES,
   addXp,
@@ -11,6 +11,7 @@ import {
   levelForXp,
   longRest,
   maxHp,
+  migrateCharacter,
   passivePerception,
   proficiencyBonus,
   savingThrowBonus,
@@ -42,11 +43,39 @@ function fmt(n: number): string {
 }
 
 export default function Overview() {
-  const { reg, char, setChar, resetChar } = useStore();
+  const { reg, char, setChar, createSheet, resetChar } = useStore();
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [dmg, setDmg] = useState(0);
   const [healAmt, setHealAmt] = useState(0);
   const [xpAmt, setXpAmt] = useState(300);
+  const portraitRef = useRef<HTMLInputElement>(null);
+
+  const uploadPortrait = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      alert('Scegli un file immagine (png, jpg, webp...)');
+      return;
+    }
+    const img = new Image();
+    img.onload = () => {
+      if (!char) return;
+      const max = 256;
+      const scale = Math.min(1, max / Math.max(img.width, img.height));
+      const w = Math.max(1, Math.round(img.width * scale));
+      const h = Math.max(1, Math.round(img.height * scale));
+      const canvas = document.createElement('canvas');
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.82);
+      URL.revokeObjectURL(img.src);
+      setChar({ ...char, portrait: dataUrl, updatedAt: new Date().toISOString() });
+    };
+    img.onerror = () => alert('Immagine non valida');
+    img.src = URL.createObjectURL(file);
+  };
 
   if (!char) return null;
   const level = totalLevel(char);
@@ -96,7 +125,7 @@ export default function Overview() {
     if (!file) return;
     file.text().then((t) => {
       try {
-        setChar(JSON.parse(t) as Character);
+        createSheet(migrateCharacter(JSON.parse(t) as Character));
       } catch {
         alert('File JSON non valido');
       }
@@ -108,6 +137,23 @@ export default function Overview() {
       <div className="grid cols3">
         <div className="card">
           <h3>Personaggio</h3>
+          <div className="row" style={{ alignItems: 'flex-start', gap: 12, marginBottom: 8 }}>
+            {char.portrait
+              ? <img className="portrait" src={char.portrait} alt={`Ritratto di ${char.name}`} />
+              : <div className="portrait-ph">nessun<br />ritratto</div>}
+            <div>
+              <div className="row">
+                <button onClick={() => portraitRef.current?.click()}>📷 {char.portrait ? 'Cambia ritratto' : 'Carica ritratto'}</button>
+                {char.portrait && (
+                  <button className="danger" onClick={() => setChar({ ...char, portrait: undefined, updatedAt: new Date().toISOString() })}>Rimuovi</button>
+                )}
+              </div>
+              <input ref={portraitRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={uploadPortrait} />
+              <div className="muted" style={{ fontSize: 11, marginTop: 4, maxWidth: 220 }}>
+                Ridimensionata a 256px e salvata solo nel browser (localStorage).
+              </div>
+            </div>
+          </div>
           <div className="big">{char.name}</div>
           <div className="muted">{race?.name}{subrace ? ` (${subrace.name})` : ''} — {classNames.join(' / ')}</div>
           <div className="row" style={{ marginTop: 8 }}>
@@ -283,7 +329,7 @@ export default function Overview() {
             <label style={{ margin: 0, width: 'auto' }} className="row">
               <input type="file" accept="application/json" onChange={importChar} style={{ width: 'auto' }} /> Importa
             </label>
-            <button className="danger" onClick={() => { if (confirm('Eliminare il personaggio?')) resetChar(); }}>Elimina</button>
+            <button className="danger" onClick={() => { if (confirm('Eliminare questa scheda?')) resetChar(); }}>Elimina scheda</button>
           </div>
         </div>
       </div>
