@@ -42,7 +42,10 @@ jobs:
           path: src-tauri/target/release/bundle
       - uses: softprops/action-gh-release@v2
         with:
-          files: src-tauri/target/release/bundle/deb/*.deb src-tauri/target/release/bundle/rpm/*.rpm src-tauri/target/release/bundle/appimage/*.AppImage
+          files: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
 
   android:
     runs-on: ubuntu-latest
