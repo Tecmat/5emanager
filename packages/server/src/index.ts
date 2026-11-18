@@ -25,13 +25,16 @@ import {
 } from './campaign.js';
 import {
   accountCharacters,
+  approveAccount,
   createSession,
   deleteAccount,
   deleteAccountCharacter,
   getAccount,
-  loadAccounts,
+  listPending,
+  loadAccountsFile,
   loginAccount,
-  registerAccount,
+  requestAccount,
+  rejectAccount,
   saveAccountCharacter,
   sessionUsername,
 } from './accounts.js';
@@ -124,15 +127,28 @@ function broadcast(campaign: Campaign): void {
   }
 }
 
+const STARTED_AT = new Date();
+
 function sendAdminState(ws: WebSocket): void {
+  const accounts = Object.values(loadAccountsFile().accounts);
+  const pending = listPending();
   send(ws, {
     t: 'adminState',
     campaigns: listCampaignsDetailed(),
-    accounts: Object.values(loadAccounts()).map((a) => ({
+    accounts: accounts.map((a) => ({
       username: a.username,
       characters: Object.keys(a.characters).length,
       createdAt: a.createdAt,
     })),
+    pending: pending.map((p) => ({ username: p.username, requestedAt: p.requestedAt })),
+    server: {
+      startedAt: STARTED_AT.toISOString(),
+      uptimeSec: Math.floor((Date.now() - STARTED_AT.getTime()) / 1000),
+      campaigns: listCampaignsDetailed().length,
+      accounts: accounts.length,
+      pending: pending.length,
+      lan: lanAddresses(PORT),
+    },
   });
 }
 
@@ -155,10 +171,10 @@ function handleMessage(conn: Conn, raw: string): void {
   }
 
   if (msg.t === 'register') {
+    // la registrazione crea solo una RICHIESTA: l'admin la approva dal pannello /admin
     try {
-      const acc = registerAccount(msg.username.trim(), msg.password);
-      conn.token = createSession(acc.username);
-      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
+      requestAccount(msg.username.trim(), msg.password);
+      send(conn.ws, { t: 'notice', message: 'Richiesta di registrazione inviata per "' + msg.username.trim() + '": attendi l\'approvazione dell\'admin.' });
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -186,7 +202,7 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -206,11 +222,29 @@ function handleMessage(conn: Conn, raw: string): void {
         campaigns.delete(msg.id);
       }
       if (msg.t === 'adminDeleteAccount') deleteAccount(msg.username);
+      if (msg.t === 'adminApproveAccount') approveAccount(msg.username);
+      if (msg.t === 'adminRejectAccount') rejectAccount(msg.username);
+      if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
       return;
     }
     sendAdminState(conn.ws);
+    return;
+  }
+
+  if (msg.t === 'adminAccountDetail') {
+    if (!conn.admin) {
+      send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
+      return;
+    }
+    const chars = accountCharacters(msg.username).map((ch) => ({
+      id: ch.id,
+      name: ch.name,
+      level: ch.classLevels.reduce((s, c) => s + c.level, 0),
+      updatedAt: ch.updatedAt,
+    }));
+    send(conn.ws, { t: 'adminAccount', username: msg.username, characters: chars });
     return;
   }
 

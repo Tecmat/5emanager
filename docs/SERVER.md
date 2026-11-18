@@ -48,18 +48,22 @@ Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`,
 (token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`),
 `campaignDeleted` (la campagna è stata eliminata), `error`
 
-## Account e libreria schede
+## Account, richieste e libreria schede
 
-- `register { username, password }` / `login { username, password }` → `auth { token, username, characters }`;
-  la password è **verificata lato server** (solo l'hash sha256 è salvato in `accounts.data`;
-  gli account legacy senza hash impostano la password alla prima login)
-- le sessioni sono in memoria (token → username) e si perdono al riavvio del server
+- `register { username, password }` **non crea subito l'account**: registra una *richiesta*
+  (in `accounts.data`, con hash sha256 della password) e risponde `notice`; l'admin la vede
+  in `/admin` → "Richieste di registrazione" e la **approva** (`adminApproveAccount`) o
+  **rifiuta** (`adminRejectAccount`). Solo dopo l'approvazione il login funziona.
+- `login { username, password }` → `auth { token, username, characters }`; la password è
+  **verificata lato server** (hash sha256 su disco, mai in chiaro; account legacy senza
+  hash impostano la password alla prima login). Sessioni in memoria (token → username).
 - `saveCharacter` / `deleteCharacter` salvano la scheda nella libreria dell'account
-  (persistente in `accounts.data` dentro la data dir); `useCharacter` la carica in campagna
-  al posto di `setCharacter`
-- il master può eliminare la campagna con l'azione `deleteCampaign` (tutti i partecipanti
-  ricevono `campaignDeleted`); l'admin gestisce le campagne da `/admin`
-  (crea/modifica/elimina, con `adminCreateCampaign`/`adminUpdateCampaign`)
+  (persistente in `accounts.data`); `useCharacter` la carica in campagna
+- il master può eliminare la campagna con l'azione `deleteCampaign` (tutti ricevono
+  `campaignDeleted`); l'admin gestisce campagne e account da `/admin`:
+  crea/modifica/elimina campagne, approva/rifiuta richieste, vede ed elimina le singole
+  schede di un account (`adminAccountDetail` / `adminDeleteCharacter`), e vede info del
+  server (uptime, conteggi, indirizzi LAN) in `adminState.server`
 
 ## Persistenza e regole per campagna
 

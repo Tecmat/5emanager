@@ -146,18 +146,34 @@ describe('server multiplayer', () => {
     const pong = await c.waitFor((m) => m.t === 'pong' && m.id === 'p1');
     expect(typeof pong.serverTime).toBe('number');
 
+    // register ora crea solo una RICHIESTA (niente auth immediato)
     c.send({ t: 'register', username: 'tecmat', password: 'pw123' });
-    let auth = await c.waitFor((m) => m.t === 'auth');
-    expect(auth.username).toBe('tecmat');
-    expect(auth.characters).toEqual([]);
-    expect(auth.token).toBeTruthy();
+    const notice = await c.waitFor((m) => m.t === 'notice');
+    expect(notice.message).toContain('approvazione');
 
-    // username duplicato (case-insensitive) -> errore
+    // login prima dell'approvazione -> errore "in attesa"
+    const pend = await connect();
+    pend.send({ t: 'login', username: 'tecmat', password: 'pw123' });
+    const errPend = await pend.waitFor((m) => m.t === 'error');
+    expect(errPend.message).toContain('attesa');
+    pend.ws.close();
+
+    // duplicato mentre in attesa -> errore
     const dup = await connect();
     dup.send({ t: 'register', username: 'TECMAT', password: 'altra' });
     const err = await dup.waitFor((m) => m.t === 'error');
-    expect(err.message).toContain('registrato');
+    expect(err.message).toMatch(/attesa|registrato/);
     dup.ws.close();
+
+    // l'admin vede la richiesta in pending e la approva
+    const adm0 = await connect();
+    adm0.send({ t: 'adminAuth', token: 'test-admin-token' });
+    const as0 = await adm0.waitFor((m) => m.t === 'adminState' && (m.pending ?? []).some((p: any) => p.username === 'tecmat'));
+    expect(as0.server.accounts).toBe(0);
+    expect(as0.server.pending).toBe(1);
+    adm0.send({ t: 'adminApproveAccount', username: 'tecmat' });
+    await adm0.waitFor((m) => m.t === 'adminState' && (m.pending ?? []).length === 0 && m.accounts.some((a: any) => a.username === 'tecmat'));
+    adm0.ws.close();
 
     // login con password sbagliata -> errore (verifica lato server)
     const bad = await connect();
@@ -166,11 +182,12 @@ describe('server multiplayer', () => {
     expect(errBad.message).toContain('Password');
     bad.ws.close();
 
-    // login da un'altra connessione con la password giusta
+    // login con password giusta dopo l'approvazione
     const c2 = await connect();
     c2.send({ t: 'login', username: 'tecmat', password: 'pw123' });
-    auth = await c2.waitFor((m) => m.t === 'auth');
+    let auth = await c2.waitFor((m) => m.t === 'auth');
     expect(auth.token).toBeTruthy();
+    expect(auth.username).toBe('tecmat');
 
     // salva una scheda nella libreria dell'account (senza essere in campagna)
     const ch = makeChar('Biblioteca-Mago', 'wizard');
@@ -259,10 +276,15 @@ describe('server multiplayer', () => {
     const as1 = await adm.waitFor((m) => m.t === 'adminState');
     expect(as1.campaigns.some((c: any) => c.id === cid)).toBe(true);
 
+    // register -> pending, poi approve -> account, poi adminAccountDetail, poi delete
     adm.send({ t: 'register', username: 'da-eliminare', password: 'pw456' });
-    await adm.waitFor((m) => m.t === 'auth');
+    await adm.waitFor((m) => m.t === 'notice');
+    adm.send({ t: 'adminApproveAccount', username: 'da-eliminare' });
     adm.send({ t: 'adminList' });
     await adm.waitFor((m) => m.t === 'adminState' && m.accounts.some((a: any) => a.username === 'da-eliminare'));
+    adm.send({ t: 'adminAccountDetail', username: 'da-eliminare' });
+    const ad = await adm.waitFor((m) => m.t === 'adminAccount' && m.username === 'da-eliminare');
+    expect(ad.characters).toEqual([]);
     adm.send({ t: 'adminDeleteAccount', username: 'da-eliminare' });
     await adm.waitFor((m) => m.t === 'adminState' && !m.accounts.some((a: any) => a.username === 'da-eliminare'));
     adm.send({ t: 'adminDeleteCampaign', id: cid });

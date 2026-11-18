@@ -72,6 +72,7 @@ interface NetCtx {
   auth: AuthState | null;
   error: string;
   setError: (e: string) => void;
+  notice: string;
   pingState: PingState;
   campaignList: { id: string; name: string; players: number }[];
   url: string;
@@ -98,6 +99,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [conn, setConn] = useState<ConnState>({ phase: 'offline' });
   const [auth, setAuth] = useState<AuthState | null>(null);
   const [error, setError] = useState('');
+  const [notice, setNotice] = useState('');
   const [pingState, setPingState] = useState<PingState>({ status: 'idle' });
   const [campaignList, setCampaignList] = useState<{ id: string; name: string; players: number }[]>([]);
   const [url, setUrlState] = useState(() => localStorage.getItem(URL_KEY) ?? defaultWsUrl());
@@ -154,6 +156,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
       } else if (m.t === 'campaignDeleted') {
         setConn({ phase: 'offline' });
         setError('La campagna è stata eliminata (dal master o dall\'admin).');
+      } else if (m.t === 'notice') {
+        setNotice(m.message);
       } else if (m.t === 'error') {
         setError(m.message);
       } else if (m.t === 'closed') {
@@ -200,6 +204,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
 
   const doRegister = async (username: string, password: string) => {
     setError('');
+    setNotice('');
     if (!username.trim()) { setError('Inserisci uno username'); return; }
     try {
       const net = await ensureNet();
@@ -212,6 +217,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
 
   const doLogin = async (username: string, password: string) => {
     setError('');
+    setNotice('');
     if (!username.trim()) { setError('Inserisci lo username'); return; }
     try {
       const net = await ensureNet();
@@ -249,7 +255,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   const value: NetCtx = {
-    conn, auth, error, setError, pingState, campaignList,
+    conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     send, act, connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout,

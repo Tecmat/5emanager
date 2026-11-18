@@ -51,6 +51,20 @@
   </div>
 
   <div class="card">
+    <h2>Server</h2>
+    <div id="serverinfo" class="muted">—</div>
+  </div>
+
+  <div class="card">
+    <h2>Richieste di registrazione (in attesa)</h2>
+    <table>
+      <thead><tr><th>Username</th><th>Richiesta il</th><th></th></tr></thead>
+      <tbody id="pending"></tbody>
+    </table>
+    <div id="pending-empty" class="muted">Nessuna richiesta in attesa.</div>
+  </div>
+
+  <div class="card">
     <h2>Campagne</h2>
     <div class="row" style="margin-bottom:8px">
       <input id="newcamp-name" placeholder="Nome nuova campagna" style="width:220px">
@@ -72,6 +86,15 @@
     </table>
     <div id="accounts-empty" class="muted">Nessun account registrato.</div>
   </div>
+
+  <div class="card" id="account-detail-card" style="display:none">
+    <h2>Schede dell'account <span id="ad-user"></span></h2>
+    <table>
+      <thead><tr><th>Nome</th><th>Livello</th><th>Aggiornata</th><th></th></tr></thead>
+      <tbody id="ad-chars"></tbody>
+    </table>
+    <div class="row" style="margin-top:8px"><button id="ad-close">Chiudi</button></div>
+  </div>
 </main>
 <script>
 const wsurl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
@@ -92,6 +115,36 @@ function fmtDate(iso) { try { return new Date(iso).toLocaleString('it-IT'); } ca
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
 
 function render(state) {
+  // info server
+  const si = document.getElementById('serverinfo');
+  if (state.server) {
+    const s = state.server;
+    const up = Math.floor(s.uptimeSec / 3600) + 'h ' + Math.floor((s.uptimeSec % 3600) / 60) + 'm';
+    si.innerHTML = 'Avviato: <b>' + fmtDate(s.startedAt) + '</b> · uptime <b>' + up + '</b> · campagne <b>' + s.campaigns + '</b> · account <b>' + s.accounts + '</b> · richieste in attesa <b>' + s.pending + '</b>' +
+      (s.lan.length ? '<br>LAN: ' + s.lan.map((a) => '<code>' + esc(a) + '</code>').join(' ') : '');
+  }
+  // richieste in attesa
+  const pt = document.getElementById('pending');
+  pt.innerHTML = '';
+  document.getElementById('pending-empty').style.display = (state.pending || []).length ? 'none' : 'block';
+  for (const p of state.pending || []) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><b>' + esc(p.username) + '</b></td><td class="muted">' + fmtDate(p.requestedAt) + '</td>';
+    const td = document.createElement('td');
+    td.className = 'row';
+    const ok = document.createElement('button');
+    ok.className = 'primary';
+    ok.textContent = '✓ Approva';
+    ok.onclick = () => ws.send(JSON.stringify({ t: 'adminApproveAccount', username: p.username }));
+    const no = document.createElement('button');
+    no.className = 'danger';
+    no.textContent = '✗ Rifiuta';
+    no.onclick = () => { if (confirm('Rifiutare la richiesta di ' + p.username + '?')) ws.send(JSON.stringify({ t: 'adminRejectAccount', username: p.username })); };
+    td.appendChild(ok);
+    td.appendChild(no);
+    tr.appendChild(td);
+    pt.appendChild(tr);
+  }
   const ct = document.getElementById('campaigns');
   ct.innerHTML = '';
   document.getElementById('campaigns-empty').style.display = state.campaigns.length ? 'none' : 'block';
@@ -128,16 +181,41 @@ function render(state) {
     const tr = document.createElement('tr');
     tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + a.characters + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
     const td = document.createElement('td');
+    td.className = 'row';
+    const sheets = document.createElement('button');
+    sheets.textContent = '📄 Schede';
+    sheets.onclick = () => ws.send(JSON.stringify({ t: 'adminAccountDetail', username: a.username }));
     const btn = document.createElement('button');
     btn.className = 'danger';
     btn.textContent = 'Elimina';
     btn.onclick = () => {
       if (confirm('Eliminare l\'account "' + a.username + '" e tutte le sue schede?')) ws.send(JSON.stringify({ t: 'adminDeleteAccount', username: a.username }));
     };
+    td.appendChild(sheets);
     td.appendChild(btn);
     tr.appendChild(td);
     at.appendChild(tr);
   }
+}
+
+function renderAccountDetail(m) {
+  document.getElementById('account-detail-card').style.display = 'block';
+  document.getElementById('ad-user').textContent = m.username;
+  const tb = document.getElementById('ad-chars');
+  tb.innerHTML = '';
+  for (const c of m.characters) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + esc(c.name) + '</td><td>' + c.level + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
+    const td = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'danger';
+    btn.textContent = 'Elimina scheda';
+    btn.onclick = () => { if (confirm('Eliminare la scheda "' + c.name + '"?')) ws.send(JSON.stringify({ t: 'adminDeleteCharacter', username: m.username, characterId: c.id })); };
+    td.appendChild(btn);
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  }
+  document.getElementById('account-detail-card').scrollIntoView({ behavior: 'smooth' });
 }
 
 function connect() {
@@ -154,6 +232,7 @@ function connect() {
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === 'adminState') render(m);
+    else if (m.t === 'adminAccount') renderAccountDetail(m);
     else if (m.t === 'error') { err(m.message); setStatus('errore', false); }
   };
   ws.onclose = () => setStatus('disconnesso', false);
@@ -162,6 +241,7 @@ function connect() {
 
 document.getElementById('connect').onclick = connect;
 document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };
+document.getElementById('ad-close').onclick = () => { document.getElementById('account-detail-card').style.display = 'none'; };
 document.getElementById('newcamp').onclick = () => {
   const name = document.getElementById('newcamp-name').value.trim();
   const pw = document.getElementById('newcamp-pw').value;

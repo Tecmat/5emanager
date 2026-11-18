@@ -3,6 +3,7 @@ export * from './registry.js';
 export * from './validate.js';
 export * from './custom.js';
 export * from './character.js';
+export * from './campaign.js';
 export * from './rules/derived.js';
 export * from './rules/levelup.js';
 export * from './rules/spells.js';

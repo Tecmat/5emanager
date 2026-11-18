@@ -72,7 +72,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
 export default function CampaignTab() {
   const { reg, char, sheets, viewChar, viewLabel, setViewChar } = useStore();
   const {
-    conn, auth, error, setError, pingState, campaignList,
+    conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     act, connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout,
@@ -155,8 +155,9 @@ export default function CampaignTab() {
                 <button onClick={() => doRegister(accountName, accountPw)}>Registrati</button>
                 <button className="primary" onClick={() => doLogin(accountName, accountPw)}>Login</button>
               </div>
+              {notice && <div className="ok" style={{ marginTop: 6 }}>ℹ️ {notice}</div>}
               <div className="muted" style={{ marginTop: 6 }}>
-                Per ora la password resta solo su questo dispositivo (hash in localStorage): non viene inviata al server.
+                La registrazione crea una <b>richiesta</b> che l'admin approva dal pannello <code>/admin</code>; la password è verificata lato server (hash sha256, mai in chiaro).
               </div>
             </>
           )}
