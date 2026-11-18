@@ -1,7 +1,73 @@
 import { useState } from 'react';
-import { ABILITIES, CONDITIONS, armorClass, maxHp, passiveInsight, passivePerception, totalLevel } from '@dnd5e/core';
+import {
+  ABILITIES,
+  CONDITIONS,
+  SKILLS,
+  armorClass,
+  maxHp,
+  passiveInsight,
+  passivePerception,
+  savingThrowBonus,
+  skillBonus,
+  speedOf,
+  totalLevel,
+  type Character,
+  type Registry,
+} from '@dnd5e/core';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
+
+/** vista completa (sola lettura) della scheda di un giocatore, per il master */
+function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
+  const lvl = totalLevel(ch);
+  const clsNames = ch.classLevels.map((cl) => `${reg.classes.get(cl.classId)?.name ?? cl.classId} ${cl.level}`).join(' / ');
+  const slots = Object.entries(ch.spellSlots).filter(([, v]) => v.total > 0).sort((a, b) => Number(a[0]) - Number(b[0]));
+  return (
+    <div style={{ fontSize: 12, marginTop: 6 }}>
+      <div className="row">
+        {ch.portrait && <img className="portrait" src={ch.portrait} alt={ch.name} />}
+        <div>
+          <b>{ch.name}</b> — {reg.races.get(ch.raceId)?.name} · {clsNames} (liv {lvl}){ch.background ? ` · ${ch.background}` : ''}{ch.alignment ? ` · ${ch.alignment}` : ''}
+          <div className="muted">
+            PF {ch.hp.current}/{maxHp(ch, reg)}{ch.hp.temp > 0 ? ` (+${ch.hp.temp})` : ''} · CA {armorClass(ch, reg).ac} · Vel {speedOf(ch, reg)} · XP {ch.xp} · Esaurimento {ch.exhaustion ?? 0}
+          </div>
+        </div>
+      </div>
+      <div className="row" style={{ marginTop: 4 }}>
+        {ABILITIES.map((ab) => (
+          <span key={ab} className="tag">{ab.toUpperCase()} {ch.abilityScores[ab]} ({Math.floor((ch.abilityScores[ab] - 10) / 2) >= 0 ? '+' : ''}{Math.floor((ch.abilityScores[ab] - 10) / 2)})</span>
+        ))}
+      </div>
+      <div style={{ marginTop: 4 }}>
+        <b>TS:</b> {ABILITIES.map((ab) => `${ab.toUpperCase()} ${savingThrowBonus(ch, ab, reg) >= 0 ? '+' : ''}${savingThrowBonus(ch, ab, reg)}`).join(' · ')}
+        {' '}<b>Passivi:</b> Percezione {passivePerception(ch)} · Intuizione {passiveInsight(ch)}
+      </div>
+      <div style={{ marginTop: 4 }}>
+        <b>Competenze:</b> {ch.proficiency.skills.length ? ch.proficiency.skills.map((s) => `${SKILLS.find((x) => x.id === s)?.name ?? s} ${skillBonus(ch, s, reg) >= 0 ? '+' : ''}${skillBonus(ch, s, reg)}`).join(', ') : '—'}
+        {ch.proficiency.expertise.length > 0 && <> · expertise: {ch.proficiency.expertise.join(', ')}</>}
+      </div>
+      {slots.length > 0 && (
+        <div style={{ marginTop: 4 }}>
+          <b>Slot:</b> {slots.map(([l, v]) => `${l}° ${v.total - v.used}/${v.total}`).join(' · ')}
+          {ch.concentrationSpellId && <> · concentrazione: {reg.spells.get(ch.concentrationSpellId)?.name}</>}
+        </div>
+      )}
+      {ch.spellsKnown.length > 0 && (
+        <div style={{ marginTop: 4 }}><b>Incantesimi conosciuti:</b> {ch.spellsKnown.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
+      )}
+      {ch.spellsPrepared.length > 0 && (
+        <div style={{ marginTop: 4 }}><b>Preparati:</b> {ch.spellsPrepared.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
+      )}
+      {ch.inventory.length > 0 && (
+        <div style={{ marginTop: 4 }}><b>Inventario:</b> {ch.inventory.map((i) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ''}${i.equipped ? ' (equip)' : ''}`).join(', ')}</div>
+      )}
+      <div style={{ marginTop: 4 }}><b>Valuta:</b> {ch.currency.gp} mo {ch.currency.sp} ma {ch.currency.ep} me {ch.currency.cp} mr {ch.currency.pp} mp</div>
+      {ch.feats.length > 0 && <div style={{ marginTop: 4 }}><b>Talenti:</b> {ch.feats.map((f) => reg.feats.get(f)?.name ?? f).join(', ')}</div>}
+      {ch.conditions.length > 0 && <div style={{ marginTop: 4 }}><b>Condizioni:</b> {ch.conditions.map((cd) => CONDITIONS.find((x) => x.id === cd)?.name ?? cd).join(', ')}</div>}
+      {ch.notes && <div style={{ marginTop: 4 }}><b>Note:</b> {ch.notes}</div>}
+    </div>
+  );
+}
 
 export default function CampaignTab() {
   const { reg, char, sheets } = useStore();
@@ -24,6 +90,10 @@ export default function CampaignTab() {
   const [enemyId, setEnemyId] = useState('');
   const [moveAmt, setMoveAmt] = useState(6);
 
+  const onEnter = (fn: () => void) => (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') { e.preventDefault(); fn(); }
+  };
+
   if (conn.phase !== 'online') {
     return (
       <div className="grid" style={{ maxWidth: 560 }}>
@@ -34,6 +104,7 @@ export default function CampaignTab() {
             <input
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={onEnter(checkConnection)}
               placeholder="ws://localhost:3001"
               style={{ flex: 1 }}
               list="saved-servers"
@@ -69,8 +140,8 @@ export default function CampaignTab() {
           ) : (
             <>
               <div className="row">
-                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} placeholder="Username" style={{ flex: 1 }} />
-                <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} placeholder="Password" style={{ flex: 1 }} />
+                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder="Username" style={{ flex: 1 }} />
+                <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder="Password (verificata dal server)" style={{ flex: 1 }} />
               </div>
               <div className="row" style={{ marginTop: 6 }}>
                 <button onClick={() => doRegister(accountName, accountPw)}>Registrati</button>
@@ -90,11 +161,11 @@ export default function CampaignTab() {
             <button className={mode === 'join' ? 'primary' : ''} onClick={() => setMode('join')}>Unisciti a una campagna</button>
           </div>
           <label>Il tuo nome</label>
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Eroe" />
+          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="Eroe" />
           {mode === 'create' && (
             <>
               <label>Nome campagna</label>
-              <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} placeholder="La tomba perduta" />
+              <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="La tomba perduta" />
             </>
           )}
           {mode === 'join' && (
@@ -128,7 +199,7 @@ export default function CampaignTab() {
                 </>
               )}
               <label>ID campagna (manuale)</label>
-              <input value={joinId} onChange={(e) => setJoinId(e.target.value)} placeholder="id a 8 caratteri" />
+              <input value={joinId} onChange={(e) => setJoinId(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="id a 8 caratteri" />
               <label className="row" style={{ marginTop: 6 }}>
                 <input type="checkbox" checked={asMaster} onChange={(e) => setAsMaster(e.target.checked)} style={{ width: 'auto' }} />
                 <span>Entra come <b>master</b> (serve la password della campagna; possibile solo se nessun master è collegato)</span>
@@ -136,7 +207,7 @@ export default function CampaignTab() {
             </>
           )}
           <label>Password campagna</label>
-          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} />
           {error && <div className="error">{error}</div>}
           <div style={{ marginTop: 10 }}>
             <button
@@ -181,6 +252,14 @@ export default function CampaignTab() {
           </button>
           {pingState.status === 'ok' && <span className="ok">✅ {pingState.rtt} ms</span>}
           {pingState.status === 'error' && <span className="error">❌ {pingState.message}</span>}
+          {isMaster && (
+            <button
+              className="danger"
+              onClick={() => { if (confirm(`Eliminare definitivamente la campagna "${campaign.name}" (${campaign.id})? Tutti i partecipanti verranno disconnessi.`)) act({ kind: 'deleteCampaign' }); }}
+            >
+              🗑 Elimina campagna
+            </button>
+          )}
           <button onClick={disconnect}>Esci</button>
         </div>
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
@@ -287,11 +366,7 @@ export default function CampaignTab() {
                         {ch.conditions.map((cd) => <option key={cd} value={cd}>{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</option>)}
                       </select>
                     </div>
-                    <div className="muted" style={{ fontSize: 12 }}>
-                      Caratteristiche: {ABILITIES.map((ab) => `${ab.toUpperCase()} ${ch.abilityScores[ab]}`).join(' · ')}<br />
-                      Incantesimi conosciuti: {ch.spellsKnown.length} · Oggetti: {ch.inventory.length} · Competenze: {ch.proficiency.skills.join(', ') || '—'}
-                      {ch.notes ? <><br />Note: {ch.notes}</> : null}
-                    </div>
+                    <SheetFull ch={ch} reg={reg} />
                   </div>
                 )}
               </details>

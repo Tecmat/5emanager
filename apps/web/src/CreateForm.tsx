@@ -78,7 +78,11 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
 
   return (
     <main>
-      <div className="card" style={{ maxWidth: 640, margin: '30px auto' }}>
+      <form
+        className="card"
+        style={{ maxWidth: 640, margin: '30px auto' }}
+        onSubmit={(e) => { e.preventDefault(); submit(); }}
+      >
         <h3>{t('cf.title', 'Nuovo personaggio')}</h3>
         <label>{t('cf.name', 'Nome')}</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('cf.namePh', 'Aldric il Coraggioso')} />
@@ -165,10 +169,10 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
         </div>
         {errors.length > 0 && <div className="error">{errors.join('\n')}</div>}
         <div style={{ marginTop: 14 }} className="row">
-          <button className="primary" onClick={submit}>{t('cf.create', 'Crea personaggio')}</button>
-          {onCancel && <button onClick={onCancel}>{t('cf.cancel', 'Annulla')}</button>}
+          <button type="submit" className="primary">{t('cf.create', 'Crea personaggio')}</button>
+          {onCancel && <button type="button" onClick={onCancel}>{t('cf.cancel', 'Annulla')}</button>}
         </div>
-      </div>
+      </form>
     </main>
   );
 }

@@ -79,3 +79,10 @@ details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .pb-row .pb-val small { color: var(--muted); font-weight: 400; }
 .portrait { width: 84px; height: 84px; border-radius: 10px; object-fit: cover; border: 1px solid var(--border); background: var(--panel2); }
 .portrait-ph { width: 84px; height: 84px; border-radius: 10px; border: 1px dashed var(--border); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 11px; text-align: center; background: var(--panel2); }
+/* select/option seguono il tema (altrimenti restano bianchi e illeggibili in dark) */
+select, option { background-color: var(--panel2); color: var(--text); }
+select:focus { outline: none; border-color: var(--accent); }
+option:hover, option:checked { background-color: var(--accent); color: #14161c; }
+:root[data-theme='light'] option:hover, :root[data-theme='light'] option:checked { color: #fffdf7; }
+input[type='file'] { color: var(--text); }
+input::placeholder, textarea::placeholder { color: var(--muted); }

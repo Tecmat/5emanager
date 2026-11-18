@@ -33,6 +33,7 @@ import { SKILLS } from '@dnd5e/core';
 import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
 import { CUSTOM_KEY, useStore } from './store.js';
 import { loadJSON, saveJSON } from './storage.js';
+import { sha256Hex } from './netStore.js';
 import LevelUpDialog from './LevelUpDialog.js';
 import DiceRoller from './DiceRoller.js';
 
@@ -60,8 +61,57 @@ function fmt(n: number): string {
   return n >= 0 ? `+${n}` : `${n}`;
 }
 
-export default function Overview() {
+const LOCK_KEY = 'dnd5e.lock.v1';
+
+interface LockRec {
+  enabled: boolean;
+  hash: string;
+}
+
+function loadLock(): LockRec {
+  try {
+    const r = JSON.parse(localStorage.getItem(LOCK_KEY) ?? '{}') as Partial<LockRec>;
+    return { enabled: !!r.enabled, hash: r.hash ?? '' };
+  } catch {
+    return { enabled: false, hash: '' };
+  }
+}
+
+export default function Overview({ editing = false }: { editing?: boolean }) {
   const { reg, char, setChar, createSheet, importSheets, sheets, resetChar, reloadCustom } = useStore();
+  const [lock, setLock] = useState<LockRec>(loadLock);
+
+  const editField = <K extends keyof Character>(key: K, value: Character[K]) => {
+    if (!char) return;
+    setChar({ ...char, [key]: value, updatedAt: new Date().toISOString() });
+  };
+
+  const setupLock = async () => {
+    const pw1 = prompt('Scegli la password locale per bloccare l\'app (min 4 caratteri):');
+    if (!pw1 || pw1.length < 4) return;
+    const pw2 = prompt('Ripeti la password:');
+    if (pw2 !== pw1) { alert('Le password non coincidono'); return; }
+    const hash = await sha256Hex(pw1);
+    const rec = { enabled: true, hash };
+    localStorage.setItem(LOCK_KEY, JSON.stringify(rec));
+    setLock(rec);
+  };
+
+  const changeLock = async () => {
+    const old = prompt('Password attuale:');
+    if (!old) return;
+    if ((await sha256Hex(old)) !== lock.hash) { alert('Password errata'); return; }
+    await setupLock();
+  };
+
+  const disableLock = async () => {
+    const old = prompt('Password attuale (per disabilitare il blocco):');
+    if (!old) return;
+    if ((await sha256Hex(old)) !== lock.hash) { alert('Password errata'); return; }
+    const rec = { enabled: false, hash: '' };
+    localStorage.setItem(LOCK_KEY, JSON.stringify(rec));
+    setLock(rec);
+  };
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [dmg, setDmg] = useState(0);
   const [healAmt, setHealAmt] = useState(0);
@@ -212,11 +262,39 @@ export default function Overview() {
               </div>
             </div>
           </div>
-          <div className="big">{char.name}</div>
+          {editing ? (
+            <input value={char.name} onChange={(e) => editField('name', e.target.value)} style={{ fontSize: 18, fontWeight: 700 }} />
+          ) : (
+            <div className="big">{char.name}</div>
+          )}
+          {editing && (
+            <div className="grid cols2" style={{ marginTop: 6 }}>
+              <div>
+                <label>Background</label>
+                <input value={char.background ?? ''} onChange={(e) => editField('background', e.target.value || undefined)} placeholder="Background" />
+              </div>
+              <div>
+                <label>Allineamento</label>
+                <input value={char.alignment ?? ''} onChange={(e) => editField('alignment', e.target.value || undefined)} placeholder="Allineamento" />
+              </div>
+            </div>
+          )}
           <div className="muted">{race?.name}{subrace ? ` (${subrace.name})` : ''} — {classNames.join(' / ')}</div>
+          {editing && (
+            <div style={{ marginTop: 6 }}>
+              <label>Note</label>
+              <textarea rows={2} value={char.notes ?? ''} onChange={(e) => editField('notes', e.target.value)} style={{ width: '100%' }} />
+            </div>
+          )}
           <div className="row" style={{ marginTop: 8 }}>
             <span className="tag">Livello {level}</span>
-            <span className="tag">PF {char.hp.current}/{hpMax}{char.hp.temp > 0 ? ` (+${char.hp.temp} temp)` : ''}</span>
+            {editing ? (
+              <span className="tag row" style={{ gap: 4 }}>
+                PF <input type="number" value={char.hp.current} onChange={(e) => setChar({ ...char, hp: { ...char.hp, current: Math.max(0, Number(e.target.value)) }, updatedAt: new Date().toISOString() })} style={{ width: 56 }} />/{hpMax}
+              </span>
+            ) : (
+              <span className="tag">PF {char.hp.current}/{hpMax}{char.hp.temp > 0 ? ` (+${char.hp.temp} temp)` : ''}</span>
+            )}
             <span className="tag">CA {ac}</span>
             <span className="tag">Iniziativa {fmt(initiativeBonus(char))}</span>
             <span className="tag">Percezione passiva {passivePerception(char)}</span>
@@ -272,7 +350,14 @@ export default function Overview() {
         <div className="card">
           <h3>Esperienza</h3>
           <div className="row">
-            <span className="big">{char.xp} XP</span>
+            {editing ? (
+              <span className="row">
+                <input type="number" value={char.xp} onChange={(e) => editField('xp', Math.max(0, Number(e.target.value)))} style={{ width: 90 }} />
+                <span className="big">XP</span>
+              </span>
+            ) : (
+              <span className="big">{char.xp} XP</span>
+            )}
             <span className="muted">livello {level}{xpNext ? ` / ${xpNext} XP` : ' (max)'}</span>
           </div>
           <div className="xpbar"><div style={{ width: `${xpProgress}%` }} /></div>
@@ -293,7 +378,16 @@ export default function Overview() {
             {ABILITIES.map((ab) => (
               <div key={ab} className="abil">
                 <div className="muted" style={{ fontSize: 10 }}>{ABILITY_IT[ab]}</div>
-                <div className="score">{char.abilityScores[ab]}</div>
+                {editing ? (
+                  <input
+                    type="number" min={1} max={30}
+                    className="score" style={{ width: 52, textAlign: 'center' }}
+                    value={char.abilityScores[ab]}
+                    onChange={(e) => setChar({ ...char, abilityScores: { ...char.abilityScores, [ab]: Math.max(1, Math.min(30, Number(e.target.value))) }, updatedAt: new Date().toISOString() })}
+                  />
+                ) : (
+                  <div className="score">{char.abilityScores[ab]}</div>
+                )}
                 <div className="mod">{fmt(Math.floor((char.abilityScores[ab] - 10) / 2))}</div>
               </div>
             ))}
@@ -424,6 +518,18 @@ export default function Overview() {
               <input type="file" accept="application/json" onChange={importLibrary} style={{ width: 'auto' }} /> Importa libreria
             </label>
           </div>
+          <div className="row" style={{ marginTop: 8 }}>
+            {!lock.enabled ? (
+              <button onClick={setupLock} title="Richiedi una password locale all'apertura dell'app (protegge le schede offline)">🔐 Imposta blocco app</button>
+            ) : (
+              <>
+                <span className="tag custom">🔐 blocco app attivo</span>
+                <button onClick={changeLock}>Cambia password</button>
+                <button className="danger" onClick={disableLock}>Disabilita blocco</button>
+              </>
+            )}
+          </div>
+          <div className="muted" style={{ marginTop: 4 }}>Il blocco app è una password SOLO locale (hash in localStorage): protegge le schede offline su questo dispositivo, non ha niente a che fare con l'account server.</div>
         </div>
       </div>
 

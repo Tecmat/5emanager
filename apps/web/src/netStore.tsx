@@ -42,7 +42,6 @@ export interface SavedCampaign {
 
 const SERVERS_KEY = 'dnd5e.servers.v1';
 const JOINED_KEY = 'dnd5e.joined.v1';
-const ACCOUNT_KEY = 'dnd5e.account.v1';
 const URL_KEY = 'dnd5e.net.url';
 const NAME_KEY = 'dnd5e.net.name';
 
@@ -152,6 +151,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
       } else if (m.t === 'auth') {
         setAuth({ token: m.token, username: m.username, characters: m.characters });
         setLastUsername(m.username);
+      } else if (m.t === 'campaignDeleted') {
+        setConn({ phase: 'offline' });
+        setError('La campagna è stata eliminata (dal master o dall\'admin).');
       } else if (m.t === 'error') {
         setError(m.message);
       } else if (m.t === 'closed') {
@@ -200,12 +202,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
     setError('');
     if (!username.trim()) { setError('Inserisci uno username'); return; }
     try {
-      const hash = await sha256Hex(password);
-      localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ username: username.trim(), hash }));
-    } catch { /* crypto non disponibile: password solo in memoria */ }
-    try {
       const net = await ensureNet();
-      net.send({ t: 'register', username: username.trim() });
+      // la password va al server (verificata lì con hash sha256)
+      net.send({ t: 'register', username: username.trim(), password });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -214,20 +213,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const doLogin = async (username: string, password: string) => {
     setError('');
     if (!username.trim()) { setError('Inserisci lo username'); return; }
-    // la password viene verificata SOLO lato client (per ora il server non la vede)
-    try {
-      const raw = localStorage.getItem(ACCOUNT_KEY);
-      if (raw) {
-        const rec = JSON.parse(raw) as { username: string; hash: string };
-        if (rec.username.toLowerCase() === username.trim().toLowerCase()) {
-          const hash = await sha256Hex(password);
-          if (hash !== rec.hash) { setError('Password errata (controllo locale)'); return; }
-        }
-      }
-    } catch { /* ignora */ }
     try {
       const net = await ensureNet();
-      net.send({ t: 'login', username: username.trim() });
+      net.send({ t: 'login', username: username.trim(), password });
     } catch (e) {
       setError((e as Error).message);
     }
