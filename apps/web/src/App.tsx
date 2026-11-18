@@ -13,7 +13,7 @@ import CampaignTab from './CampaignTab.js';
 type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
 
 export default function App() {
-  const { char, sheets, selectSheet } = useStore();
+  const { char, sheets, selectSheet, lang, setLang, t } = useStore();
   const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
@@ -44,7 +44,7 @@ export default function App() {
             <select
               value={char.id}
               onChange={(e) => selectSheet(e.target.value)}
-              title="Cambia scheda personaggio"
+              title={t('app.switcher', 'Cambia scheda personaggio')}
               style={{ maxWidth: 180 }}
             >
               {sheets.map((s) => (
@@ -52,26 +52,27 @@ export default function App() {
               ))}
             </select>
           )}
-          <button onClick={() => setCreating(true)} title="Crea un nuovo personaggio">＋ Nuovo</button>
+          <button onClick={() => setCreating(true)} title={t('cf.title', 'Crea un nuovo personaggio')}>{t('app.new', '＋ Nuovo')}</button>
         </span>
         <span className="row">
           <span className="muted" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
             {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : '⚪ offline'}
           </span>
-          <span className="muted">Gestore schede{sheets.length > 1 ? ` · ${sheets.length} schede` : ''}</span>
-          <button onClick={toggleTheme} title="Cambia tema">{theme === 'dark' ? '🌙' : '☀️'}</button>
+          <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
+          <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN">🌐 {lang.toUpperCase()}</button>
+          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? '🌙' : '☀️'}</button>
         </span>
       </header>
       <main>
         <nav className="tabs">
           {(
             [
-              ['panoramica', 'Panoramica'],
-              ['incantesimi', 'Incantesimi'],
-              ['inventario', 'Inventario'],
-              ['combattimento', '⚔️ Combattimento'],
-              ['campagna', '🌐 Campagna'],
-              ['custom', 'Contenuti custom'],
+              ['panoramica', t('tab.panoramica', 'Panoramica')],
+              ['incantesimi', t('tab.incantesimi', 'Incantesimi')],
+              ['inventario', t('tab.inventario', 'Inventario')],
+              ['combattimento', t('tab.combattimento', '⚔️ Combattimento')],
+              ['campagna', t('tab.campagna', '🌐 Campagna')],
+              ['custom', t('tab.custom', 'Contenuti custom')],
             ] as [Tab, string][]
           ).map(([id, label]) => (
             <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>

@@ -8,6 +8,8 @@ import {
   type SrdData,
 } from '@dnd5e/core';
 import { SRD_DATA, createSrdRegistry } from '@dnd5e/data-srd';
+import { loadJSON, saveJSON } from './storage.js';
+import { getLang, storeLang, t as translate, type Lang } from './i18n.js';
 
 const SHEETS_KEY = 'dnd5e.sheets.v2';
 const LEGACY_CHAR_KEY = 'dnd5e.character.v1';
@@ -18,32 +20,26 @@ interface SheetStoreData {
   sheets: Record<string, Character>;
 }
 
-function loadSheets(): SheetStoreData {
-  try {
-    const raw = localStorage.getItem(SHEETS_KEY);
-    if (raw) {
-      const data = JSON.parse(raw) as SheetStoreData;
-      if (data && typeof data === 'object' && data.sheets) {
-        const sheets: Record<string, Character> = {};
-        for (const [id, c] of Object.entries(data.sheets)) sheets[id] = migrateCharacter(c);
-        return { activeId: data.activeId ?? null, sheets };
-      }
-    }
-  } catch {
-    /* v2 corrotta: si tenta la migrazione dalla v1 */
-  }
+function migrateSheets(data: SheetStoreData): SheetStoreData {
+  const sheets: Record<string, Character> = {};
+  for (const [id, c] of Object.entries(data.sheets ?? {})) sheets[id] = migrateCharacter(c);
+  return { activeId: data.activeId ?? null, sheets };
+}
+
+/** carica le schede da IndexedDB (fallback localStorage) e migra dalla v1 */
+async function loadSheetsAsync(): Promise<SheetStoreData> {
+  const stored = await loadJSON<SheetStoreData>(SHEETS_KEY);
+  if (stored && stored.sheets) return migrateSheets(stored);
   try {
     const legacy = localStorage.getItem(LEGACY_CHAR_KEY);
     if (legacy) {
       const c = migrateCharacter(JSON.parse(legacy) as Character);
-      const data: SheetStoreData = { activeId: c.id, sheets: { [c.id]: c } };
-      localStorage.setItem(SHEETS_KEY, JSON.stringify(data));
+      const d: SheetStoreData = { activeId: c.id, sheets: { [c.id]: c } };
+      saveJSON(SHEETS_KEY, d);
       localStorage.removeItem(LEGACY_CHAR_KEY);
-      return data;
+      return d;
     }
-  } catch {
-    /* ignora */
-  }
+  } catch { /* ignora */ }
   return { activeId: null, sheets: {} };
 }
 
@@ -59,6 +55,9 @@ interface Store {
   resetChar: () => void;
   reloadCustom: () => void;
   customCount: number;
+  lang: Lang;
+  setLang: (l: Lang) => void;
+  t: (key: string, fallback?: string) => string;
 }
 
 const StoreCtx = createContext<Store | null>(null);
@@ -68,23 +67,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return createSrdRegistry();
   }, []);
 
-  const [data, setData] = useState<SheetStoreData>(loadSheets);
+  const [data, setData] = useState<SheetStoreData>({ activeId: null, sheets: {} });
   const [customCount, setCustomCount] = useState(0);
+  const [lang, setLangState] = useState<Lang>(getLang);
+
+  useEffect(() => {
+    loadSheetsAsync().then(setData);
+  }, []);
 
   const persist = (d: SheetStoreData) => {
-    try {
-      localStorage.setItem(SHEETS_KEY, JSON.stringify(d));
-      setData(d);
-    } catch {
-      alert("localStorage pieno: il ritratto è troppo grande? Riprova con un'immagine più piccola.");
-    }
+    setData(d);
+    saveJSON(SHEETS_KEY, d)
+      .then((ok) => { if (!ok) alert("Archiviazione piena: il ritratto è troppo grande? Riprova con un'immagine più piccola."); })
+      .catch(() => {});
   };
 
   const loadCustom = () => {
-    try {
-      const raw = localStorage.getItem(CUSTOM_KEY);
-      if (!raw) return;
-      const data = JSON.parse(raw) as SrdData;
+    loadJSON<SrdData>(CUSTOM_KEY).then((stored) => {
+      if (!stored) return;
+      const data = stored;
       const fresh = createRegistry();
       loadData(fresh, SRD_DATA);
       loadData(fresh, data);
@@ -101,9 +102,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         (SRD_DATA.spells.length + SRD_DATA.weapons.length + SRD_DATA.armors.length + SRD_DATA.classes.length +
           SRD_DATA.subclasses.length + SRD_DATA.races.length + SRD_DATA.feats.length),
       );
-    } catch {
-      /* ignora custom corrotti */
-    }
+    }).catch(() => { /* ignora custom corrotti */ });
   };
 
   useEffect(() => {
@@ -161,6 +160,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetChar: () => { if (data.activeId) deleteSheet(data.activeId); },
     reloadCustom: loadCustom,
     customCount,
+    lang,
+    setLang: (l: Lang) => { storeLang(l); setLangState(l); },
+    t: (key: string, fallback?: string) => translate(lang, key, fallback),
   };
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }
@@ -172,5 +174,7 @@ export function useStore(): Store {
 }
 
 export function persistCustom(data: SrdData): void {
-  localStorage.setItem(CUSTOM_KEY, JSON.stringify(data));
+  saveJSON(CUSTOM_KEY, data)
+    .then((ok) => { if (!ok) alert('Archiviazione piena: salvataggio dei contenuti custom fallito.'); })
+    .catch(() => {});
 }

@@ -9,7 +9,7 @@ import { useStore } from './store.js';
 const DEFAULT_SCORES: AbilityScores = { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 };
 
 export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
-  const { reg, createSheet } = useStore();
+  const { reg, createSheet, t } = useStore();
   const [name, setName] = useState('');
   const [raceId, setRaceId] = useState('human');
   const [subraceId, setSubraceId] = useState<string>('');
@@ -59,7 +59,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
 
   const submit = () => {
     if (mode === 'pointbuy' && !isPointBuyValid(scores)) {
-      setErrors([`Point-buy non valido: punteggi 8-15, budget ${POINT_BUY_BUDGET} (usati ${pointBuySpent(scores)})`]);
+      setErrors([`${t('cf.pbError', 'Point-buy non valido: punteggi 8-15, budget')} ${POINT_BUY_BUDGET} (${t('cf.used', 'usati')} ${pointBuySpent(scores)})`]);
       return;
     }
     const res = createCharacter(
@@ -67,7 +67,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
       reg,
     );
     if (res.errors.length > 0 || !res.character) {
-      setErrors(res.errors.length ? res.errors : ['Errore sconosciuto']);
+      setErrors(res.errors.length ? res.errors : [t('cf.unknownError', 'Errore sconosciuto')]);
       return;
     }
     createSheet(res.character);
@@ -79,12 +79,12 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
   return (
     <main>
       <div className="card" style={{ maxWidth: 640, margin: '30px auto' }}>
-        <h3>Nuovo personaggio</h3>
-        <label>Nome</label>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Aldric il Coraggioso" />
+        <h3>{t('cf.title', 'Nuovo personaggio')}</h3>
+        <label>{t('cf.name', 'Nome')}</label>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder={t('cf.namePh', 'Aldric il Coraggioso')} />
         <div className="grid cols2">
           <div>
-            <label>Razza</label>
+            <label>{t('cf.race', 'Razza')}</label>
             <select value={raceId} onChange={(e) => { setRaceId(e.target.value); setSubraceId(''); }}>
               {races.map((r) => (
                 <option key={r.id} value={r.id}>{r.name}</option>
@@ -92,16 +92,16 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
             </select>
           </div>
           <div>
-            <label>Sottorazza</label>
+            <label>{t('cf.subrace', 'Sottorazza')}</label>
             <select value={subraceId} onChange={(e) => setSubraceId(e.target.value)}>
-              <option value="">(nessuna)</option>
+              <option value="">{t('cf.none', '(nessuna)')}</option>
               {(race?.subraces ?? []).map((s) => (
                 <option key={s.id} value={s.id}>{s.name}</option>
               ))}
             </select>
           </div>
           <div>
-            <label>Classe</label>
+            <label>{t('cf.class', 'Classe')}</label>
             <select value={classId} onChange={(e) => setClassId(e.target.value)}>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} (d{c.hitDie})</option>
@@ -109,15 +109,15 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
             </select>
           </div>
         </div>
-        <label>Metodo statistiche</label>
+        <label>{t('cf.method', 'Metodo statistiche')}</label>
         <div className="segmented">
-          {([['standard', 'Array standard'], ['pointbuy', 'Point-buy (27 pt)'], ['roll', 'Tiri 4d6']] as [StatGenMode, string][]).map(([m, label]) => (
+          {([['standard', t('cf.standard', 'Array standard')], ['pointbuy', t('cf.pointbuy', 'Point-buy (27 pt)')], ['roll', t('cf.roll', 'Tiri 4d6')]] as [StatGenMode, string][]).map(([m, label]) => (
             <button key={m} type="button" className={mode === m ? 'seg active' : 'seg'} onClick={() => switchMode(m)}>{label}</button>
           ))}
         </div>
         <label>
-          Punteggi caratteristica
-          {mode === 'pointbuy' && ` — punti usati: ${pointBuySpent(scores)} / ${POINT_BUY_BUDGET}`}
+          {t('cf.scores', 'Punteggi caratteristica')}
+          {mode === 'pointbuy' && ` — ${t('cf.used', 'punti usati')}: ${pointBuySpent(scores)} / ${POINT_BUY_BUDGET}`}
         </label>
         <div className="grid cols3">
           {ABILITIES.map((ab: Ability) => (
@@ -141,7 +141,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
               {mode === 'roll' && (
                 <div className="pb-row">
                   <input type="number" readOnly value={scores[ab]} />
-                  <button type="button" onClick={() => rollOne(ab)}>Tira 4d6</button>
+                  <button type="button" onClick={() => rollOne(ab)}>{t('cf.rollOne', 'Tira 4d6')}</button>
                 </div>
               )}
             </div>
@@ -149,10 +149,10 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
         </div>
         {mode === 'roll' && (
           <div style={{ marginTop: 6 }}>
-            <button type="button" onClick={() => setScores(generateAbilityScores('roll'))}>Tira tutti (4d6, scarta il peggiore)</button>
+            <button type="button" onClick={() => setScores(generateAbilityScores('roll'))}>{t('cf.rollAll', 'Tira tutti (4d6, scarta il peggiore)')}</button>
           </div>
         )}
-        <label>Abilità della classe ({choose} a scelta)</label>
+        <label>{t('cf.skills', 'Abilità della classe')} ({choose} {t('cf.choose', 'a scelta')})</label>
         <div>
           {(cls?.skillChoices.from ?? []).map((sid) => {
             const sk = SKILLS.find((s) => s.id === sid);
@@ -165,8 +165,8 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
         </div>
         {errors.length > 0 && <div className="error">{errors.join('\n')}</div>}
         <div style={{ marginTop: 14 }} className="row">
-          <button className="primary" onClick={submit}>Crea personaggio</button>
-          {onCancel && <button onClick={onCancel}>Annulla</button>}
+          <button className="primary" onClick={submit}>{t('cf.create', 'Crea personaggio')}</button>
+          {onCancel && <button onClick={onCancel}>{t('cf.cancel', 'Annulla')}</button>}
         </div>
       </div>
     </main>

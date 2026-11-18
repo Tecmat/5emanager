@@ -31,7 +31,8 @@ import {
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
 import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
-import { CUSTOM_KEY, persistCustom, useStore } from './store.js';
+import { CUSTOM_KEY, useStore } from './store.js';
+import { loadJSON, saveJSON } from './storage.js';
 import LevelUpDialog from './LevelUpDialog.js';
 import DiceRoller from './DiceRoller.js';
 
@@ -60,7 +61,7 @@ function fmt(n: number): string {
 }
 
 export default function Overview() {
-  const { reg, char, setChar, createSheet, importSheets, sheets, resetChar } = useStore();
+  const { reg, char, setChar, createSheet, importSheets, sheets, resetChar, reloadCustom } = useStore();
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [dmg, setDmg] = useState(0);
   const [healAmt, setHealAmt] = useState(0);
@@ -149,9 +150,9 @@ export default function Overview() {
     });
   };
 
-  const exportLibrary = () => {
+  const exportLibrary = async () => {
     let custom: unknown = {};
-    try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '{}'); } catch { /* vuoto */ }
+    try { custom = (await loadJSON(CUSTOM_KEY)) ?? {}; } catch { /* vuoto */ }
     const data = {
       app: '5emanager', version: 1, exportedAt: new Date().toISOString(),
       sheets, custom,
@@ -166,21 +167,21 @@ export default function Overview() {
   const importLibrary = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    file.text().then((t) => {
+    file.text().then(async (t) => {
       try {
         const d = JSON.parse(t) as { sheets?: Character[]; custom?: Record<string, unknown[]> };
         if (!d || !Array.isArray(d.sheets)) throw new Error('formato non riconosciuto');
         importSheets(d.sheets);
         if (d.custom) {
           // merge dei contenuti custom per id
-          const cur = JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '{}') as Record<string, any[]>;
+          const cur = ((await loadJSON(CUSTOM_KEY)) ?? {}) as Record<string, any[]>;
           for (const [k, arr] of Object.entries(d.custom as Record<string, any[]>)) {
             if (!Array.isArray(arr)) continue;
             const map = new Map<string, any>((cur[k] ?? []).map((x: any) => [x.id as string, x]));
             for (const x of arr) if (x && typeof x.id === 'string') map.set(x.id, x);
             cur[k] = [...map.values()];
           }
-          persistCustom(cur as never);
+          saveJSON(CUSTOM_KEY, cur).then(() => reloadCustom());
         }
         alert(`Libreria importata: ${d.sheets.length} schede${d.custom ? ' + contenuti custom' : ''}.`);
       } catch (err) {

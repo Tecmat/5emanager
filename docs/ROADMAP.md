@@ -1,5 +1,19 @@
 # Roadmap — espansione di 5e Manager
 
+## ✅ P0 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
+
+- Esaurimento 1–6 con effetti automatici (core `rules/exhaustion.ts`: svantaggio prove, velocità, PF max dimezzati, morte a liv 6) + selettore in Panoramica
+- Tiri della morte a click in Panoramica a 0 PF (✓/✗, risveglio a 1 PF, 💀)
+- Bonus attacco incantesimo e CD mostrati in Panoramica per ogni classe lanciante (`spellcastingInfoAll`)
+- Lancio rituale senza slot (🕯 in tab Incantesimi) + consumo componenti materiali dall'inventario (cariche o quantità)
+- Preparazione incantesimi separata per classe (`spellsPreparedByClass`, UI multiclasse)
+- Inventario: ricerca, filtri (tipo/magico/equipaggiato), ordinamento, cariche (−/+ /⟳ /imposta), contenitori annidati con peso ricorsivo anti-ciclo
+- Mini-DSL effetti (`rules/effects.ts`): `+N CA`, `advantage: saves vs magic`, `+1d6 fire damage`, `proficiency: skill stealth`, resistenze, speed, darkvision, max hp — applicato in derived/combat; editor talenti lo usa
+- Editor UI contenuti custom strutturato: nemici (statblock), talenti, razze, archetipi, classi (con anteprima progressione 1–20) + export/import `.5epack`
+- DM screen compatto per il master (PF, CA, percez./intuizione passive, condizioni, esaurimento)
+- Storage: schede e custom su **IndexedDB** (wrapper hand-rolled, zero dipendenze) con fallback/migrazione da localStorage; export/import intera libreria (`.json`)
+- i18n IT/EN base (`i18n.ts`, selettore 🌐 in header, cablato su App + CreateForm)
+
 ## ✅ Già implementato (nov 2026)
 
 - **Server multiplayer self-hosted** (`packages/server`, WS + campagne JSON, docs/SERVER.md) — fase 2
