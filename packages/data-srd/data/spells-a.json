@@ -1,98 +1,1788 @@
 [
-  { "id": "fire-bolt", "name": "Dardo Infuocato", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "Istantanea", "damage": "1d10", "description": "Proiettile di fuoco: 1d10 danni da fuoco.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mage-hand", "name": "Mano Magica", "level": 0, "school": "conjuration", "castingTime": "1 azione", "range": "9 m", "components": "V, S", "duration": "1 minuto", "description": "Mano spettrale che manipola oggetti a distanza.", "classes": ["wizard"], "source": "srd" },
-  { "id": "prestidigitation", "name": "Prestidigitazione", "level": 0, "school": "transmutation", "castingTime": "1 azione", "range": "3 m", "components": "V, S", "duration": "1 ora", "description": "Effetti minori: accendere fuochi, pulire, marchiare oggetti.", "classes": ["wizard"], "source": "srd" },
-  { "id": "eldritch-blast", "name": "Esplosione Eldritch", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "Istantanea", "damage": "1d10", "description": "Raggio di energia: 1d10 danni da energia (più raggi con il livello).", "classes": ["warlock"], "source": "srd" },
-  { "id": "sacred-flame", "name": "Fiamma Sacra", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "1d8", "description": "Fiamma discendente: 1d8 danni radianti, ignora la copertura.", "classes": ["cleric"], "source": "srd" },
-  { "id": "light", "name": "Luce", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "tocco", "components": "V, M", "duration": "1 ora", "description": "Un oggetto emette luce intensa in un raggio di 3 m.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "minor-illusion", "name": "Illusione Minore", "level": 0, "school": "illusion", "castingTime": "1 azione", "range": "9 m", "components": "S, M", "duration": "1 minuto", "description": "Crei un suono o un'immagine illusoria.", "classes": ["wizard"], "source": "srd" },
-  { "id": "shocking-grasp", "name": "Tocco Folgorante", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "Istantanea", "damage": "1d8", "description": "Folgore: 1d8 danni da fulmine, il bersaglio non può usare reazioni.", "classes": ["wizard"], "source": "srd" },
-  { "id": "ray-of-frost", "name": "Raggio di Gelo", "level": 0, "school": "evocation", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "1d8", "description": "Raggio gelido: 1d8 danni da freddo e -3 m di velocità.", "classes": ["wizard"], "source": "srd" },
-  { "id": "chill-touch", "name": "Tocco Gelido", "level": 0, "school": "necromancy", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "1 round", "damage": "1d8", "description": "1d8 danni necrotici; il bersaglio non può curare fino al tuo prossimo turno.", "classes": ["wizard"], "source": "srd" },
-  { "id": "poison-spray", "name": "Spruzzo di Veleno", "level": 0, "school": "conjuration", "castingTime": "1 azione", "range": "3 m", "components": "V, S", "duration": "Istantanea", "damage": "1d12", "description": "1d12 danni da veleno.", "classes": ["wizard"], "source": "srd" },
-  { "id": "guidance", "name": "Guida", "level": 0, "school": "divination", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "+1d4 a una prova di caratteristica a scelta.", "classes": ["cleric"], "source": "srd" },
-  { "id": "resistance", "name": "Resistenza", "level": 0, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "+1d4 a un tiro salvezza a scelta.", "classes": ["cleric"], "source": "srd" },
-  { "id": "thaumaturgy", "name": "Taumaturgia", "level": 0, "school": "transmutation", "castingTime": "1 azione", "range": "9 m", "components": "V", "duration": "1 minuto", "description": "Piccoli prodigi: voce tonante, luci tremolanti, sapori alterati.", "classes": ["cleric"], "source": "srd" },
-  { "id": "spare-the-dying", "name": "Risparmia i Morenti", "level": 0, "school": "necromancy", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "Istantanea", "description": "Stabilizza una creatura a 0 PF.", "classes": ["cleric"], "source": "srd" },
-  { "id": "toll-the-dead", "name": "Suonare i Morti", "level": 0, "school": "necromancy", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "1d8", "description": "1d8 danni necrotici (1d12 se il bersaglio manca PF).", "classes": ["cleric"], "source": "srd" },
-  { "id": "blade-ward", "name": "Guardia della Lama", "level": 0, "school": "abjuration", "castingTime": "1 azione", "range": "sé", "components": "V, S", "duration": "1 round", "description": "Resistenza a danni contundenti, perforanti e taglienti fino al prossimo turno.", "classes": ["wizard"], "source": "srd" },
-  { "id": "friends", "name": "Amici", "level": 0, "school": "enchantment", "castingTime": "1 azione", "range": "sé", "components": "S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Vantaggio sulle prove di Carisma contro una creatura non ostile.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mending", "name": "Riparazione", "level": 0, "school": "transmutation", "castingTime": "1 minuto", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Ripara un oggetto rotto.", "classes": ["wizard"], "source": "srd" },
-  { "id": "message", "name": "Messaggio", "level": 0, "school": "transmutation", "castingTime": "1 azione", "range": "illimitato", "components": "V, S, M", "duration": "1 round", "description": "Sussurri un messaggio a una creatura entro 140 m.", "classes": ["wizard"], "source": "srd" },
-  { "id": "true-strike", "name": "Colpo Certero", "level": 0, "school": "divination", "castingTime": "1 azione", "range": "9 m", "components": "S", "duration": "concentrazione, fino a 1 round", "concentration": true, "description": "Il tuo prossimo attacco nel round ha vantaggio.", "classes": ["wizard"], "source": "srd" },
-  { "id": "magic-missile", "name": "Dardo Magico", "level": 1, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "Istantanea", "damage": "3d4+3", "description": "Tre dardi infallibili: 1d4+1 danni da energia ciascuno.", "higherLevel": "+1 dardo per slot superiore al 1°.", "classes": ["wizard"], "source": "srd" },
-  { "id": "shield", "name": "Scudo", "level": 1, "school": "abjuration", "castingTime": "1 reazione", "range": "sé", "components": "V, S", "duration": "1 round", "description": "+5 alla CA fino all'inizio del tuo prossimo turno e immunità a Dardo Magico.", "classes": ["wizard"], "source": "srd" },
-  { "id": "burning-hands", "name": "Mani Brucianti", "level": 1, "school": "evocation", "castingTime": "1 azione", "range": "sé (cono 4,5 m)", "components": "V, S", "duration": "Istantanea", "damage": "3d6", "description": "3d6 danni da fuoco in un cono di 4,5 m; TS Des dimezza.", "higherLevel": "+1d6 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "cure-wounds", "name": "Cura Ferite", "level": 1, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "Istantanea", "description": "Una creatura recupera 1d8 + mod PF.", "higherLevel": "+1d8 per slot superiore.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "healing-word", "name": "Parola Guaritrice", "level": 1, "school": "evocation", "castingTime": "1 azione bonus", "range": "18 m", "components": "V", "duration": "Istantanea", "description": "Una creatura recupera 1d4 + mod PF.", "higherLevel": "+1d4 per slot superiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "bless", "name": "Benedizione", "level": 1, "school": "enchantment", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Fino a 3 creature aggiungono 1d4 agli attacchi e ai TS.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "shield-of-faith", "name": "Scudo della Fede", "level": 1, "school": "abjuration", "castingTime": "1 azione bonus", "range": "18 m", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "+2 alla CA di un bersaglio.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "thunderwave", "name": "Onda Tonante", "level": 1, "school": "evocation", "castingTime": "1 azione", "range": "sé (cubo 4,5 m)", "components": "V, S", "duration": "Istantanea", "damage": "2d8", "description": "2d8 danni sonori e spinge a 3 m; TS Con dimezza.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "chromatic-orb", "name": "Sfera Cromatica", "level": 1, "school": "evocation", "castingTime": "1 azione", "range": "27 m", "components": "V, S, M", "duration": "Istantanea", "damage": "3d8", "description": "3d8 danni di un tipo elementale a scelta.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "sleep", "name": "Sonno", "level": 1, "school": "enchantment", "castingTime": "1 azione", "range": "27 m", "components": "V, S, M", "duration": "1 minuto", "description": "5d8 PF di creature addormentate in una sfera di 1,5 m.", "higherLevel": "+2d8 PF per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mage-armor", "name": "Armatura del Mago", "level": 1, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "8 ore", "description": "CA = 13 + mod Des se non indossi un'armatura.", "classes": ["wizard"], "source": "srd" },
-  { "id": "grease", "name": "Grasso", "level": 1, "school": "conjuration", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "1 minuto", "description": "Superficie scivolosa 3x3 m: prove Des con svantaggio.", "classes": ["wizard"], "source": "srd" },
-  { "id": "identify", "name": "Identificare", "level": 1, "school": "divination", "castingTime": "1 minuto", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "ritual": true, "description": "Identifica un oggetto e le sue proprietà magiche.", "classes": ["wizard"], "source": "srd" },
-  { "id": "detect-magic", "name": "Individuare Magia", "level": 1, "school": "divination", "castingTime": "1 azione", "range": "sé", "components": "V, S", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "ritual": true, "description": "Percepisci la magia entro 9 m e ne conosci la scuola.", "classes": ["wizard", "cleric", "paladin"], "source": "srd" },
-  { "id": "charm-person", "name": "Affascinare Persona", "level": 1, "school": "enchantment", "castingTime": "1 azione", "range": "9 m", "components": "V, S", "duration": "1 ora", "description": "TS Wis: il bersaglio ti considera un amico.", "classes": ["wizard"], "source": "srd" },
-  { "id": "command", "name": "Comando", "level": 1, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V", "duration": "1 round", "description": "TS Wis: il bersaglio obbedisce a un comando di una parola.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "create-destroy-water", "name": "Creare o Distruggere Acqua", "level": 1, "school": "transmutation", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "Istantanea", "description": "Crea o distrugge fino a 10 galloni d'acqua.", "classes": ["cleric"], "source": "srd" },
-  { "id": "purify-food-drink", "name": "Purificare Cibo e Bevande", "level": 1, "school": "transmutation", "castingTime": "1 azione", "range": "3 m", "components": "V, S", "duration": "Istantanea", "ritual": true, "description": "Rimuove veleni e malattie da cibo e bevande.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "sanctuary", "name": "Santuario", "level": 1, "school": "abjuration", "castingTime": "1 azione bonus", "range": "9 m", "components": "V, S, M", "duration": "1 minuto", "description": "TS Wis: chi attacca il bersaglio deve superarlo o perdere l'azione.", "classes": ["cleric"], "source": "srd" },
-  { "id": "armor-of-agathys", "name": "Armatura di Agathys", "level": 1, "school": "abjuration", "castingTime": "1 azione", "range": "sé", "components": "V, S, M", "duration": "1 ora", "concentration": true, "damage": "5", "description": "5 PF temporanei e 5 danni da freddo a chi ti colpisce in mischia.", "higherLevel": "+5 PF temporanei per slot superiore.", "classes": ["warlock"], "source": "srd" },
-  { "id": "hex", "name": "Maleficio", "level": 1, "school": "enchantment", "castingTime": "1 azione bonus", "range": "27 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "damage": "1d6", "description": "1d6 danni necrotici extra ai tuoi attacchi e svantaggio a una caratteristica.", "classes": ["warlock"], "source": "srd" },
-  { "id": "hellish-rebuke", "name": "Rimprovero Infernale", "level": 1, "school": "evocation", "castingTime": "1 reazione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "2d10", "description": "2d10 danni da fuoco a chi ti ha inflitto danni.", "classes": ["warlock"], "source": "srd" },
-  { "id": "false-life", "name": "Vita Falsa", "level": 1, "school": "necromancy", "castingTime": "1 azione", "range": "sé", "components": "V, S, M", "duration": "Istantanea", "description": "Ottieni 1d4+4 PF temporanei.", "higherLevel": "+5 PF temporanei per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "alarm", "name": "Allarme", "level": 1, "school": "abjuration", "castingTime": "1 minuto", "range": "9 m", "components": "V, S, M", "duration": "8 ore", "ritual": true, "description": "Allarme sonoro quando una creatura entra nell'area di 6 m.", "classes": ["wizard"], "source": "srd" },
-  { "id": "fog-cloud", "name": "Nuvola di Nebbia", "level": 1, "school": "conjuration", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Sfera di nebbia densa del raggio di 6 m che oscura la vista.", "classes": ["wizard"], "source": "srd" },
-  { "id": "ray-of-sickness", "name": "Raggio di Malattia", "level": 1, "school": "necromancy", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "2d8", "description": "2d8 danni da veleno e avvelenato; TS Con dimezza.", "classes": ["wizard"], "source": "srd" },
-  { "id": "entangle", "name": "Intrappolare", "level": 1, "school": "conjuration", "castingTime": "1 azione", "range": "27 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Piante restringono le creature in un cubo 6 m: TS Str o restrained.", "classes": ["wizard"], "source": "srd" },
-  { "id": "cause-fear", "name": "Causare Paura", "level": 1, "school": "necromancy", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: il bersaglio è spaventato da te.", "classes": ["wizard"], "source": "srd" },
-  { "id": "witch-bolt", "name": "Dardo della Strega", "level": 1, "school": "evocation", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "1d12", "description": "1d12 danni da energia, poi 1d12 a inizio dei tuoi turni finché concentri.", "classes": ["warlock"], "source": "srd" },
-  { "id": "invisibility", "name": "Invisibilità", "level": 2, "school": "illusion", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Una creatura diventa invisibile; termina se attacca o lancia.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "misty-step", "name": "Passo nella Nebbia", "level": 2, "school": "conjuration", "castingTime": "1 azione bonus", "range": "sé", "components": "V", "duration": "Istantanea", "description": "Ti teletrasporti in uno spazio libero che vedi entro 9 m.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "mirror-image", "name": "Immagine Speculare", "level": 2, "school": "illusion", "castingTime": "1 azione", "range": "sé", "components": "V, S", "duration": "1 minuto", "description": "Tre immagini duplicate: gli attacchi possono colpire le immagini.", "classes": ["wizard"], "source": "srd" },
-  { "id": "web", "name": "Ragnatela", "level": 2, "school": "conjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Ragnatela densa in un cubo 6 m: terreno difficile, TS Str o restrained.", "classes": ["wizard"], "source": "srd" },
-  { "id": "darkness", "name": "Oscurità", "level": 2, "school": "evocation", "castingTime": "1 azione", "range": "18 m", "components": "V, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Oscurità magica in una sfera del raggio di 4,5 m.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "hold-person", "name": "Blocca Persona", "level": 2, "school": "enchantment", "castingTime": "1 azione", "range": "27 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: un umanoide è paralizzato.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "flaming-sphere", "name": "Sfera Infuocata", "level": 2, "school": "conjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "2d6", "description": "Sfera di fuoco del raggio 1,5 m: 2d6 danni da fuoco; TS Des dimezza.", "classes": ["wizard"], "source": "srd" },
-  { "id": "scorching-ray", "name": "Raggio Rovente", "level": 2, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "Istantanea", "damage": "2d6", "description": "Tre raggi di fuoco: 2d6 danni da fuoco ciascuno.", "higherLevel": "+1 raggio per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "spider-climb", "name": "Scalare come Ragno", "level": 2, "school": "transmutation", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Il bersaglio scala superfici verticali e soffitti a velocità normale.", "classes": ["wizard"], "source": "srd" },
-  { "id": "suggestion", "name": "Suggerimento", "level": 2, "school": "enchantment", "castingTime": "1 azione", "range": "9 m", "components": "V, M", "duration": "concentrazione, fino a 8 ore", "concentration": true, "description": "TS Wis: il bersaglio segue un corso d'azione che gli suggerisci.", "classes": ["wizard"], "source": "srd" },
-  { "id": "lesser-restoration", "name": "Restauro Minore", "level": 2, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "Istantanea", "description": "Termina avvelenamento, paralisi, cecità, sordità o malattie.", "classes": ["cleric", "paladin"], "source": "srd" },
-  { "id": "spiritual-weapon", "name": "Arma Spirituale", "level": 2, "school": "evocation", "castingTime": "1 azione bonus", "range": "18 m", "components": "V, S", "duration": "1 minuto", "damage": "1d8", "description": "Arma spettrale che attacchi con azione bonus: 1d8 + mod danni da energia.", "higherLevel": "+1d8 per slot superiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "zone-of-truth", "name": "Zona di Verità", "level": 2, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "10 minuti", "description": "Nessuna creatura nella sfera di 4,5 m può mentire volontariamente.", "classes": ["cleric"], "source": "srd" },
-  { "id": "fireball", "name": "Palla di Fuoco", "level": 3, "school": "evocation", "castingTime": "1 azione", "range": "45 m", "components": "V, S, M", "duration": "Istantanea", "damage": "8d6", "description": "Esplosione in una sfera di 6 m: 8d6 danni da fuoco; TS Des dimezza.", "higherLevel": "+1d6 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "lightning-bolt", "name": "Dardo Fulmineo", "level": 3, "school": "evocation", "castingTime": "1 azione", "range": "30 m", "components": "V, S, M", "duration": "Istantanea", "damage": "8d6", "description": "Linea 30 m x 1,5 m: 8d6 danni da fulmine; TS Des dimezza.", "higherLevel": "+1d6 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "haste", "name": "Velocità", "level": 3, "school": "transmutation", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Velocità raddoppiata, +1 CA, vantaggio su TS Des e un'azione extra (Scatto, Disimpegno, Usare).", "classes": ["wizard"], "source": "srd" },
-  { "id": "slow", "name": "Lentezza", "level": 3, "school": "transmutation", "castingTime": "1 azione", "range": "36 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: fino a 6 creature con velocità dimezzata, -2 CA e TS Des, niente reazioni.", "classes": ["wizard"], "source": "srd" },
-  { "id": "fly", "name": "Volo", "level": 3, "school": "transmutation", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Il bersaglio ottiene velocità di volo 18 m.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "fear", "name": "Paura", "level": 3, "school": "illusion", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: le creature nel cono di 9 m sono spaventate e fuggono.", "classes": ["wizard"], "source": "srd" },
-  { "id": "hypnotic-pattern", "name": "Modello Ipnotico", "level": 3, "school": "illusion", "castingTime": "1 azione", "range": "36 m", "components": "S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: creature in un cubo di 9 m sono affascinate e incapacitate.", "classes": ["wizard"], "source": "srd" },
-  { "id": "sleet-storm", "name": "Bufera di Nevischio", "level": 3, "school": "conjuration", "castingTime": "1 azione", "range": "45 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Cilindro di 12 m: terreno difficile, vista oscurata, TS Des o prono.", "classes": ["wizard"], "source": "srd" },
-  { "id": "vampiric-touch", "name": "Tocco Vampirico", "level": 3, "school": "necromancy", "castingTime": "1 azione", "range": "sé", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "3d6", "description": "3d6 danni necrotici e recuperi PF pari ai danni inflitti.", "higherLevel": "+1d6 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "animate-dead", "name": "Animare i Morti", "level": 3, "school": "necromancy", "castingTime": "1 minuto", "range": "3 m", "components": "V, S, M", "duration": "Istantanea", "description": "Crei uno scheletro o uno zombie da un cadavere.", "higherLevel": "+1 scheletro/zombie per slot superiore.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "revivify", "name": "Rianimare", "level": 3, "school": "conjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Riporti in vita una creatura morta da non più di 1 minuto (con 1 PF).", "classes": ["cleric"], "source": "srd" },
-  { "id": "dispel-magic", "name": "Dissolvi Magia", "level": 3, "school": "abjuration", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "Istantanea", "description": "Termina un incantesimo di 3° livello o inferiore.", "higherLevel": "Tiro di characteristic contro 10 + livello per incantesimi di livello superiore.", "classes": ["wizard", "cleric", "paladin", "warlock"], "source": "srd" },
-  { "id": "counterspell", "name": "Controincantesimo", "level": 3, "school": "abjuration", "castingTime": "1 reazione", "range": "18 m", "components": "S", "duration": "Istantanea", "description": "Interrompi un incantesimo di 3° livello o inferiore.", "higherLevel": "Automatico se usi uno slot di livello pari o superiore a quello dell'incantesimo.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "blink", "name": "Lampeggio", "level": 3, "school": "transmutation", "castingTime": "1 azione", "range": "sé", "components": "V, S", "duration": "1 minuto", "description": "A fine turno, 50% di probabilità di teletrasportarti nel Piano Etereo.", "classes": ["wizard"], "source": "srd" },
-  { "id": "stinking-cloud", "name": "Nuvola Maleodorante", "level": 3, "school": "conjuration", "castingTime": "1 azione", "range": "27 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Sfera di 6 m di gas: TS Con o avvelenato e vista oscurata.", "classes": ["wizard"], "source": "srd" },
-  { "id": "water-breathing", "name": "Respiro Sott'acqua", "level": 3, "school": "transmutation", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "1 ora", "ritual": true, "description": "Fino a 10 creature possono respirare sott'acqua.", "higherLevel": "+5 creature per slot superiore.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "mass-healing-word", "name": "Parola Guaritrice di Massa", "level": 3, "school": "evocation", "castingTime": "1 azione bonus", "range": "18 m", "components": "V", "duration": "Istantanea", "description": "Fino a 6 creature recuperano 1d4 + mod PF.", "higherLevel": "+1d4 e +1 bersaglio per slot superiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "beacon-of-hope", "name": "Faro della Speranza", "level": 3, "school": "abjuration", "castingTime": "1 azione", "range": "9 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Cura al massimo e vantaggio sui TS contro la paura per te e gli alleati.", "classes": ["cleric"], "source": "srd" },
-  { "id": "spirit-guardians", "name": "Guardiani Spirituali", "level": 3, "school": "conjuration", "castingTime": "1 azione", "range": "sé (4,5 m)", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "damage": "3d8", "description": "Spiriti: 3d8 danni radianti o necrotici; TS Wis dimezza.", "classes": ["cleric"], "source": "srd" },
-  { "id": "daylight", "name": "Luce del Giorno", "level": 3, "school": "evocation", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "1 ora", "description": "Sfera di luce intensa del raggio di 18 m; contrasta oscurità magica di 3° o inferiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "wall-of-fire", "name": "Muro di Fuoco", "level": 4, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "5d8", "description": "Muro di 18 m: 5d8 danni da fuoco a chi lo attraversa; TS Des dimezza.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "polymorph", "name": "Metamorfosi", "level": 4, "school": "transmutation", "castingTime": "1 azione", "range": "18 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "TS Wis: trasformi una creatura in una bestia.", "classes": ["wizard"], "source": "srd" },
-  { "id": "banishment", "name": "Esilio", "level": 4, "school": "abjuration", "castingTime": "1 azione", "range": "9 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Cha: una creatura extraplanare è esiliata nel suo piano d'origine.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["cleric", "wizard", "paladin", "warlock"], "source": "srd" },
-  { "id": "dimension-door", "name": "Porta Dimensionale", "level": 4, "school": "conjuration", "castingTime": "1 azione", "range": "150 m", "components": "V", "duration": "Istantanea", "description": "Ti teletrasporti fino a 150 m e porti con te una creatura a 1,5 m.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "ice-storm", "name": "Tempesta di Ghiaccio", "level": 4, "school": "evocation", "castingTime": "1 azione", "range": "90 m", "components": "V, S, M", "duration": "Istantanea", "damage": "2d8+4d6", "description": "Cilindro di 12 m: 2d8 contundenti + 4d6 freddo; terreno difficile per 1 round.", "classes": ["wizard"], "source": "srd" },
-  { "id": "greater-invisibility", "name": "Invisibilità Superiore", "level": 4, "school": "illusion", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Un bersaglio resta invisibile anche se attacca o lancia incantesimi.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "fire-shield", "name": "Scudo di Fuoco", "level": 4, "school": "evocation", "castingTime": "1 azione", "range": "sé", "components": "V, S, M", "duration": "10 minuti", "damage": "2d8", "description": "2d8 danni da fuoco o freddo a chi ti colpisce in mischia; resistenza a uno dei due tipi.", "classes": ["wizard"], "source": "srd" },
-  { "id": "stone-shape", "name": "Forma della Pietra", "level": 4, "school": "transmutation", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Modifichi la forma di pietra, sabbia o fango.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "freedom-of-movement", "name": "Libertà di Movimento", "level": 4, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "1 ora", "description": "Il bersaglio non è rallentato da terreno difficile o magia.", "classes": ["cleric", "wizard"], "source": "srd" },
-  { "id": "hallucinatory-terrain", "name": "Terreno Illusorio", "level": 4, "school": "illusion", "castingTime": "10 minuti", "range": "90 m", "components": "V, S, M", "duration": "24 ore", "description": "Illudi un terreno naturale in un cubo di 45 m.", "classes": ["wizard"], "source": "srd" },
-  { "id": "crusaders-mantle", "name": "Mantello del Crociato", "level": 4, "school": "evocation", "castingTime": "1 azione", "range": "sé (9 m)", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "1d4", "description": "Aura di 9 m: 1d4 danni radianti extra agli attacchi con arma.", "classes": ["paladin"], "source": "srd" },
-  { "id": "aura-of-vitality", "name": "Aura di Vitalità", "level": 4, "school": "evocation", "castingTime": "1 azione", "range": "sé (9 m)", "components": "V", "duration": "concentrazione, fino a 2 minuti", "concentration": true, "description": "Aura di 9 m: con azione bonus curi 2d6 PF a una creatura.", "higherLevel": "+1d6 per slot superiore.", "classes": ["paladin"], "source": "srd" },
-  { "id": "dominate-beast", "name": "Dominare Bestia", "level": 4, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: controlli le azioni di una bestia.", "classes": ["wizard"], "source": "srd" }
+  {
+    "id": "fire-bolt",
+    "name": "Dardo Infuocato",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d10",
+    "description": "Proiettile di fuoco: 1d10 danni da fuoco.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mage-hand",
+    "name": "Mano Magica",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "description": "Mano spettrale che manipola oggetti a distanza.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "prestidigitation",
+    "name": "Prestidigitazione",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "3 m",
+    "components": "V, S",
+    "duration": "1 ora",
+    "description": "Effetti minori: accendere fuochi, pulire, marchiare oggetti.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "eldritch-blast",
+    "name": "Esplosione Eldritch",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d10",
+    "description": "Raggio di energia: 1d10 danni da energia (più raggi con il livello).",
+    "classes": [
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "sacred-flame",
+    "name": "Fiamma Sacra",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d8",
+    "description": "Fiamma discendente: 1d8 danni radianti, ignora la copertura.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "light",
+    "name": "Luce",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, M",
+    "duration": "1 ora",
+    "description": "Un oggetto emette luce intensa in un raggio di 3 m.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "minor-illusion",
+    "name": "Illusione Minore",
+    "level": 0,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "S, M",
+    "duration": "1 minuto",
+    "description": "Crei un suono o un'immagine illusoria.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "shocking-grasp",
+    "name": "Tocco Folgorante",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d8",
+    "description": "Folgore: 1d8 danni da fulmine, il bersaglio non può usare reazioni.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "ray-of-frost",
+    "name": "Raggio di Gelo",
+    "level": 0,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d8",
+    "description": "Raggio gelido: 1d8 danni da freddo e -3 m di velocità.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "chill-touch",
+    "name": "Tocco Gelido",
+    "level": 0,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "1 round",
+    "damage": "1d8",
+    "description": "1d8 danni necrotici; il bersaglio non può curare fino al tuo prossimo turno.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "poison-spray",
+    "name": "Spruzzo di Veleno",
+    "level": 0,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "3 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d12",
+    "description": "1d12 danni da veleno.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "guidance",
+    "name": "Guida",
+    "level": 0,
+    "school": "divination",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "+1d4 a una prova di caratteristica a scelta.",
+    "classes": [
+      "cleric"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "resistance",
+    "name": "Resistenza",
+    "level": 0,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "+1d4 a un tiro salvezza a scelta.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "thaumaturgy",
+    "name": "Taumaturgia",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V",
+    "duration": "1 minuto",
+    "description": "Piccoli prodigi: voce tonante, luci tremolanti, sapori alterati.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "spare-the-dying",
+    "name": "Risparmia i Morenti",
+    "level": 0,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Stabilizza una creatura a 0 PF.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "toll-the-dead",
+    "name": "Suonare i Morti",
+    "level": 0,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "1d8",
+    "description": "1d8 danni necrotici (1d12 se il bersaglio manca PF).",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "blade-ward",
+    "name": "Guardia della Lama",
+    "level": 0,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "1 round",
+    "description": "Resistenza a danni contundenti, perforanti e taglienti fino al prossimo turno.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "friends",
+    "name": "Amici",
+    "level": 0,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Vantaggio sulle prove di Carisma contro una creatura non ostile.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mending",
+    "name": "Riparazione",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": "1 minuto",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Ripara un oggetto rotto.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "message",
+    "name": "Messaggio",
+    "level": 0,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "illimitato",
+    "components": "V, S, M",
+    "duration": "1 round",
+    "description": "Sussurri un messaggio a una creatura entro 140 m.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "true-strike",
+    "name": "Colpo Certero",
+    "level": 0,
+    "school": "divination",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "S",
+    "duration": "concentrazione, fino a 1 round",
+    "concentration": true,
+    "description": "Il tuo prossimo attacco nel round ha vantaggio.",
+    "classes": [
+      "wizard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "magic-missile",
+    "name": "Dardo Magico",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "3d4+3",
+    "description": "Tre dardi infallibili: 1d4+1 danni da energia ciascuno.",
+    "higherLevel": "+1 dardo per slot superiore al 1°.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "shield",
+    "name": "Scudo",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 reazione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "1 round",
+    "description": "+5 alla CA fino all'inizio del tuo prossimo turno e immunità a Dardo Magico.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "burning-hands",
+    "name": "Mani Brucianti",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (cono 4,5 m)",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "3d6",
+    "description": "3d6 danni da fuoco in un cono di 4,5 m; TS Des dimezza.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "cure-wounds",
+    "name": "Cura Ferite",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Una creatura recupera 1d8 + mod PF.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "healing-word",
+    "name": "Parola Guaritrice",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione bonus",
+    "range": "18 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Una creatura recupera 1d4 + mod PF.",
+    "higherLevel": "+1d4 per slot superiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "bless",
+    "name": "Benedizione",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Fino a 3 creature aggiungono 1d4 agli attacchi e ai TS.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "shield-of-faith",
+    "name": "Scudo della Fede",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 azione bonus",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "+2 alla CA di un bersaglio.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "thunderwave",
+    "name": "Onda Tonante",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (cubo 4,5 m)",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "2d8",
+    "description": "2d8 danni sonori e spinge a 3 m; TS Con dimezza.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "chromatic-orb",
+    "name": "Sfera Cromatica",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "3d8",
+    "description": "3d8 danni di un tipo elementale a scelta.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "sleep",
+    "name": "Sonno",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "1 minuto",
+    "description": "5d8 PF di creature addormentate in una sfera di 1,5 m.",
+    "higherLevel": "+2d8 PF per slot superiore.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mage-armor",
+    "name": "Armatura del Mago",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "description": "CA = 13 + mod Des se non indossi un'armatura.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "grease",
+    "name": "Grasso",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "1 minuto",
+    "description": "Superficie scivolosa 3x3 m: prove Des con svantaggio.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "identify",
+    "name": "Identificare",
+    "level": 1,
+    "school": "divination",
+    "castingTime": "1 minuto",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "ritual": true,
+    "description": "Identifica un oggetto e le sue proprietà magiche.",
+    "classes": [
+      "wizard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "detect-magic",
+    "name": "Individuare Magia",
+    "level": 1,
+    "school": "divination",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "ritual": true,
+    "description": "Percepisci la magia entro 9 m e ne conosci la scuola.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "paladin"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "charm-person",
+    "name": "Affascinare Persona",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S",
+    "duration": "1 ora",
+    "description": "TS Wis: il bersaglio ti considera un amico.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "command",
+    "name": "Comando",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V",
+    "duration": "1 round",
+    "description": "TS Wis: il bersaglio obbedisce a un comando di una parola.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "create-destroy-water",
+    "name": "Creare o Distruggere Acqua",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Crea o distrugge fino a 10 galloni d'acqua.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "purify-food-drink",
+    "name": "Purificare Cibo e Bevande",
+    "level": 1,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "3 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "ritual": true,
+    "description": "Rimuove veleni e malattie da cibo e bevande.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "sanctuary",
+    "name": "Santuario",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 azione bonus",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "1 minuto",
+    "description": "TS Wis: chi attacca il bersaglio deve superarlo o perdere l'azione.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "armor-of-agathys",
+    "name": "Armatura di Agathys",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "concentration": true,
+    "damage": "5",
+    "description": "5 PF temporanei e 5 danni da freddo a chi ti colpisce in mischia.",
+    "higherLevel": "+5 PF temporanei per slot superiore.",
+    "classes": [
+      "warlock",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hex",
+    "name": "Maleficio",
+    "level": 1,
+    "school": "enchantment",
+    "castingTime": "1 azione bonus",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "damage": "1d6",
+    "description": "1d6 danni necrotici extra ai tuoi attacchi e svantaggio a una caratteristica.",
+    "classes": [
+      "warlock",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hellish-rebuke",
+    "name": "Rimprovero Infernale",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 reazione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "2d10",
+    "description": "2d10 danni da fuoco a chi ti ha inflitto danni.",
+    "classes": [
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "false-life",
+    "name": "Vita Falsa",
+    "level": 1,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Ottieni 1d4+4 PF temporanei.",
+    "higherLevel": "+5 PF temporanei per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "alarm",
+    "name": "Allarme",
+    "level": 1,
+    "school": "abjuration",
+    "castingTime": "1 minuto",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "ritual": true,
+    "description": "Allarme sonoro quando una creatura entra nell'area di 6 m.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "fog-cloud",
+    "name": "Nuvola di Nebbia",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Sfera di nebbia densa del raggio di 6 m che oscura la vista.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "ray-of-sickness",
+    "name": "Raggio di Malattia",
+    "level": 1,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "2d8",
+    "description": "2d8 danni da veleno e avvelenato; TS Con dimezza.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "entangle",
+    "name": "Intrappolare",
+    "level": 1,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Piante restringono le creature in un cubo 6 m: TS Str o restrained.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "cause-fear",
+    "name": "Causare Paura",
+    "level": 1,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: il bersaglio è spaventato da te.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "witch-bolt",
+    "name": "Dardo della Strega",
+    "level": 1,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "1d12",
+    "description": "1d12 danni da energia, poi 1d12 a inizio dei tuoi turni finché concentri.",
+    "classes": [
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "invisibility",
+    "name": "Invisibilità",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Una creatura diventa invisibile; termina se attacca o lancia.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "misty-step",
+    "name": "Passo nella Nebbia",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": "1 azione bonus",
+    "range": "sé",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Ti teletrasporti in uno spazio libero che vedi entro 9 m.",
+    "classes": [
+      "wizard",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mirror-image",
+    "name": "Immagine Speculare",
+    "level": 2,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "description": "Tre immagini duplicate: gli attacchi possono colpire le immagini.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "web",
+    "name": "Ragnatela",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Ragnatela densa in un cubo 6 m: terreno difficile, TS Str o restrained.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "darkness",
+    "name": "Oscurità",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Oscurità magica in una sfera del raggio di 4,5 m.",
+    "classes": [
+      "wizard",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hold-person",
+    "name": "Blocca Persona",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: un umanoide è paralizzato.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "flaming-sphere",
+    "name": "Sfera Infuocata",
+    "level": 2,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "2d6",
+    "description": "Sfera di fuoco del raggio 1,5 m: 2d6 danni da fuoco; TS Des dimezza.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "scorching-ray",
+    "name": "Raggio Rovente",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "2d6",
+    "description": "Tre raggi di fuoco: 2d6 danni da fuoco ciascuno.",
+    "higherLevel": "+1 raggio per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "spider-climb",
+    "name": "Scalare come Ragno",
+    "level": 2,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Il bersaglio scala superfici verticali e soffitti a velocità normale.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "suggestion",
+    "name": "Suggerimento",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, M",
+    "duration": "concentrazione, fino a 8 ore",
+    "concentration": true,
+    "description": "TS Wis: il bersaglio segue un corso d'azione che gli suggerisci.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "lesser-restoration",
+    "name": "Restauro Minore",
+    "level": 2,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Termina avvelenamento, paralisi, cecità, sordità o malattie.",
+    "classes": [
+      "cleric",
+      "paladin",
+      "sorcerer",
+      "bard",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "spiritual-weapon",
+    "name": "Arma Spirituale",
+    "level": 2,
+    "school": "evocation",
+    "castingTime": "1 azione bonus",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "damage": "1d8",
+    "description": "Arma spettrale che attacchi con azione bonus: 1d8 + mod danni da energia.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "zone-of-truth",
+    "name": "Zona di Verità",
+    "level": 2,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "10 minuti",
+    "description": "Nessuna creatura nella sfera di 4,5 m può mentire volontariamente.",
+    "classes": [
+      "cleric",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "fireball",
+    "name": "Palla di Fuoco",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "45 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "8d6",
+    "description": "Esplosione in una sfera di 6 m: 8d6 danni da fuoco; TS Des dimezza.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "lightning-bolt",
+    "name": "Dardo Fulmineo",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "30 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "8d6",
+    "description": "Linea 30 m x 1,5 m: 8d6 danni da fulmine; TS Des dimezza.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "haste",
+    "name": "Velocità",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Velocità raddoppiata, +1 CA, vantaggio su TS Des e un'azione extra (Scatto, Disimpegno, Usare).",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "slow",
+    "name": "Lentezza",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: fino a 6 creature con velocità dimezzata, -2 CA e TS Des, niente reazioni.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "fly",
+    "name": "Volo",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Il bersaglio ottiene velocità di volo 18 m.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "fear",
+    "name": "Paura",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: le creature nel cono di 9 m sono spaventate e fuggono.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hypnotic-pattern",
+    "name": "Modello Ipnotico",
+    "level": 3,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: creature in un cubo di 9 m sono affascinate e incapacitate.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "sleet-storm",
+    "name": "Bufera di Nevischio",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "45 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Cilindro di 12 m: terreno difficile, vista oscurata, TS Des o prono.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "vampiric-touch",
+    "name": "Tocco Vampirico",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "3d6",
+    "description": "3d6 danni necrotici e recuperi PF pari ai danni inflitti.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "animate-dead",
+    "name": "Animare i Morti",
+    "level": 3,
+    "school": "necromancy",
+    "castingTime": "1 minuto",
+    "range": "3 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Crei uno scheletro o uno zombie da un cadavere.",
+    "higherLevel": "+1 scheletro/zombie per slot superiore.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "revivify",
+    "name": "Rianimare",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Riporti in vita una creatura morta da non più di 1 minuto (con 1 PF).",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dispel-magic",
+    "name": "Dissolvi Magia",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Termina un incantesimo di 3° livello o inferiore.",
+    "higherLevel": "Tiro di characteristic contro 10 + livello per incantesimi di livello superiore.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "paladin",
+      "warlock",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "counterspell",
+    "name": "Controincantesimo",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": "1 reazione",
+    "range": "18 m",
+    "components": "S",
+    "duration": "Istantanea",
+    "description": "Interrompi un incantesimo di 3° livello o inferiore.",
+    "higherLevel": "Automatico se usi uno slot di livello pari o superiore a quello dell'incantesimo.",
+    "classes": [
+      "wizard",
+      "warlock",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "blink",
+    "name": "Lampeggio",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "description": "A fine turno, 50% di probabilità di teletrasportarti nel Piano Etereo.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "stinking-cloud",
+    "name": "Nuvola Maleodorante",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Sfera di 6 m di gas: TS Con o avvelenato e vista oscurata.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "water-breathing",
+    "name": "Respiro Sott'acqua",
+    "level": 3,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "ritual": true,
+    "description": "Fino a 10 creature possono respirare sott'acqua.",
+    "higherLevel": "+5 creature per slot superiore.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mass-healing-word",
+    "name": "Parola Guaritrice di Massa",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": "1 azione bonus",
+    "range": "18 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Fino a 6 creature recuperano 1d4 + mod PF.",
+    "higherLevel": "+1d4 e +1 bersaglio per slot superiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "beacon-of-hope",
+    "name": "Faro della Speranza",
+    "level": 3,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Cura al massimo e vantaggio sui TS contro la paura per te e gli alleati.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "spirit-guardians",
+    "name": "Guardiani Spirituali",
+    "level": 3,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "sé (4,5 m)",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "damage": "3d8",
+    "description": "Spiriti: 3d8 danni radianti o necrotici; TS Wis dimezza.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "daylight",
+    "name": "Luce del Giorno",
+    "level": 3,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "1 ora",
+    "description": "Sfera di luce intensa del raggio di 18 m; contrasta oscurità magica di 3° o inferiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "wall-of-fire",
+    "name": "Muro di Fuoco",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "5d8",
+    "description": "Muro di 18 m: 5d8 danni da fuoco a chi lo attraversa; TS Des dimezza.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "polymorph",
+    "name": "Metamorfosi",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "TS Wis: trasformi una creatura in una bestia.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "bard",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "banishment",
+    "name": "Esilio",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Cha: una creatura extraplanare è esiliata nel suo piano d'origine.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "cleric",
+      "wizard",
+      "paladin",
+      "warlock",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dimension-door",
+    "name": "Porta Dimensionale",
+    "level": 4,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "150 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Ti teletrasporti fino a 150 m e porti con te una creatura a 1,5 m.",
+    "classes": [
+      "wizard",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "ice-storm",
+    "name": "Tempesta di Ghiaccio",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "90 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "2d8+4d6",
+    "description": "Cilindro di 12 m: 2d8 contundenti + 4d6 freddo; terreno difficile per 1 round.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "greater-invisibility",
+    "name": "Invisibilità Superiore",
+    "level": 4,
+    "school": "illusion",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Un bersaglio resta invisibile anche se attacca o lancia incantesimi.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "fire-shield",
+    "name": "Scudo di Fuoco",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "10 minuti",
+    "damage": "2d8",
+    "description": "2d8 danni da fuoco o freddo a chi ti colpisce in mischia; resistenza a uno dei due tipi.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "stone-shape",
+    "name": "Forma della Pietra",
+    "level": 4,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Modifichi la forma di pietra, sabbia o fango.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "freedom-of-movement",
+    "name": "Libertà di Movimento",
+    "level": 4,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "description": "Il bersaglio non è rallentato da terreno difficile o magia.",
+    "classes": [
+      "cleric",
+      "wizard",
+      "sorcerer",
+      "bard",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hallucinatory-terrain",
+    "name": "Terreno Illusorio",
+    "level": 4,
+    "school": "illusion",
+    "castingTime": "10 minuti",
+    "range": "90 m",
+    "components": "V, S, M",
+    "duration": "24 ore",
+    "description": "Illudi un terreno naturale in un cubo di 45 m.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "crusaders-mantle",
+    "name": "Mantello del Crociato",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (9 m)",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "1d4",
+    "description": "Aura di 9 m: 1d4 danni radianti extra agli attacchi con arma.",
+    "classes": [
+      "paladin",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "aura-of-vitality",
+    "name": "Aura di Vitalità",
+    "level": 4,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (9 m)",
+    "components": "V",
+    "duration": "concentrazione, fino a 2 minuti",
+    "concentration": true,
+    "description": "Aura di 9 m: con azione bonus curi 2d6 PF a una creatura.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "paladin",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dominate-beast",
+    "name": "Dominare Bestia",
+    "level": 4,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: controlli le azioni di una bestia.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  }
 ]

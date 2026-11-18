@@ -18,6 +18,7 @@ import {
 import { useStore } from './store.js';
 
 function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: ReturnType<typeof useStore>['char']; reg: ReturnType<typeof useStore>['reg']; onChange: (c: NonNullable<ReturnType<typeof useStore>['char']>) => void }) {
+  const { t, tf } = useStore();
   if (!char) return null;
   const known = char.spellsKnown.includes(spell.id);
   const preparers = castersOf(char, reg).filter((c) => c.prepare).map((c) => c.classId);
@@ -34,27 +35,27 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
   return (
     <tr>
       <td>{spell.name} {spell.source === 'custom' && <span className="tag custom">custom</span>}</td>
-      <td>{spell.level === 0 ? 'trucchetto' : `${spell.level}°`}</td>
+      <td>{spell.level === 0 ? t('sp.cantrip', 'trucchetto') : `${spell.level}°`}</td>
       <td className="muted">
-        {spell.school}{spell.concentration ? ' · conc.' : ''}{spell.ritual ? ' · rituale' : ''}
+        {spell.school}{spell.concentration ? ` · ${t('sp.concTag', 'conc.')}` : ''}{spell.ritual ? ` · ${t('sp.ritualTag', 'rituale')}` : ''}
         {mat && <div title={isMaterialConsumed(spell) ? 'componente consumato' : 'componente non consumato'}>M: {mat}</div>}
       </td>
       <td>
         {!known && (
           <button
             disabled={atLimit}
-            title={atLimit ? `Limite raggiunto (${knownSpellCount(char, reg)}/${maxKnown})` : ''}
+            title={atLimit ? tf('sp.limitTitle', 'Limite raggiunto ({a}/{b})', { a: knownSpellCount(char, reg), b: maxKnown }) : ''}
             onClick={() => {
               const r = addSpellKnown(char, spell.id, reg);
               if (r.error) alert(r.error);
               else onChange(r.character);
             }}
           >
-            Impara
+            {t('sp.learn', 'Impara')}
           </button>
         )}
         {known && spell.level > 0 && (
-          <button className="danger" style={{ marginLeft: 4 }} onClick={() => onChange(forgetSpell(char, spell.id).character)}>Dimentica</button>
+          <button className="danger" style={{ marginLeft: 4 }} onClick={() => onChange(forgetSpell(char, spell.id).character)}>{t('sp.forget', 'Dimentica')}</button>
         )}
         {known && preparers.length > 0 && (
           <span className="row" style={{ display: 'inline-flex', marginLeft: 4 }}>
@@ -73,7 +74,7 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
                 }
               }}
             >
-              {prepared ? `✓ prep. (${reg.classes.get(prepClass!)?.name ?? prepClass})` : 'prepara'}
+              {prepared ? tf('sp.prepped', '✓ prep. ({cls})', { cls: reg.classes.get(prepClass!)?.name ?? prepClass }) : t('sp.prepare', 'prepara')}
             </button>
           </span>
         )}
@@ -92,30 +93,30 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
                 else { if (r.warning) alert(r.warning); onChange(r.character); }
               }}
             >
-              Lancia
+              {t('sp.cast', 'Lancia')}
             </button>
             {spell.ritual && (
               <button
-                title="Lancio rituale: +10 minuti, nessuno slot consumato"
+                title={t('sp.ritualTitle', 'Lancio rituale: +10 minuti, nessuno slot consumato')}
                 onClick={() => {
                   const r = castSpellRitual(char, spell.id, reg);
                   if (r.error) alert(r.error);
                   else { if (r.warning) alert(r.warning); onChange(r.character); }
                 }}
               >
-                🕯 rituale
+                🕯 {t('sp.ritual', '🕯 rituale')}
               </button>
             )}
           </span>
         )}
-        {castable && spell.level === 0 && <span className="muted" style={{ marginLeft: 6 }}>trucchetto (sempre lanciabile)</span>}
+        {castable && spell.level === 0 && <span className="muted" style={{ marginLeft: 6 }}>{t('sp.cantripFree', 'trucchetto (sempre lanciabile)')}</span>}
       </td>
     </tr>
   );
 }
 
 export default function SpellsTab() {
-  const { reg, char, setChar } = useStore();
+  const { reg, char, setChar, t, tf } = useStore();
   const [filter, setFilter] = useState('');
   if (!char) return null;
 
@@ -135,11 +136,11 @@ export default function SpellsTab() {
   return (
     <div className="grid">
       <div className="card">
-        <h3>Slot incantesimo</h3>
-        {casters.length === 0 && <div className="muted">Questo personaggio non lancia incantesimi.</div>}
+        <h3>{t('sp.slots', 'Slot incantesimo')}</h3>
+        {casters.length === 0 && <div className="muted">{t('sp.noCaster', 'Questo personaggio non lancia incantesimi.')}</div>}
         {casters.map((c) => (
           <div key={c.classId} className="muted" style={{ marginBottom: 6 }}>
-            {reg.classes.get(c.classId)?.name}: caratteristica {c.ability.toUpperCase()}, trucchetti conosciuti: {c.cantripsKnown}
+            {tf('sp.casterLine', '{cls}: caratteristica {ab}, trucchetti conosciuti: {n}', { cls: reg.classes.get(c.classId)?.name ?? c.classId, ab: c.ability.toUpperCase(), n: c.cantripsKnown })}
           </div>
         ))}
         {casters.filter((c) => c.prepare).map((c) => {
@@ -147,11 +148,11 @@ export default function SpellsTab() {
           if (prep.length === 0) return null;
           return (
             <div key={'prep-' + c.classId} className="muted" style={{ marginBottom: 4 }}>
-              <b style={{ color: 'var(--text)' }}>{reg.classes.get(c.classId)?.name}</b> prepara: {prep.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}
+              <b style={{ color: 'var(--text)' }}>{reg.classes.get(c.classId)?.name}</b> {tf('sp.prepares', 'prepara: {list}', { list: prep.map((id) => reg.spells.get(id)?.name ?? id).join(', ') })}
             </div>
           );
         })}
-        {slots.length === 0 && casters.length > 0 && <div className="muted">Nessuno slot disponibile a questo livello.</div>}
+        {slots.length === 0 && casters.length > 0 && <div className="muted">{t('sp.noSlots', 'Nessuno slot disponibile a questo livello.')}</div>}
         <div>
           {slots.map((s) => (
             <span key={s.level} className="slot">
@@ -163,21 +164,21 @@ export default function SpellsTab() {
           ))}
         </div>
         {char.concentrationSpellId && (
-          <div className="muted" style={{ marginTop: 6 }}>Concentrazione su: <b>{reg.spells.get(char.concentrationSpellId)?.name}</b></div>
+          <div className="muted" style={{ marginTop: 6 }}>{tf('sp.concOn', 'Concentrazione su: {name}', { name: reg.spells.get(char.concentrationSpellId)?.name ?? char.concentrationSpellId })}</div>
         )}
       </div>
 
       <div className="card">
         <h3>
-          Incantesimi conosciuti ({known.length})
+          {tf('sp.known', 'Incantesimi conosciuti ({n})', { n: known.length })}
           {maxKnown !== Infinity && (
-            <span className="muted"> — non-trucchetti {knownSpellCount(char, reg)}/{maxKnown}{(char.houseRules?.bypassSpellLimit ?? false) ? ' (limite ignorato)' : ''}</span>
+            <span className="muted"> {tf('sp.knownLimit', '— non-trucchetti {a}/{b}{extra}', { a: knownSpellCount(char, reg), b: maxKnown, extra: (char.houseRules?.bypassSpellLimit ?? false) ? t('sp.limitIgnored', ' (limite ignorato)') : '' })}</span>
           )}
         </h3>
         {maxKnown !== Infinity && !(char.houseRules?.bypassSpellLimit ?? false) && knownSpellCount(char, reg) >= maxKnown && (
-          <div className="error">Limite raggiunto: dimentica un incantesimo per imparne uno nuovo (o attiva l'house-rule).</div>
+          <div className="error">{t('sp.limitHit', "Limite raggiunto: dimentica un incantesimo per imparne uno nuovo (o attiva l'house-rule).")}</div>
         )}
-        {known.length === 0 && <div className="muted">Nessun incantesimo conosciuto.</div>}
+        {known.length === 0 && <div className="muted">{t('sp.noneKnown', 'Nessun incantesimo conosciuto.')}</div>}
         <table>
           <tbody>
             {known.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)).map((s) => (
@@ -188,11 +189,11 @@ export default function SpellsTab() {
       </div>
 
       <div className="card">
-        <h3>Grimorio — impara nuovi incantesimi</h3>
-        <input placeholder="Cerca incantesimo..." value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 300, marginBottom: 8 }} />
+        <h3>{t('sp.grimoire', 'Grimorio — impara nuovi incantesimi')}</h3>
+        <input placeholder={t('sp.search', 'Cerca incantesimo...')} value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 300, marginBottom: 8 }} />
         <table>
           <thead>
-            <tr><th>Incantesimo</th><th>Liv.</th><th>Tipo</th><th>Azione</th></tr>
+            <tr><th>{t('sp.thSpell', 'Incantesimo')}</th><th>{t('sp.thLevel', 'Liv.')}</th><th>{t('sp.thType', 'Tipo')}</th><th>{t('sp.thAction', 'Azione')}</th></tr>
           </thead>
           <tbody>
             {shown.slice(0, 200).map((s) => (
@@ -200,7 +201,7 @@ export default function SpellsTab() {
             ))}
           </tbody>
         </table>
-        {shown.length > 200 && <div className="muted">…{shown.length - 200} risultati in più: affina la ricerca.</div>}
+        {shown.length > 200 && <div className="muted">{tf('sp.moreResults', '…{n} risultati in più: affina la ricerca.', { n: shown.length - 200 })}</div>}
       </div>
     </div>
   );

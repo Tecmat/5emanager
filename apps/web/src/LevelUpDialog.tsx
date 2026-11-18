@@ -11,7 +11,7 @@ import { useStore } from './store.js';
 const ABILITY_IT: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
 
 export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
-  const { reg, char, setChar } = useStore();
+  const { reg, char, setChar, t, tf } = useStore();
   const [classId, setClassId] = useState(char?.classLevels[0]?.classId ?? '');
   const [hpRoll, setHpRoll] = useState<number | ''>('');
   const [fightingStyleId, setFightingStyleId] = useState('');
@@ -63,20 +63,20 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
   return (
     <div className="modal-bg" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Sali di livello — {cls?.name} {newLevel}</h2>
-        <label>Classe</label>
+        <h2>{t('lu.title', 'Sali di livello')} — {cls?.name} {newLevel}</h2>
+        <label>{t('lu.class', 'Classe')}</label>
         <select value={classId} onChange={(e) => setClassId(e.target.value)}>
           {[...new Set([...char.classLevels.map((c) => c.classId), ...[...reg.classes.keys()]])].map((id) => (
             <option key={id} value={id}>{reg.classes.get(id)?.name ?? id}</option>
           ))}
         </select>
 
-        <label>Tiro dado vita (d{cls?.hitDie}) — vuoto = media ({avg})</label>
+        <label>{tf('lu.hitDie', 'Tiro dado vita (d{d}) — vuoto = media ({avg})', { d: cls?.hitDie ?? 0, avg })}</label>
         <input type="number" min={1} max={cls?.hitDie} value={hpRoll} onChange={(e) => setHpRoll(e.target.value === '' ? '' : Number(e.target.value))} />
 
         {needsFightingStyle && (
           <>
-            <label>Stile di combattimento</label>
+            <label>{t('lu.style', 'Stile di combattimento')}</label>
             <select value={fightingStyleId} onChange={(e) => setFightingStyleId(e.target.value)}>
               <option value="">— scegli —</option>
               {styleOptions.map((o) => <option key={o} value={o}>{reg.fightingStyles.get(o)?.name ?? o}</option>)}
@@ -86,7 +86,7 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
 
         {needsSubclass && (
           <>
-            <label>Archetipo / Sottoclasse</label>
+            <label>{t('lu.subclass', 'Archetipo / Sottoclasse')}</label>
             <select value={subclassId} onChange={(e) => setSubclassId(e.target.value)}>
               <option value="">— scegli —</option>
               {subclassOptions.map((o) => <option key={o} value={o}>{reg.subclasses.get(o)?.name ?? o}</option>)}
@@ -96,7 +96,7 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
 
         {hasAsi && (
           <>
-            <label>Aumento caratteristiche o talento</label>
+            <label>{t('lu.asi', 'Aumento caratteristiche o talento')}</label>
             <div className="row">
               <label style={{ margin: 0 }}><input type="radio" checked={mode === 'asi'} onChange={() => setMode('asi')} style={{ width: 'auto' }} /> ASI (+2)</label>
               <label style={{ margin: 0 }}><input type="radio" checked={mode === 'feat'} onChange={() => setMode('feat')} style={{ width: 'auto' }} /> Talento</label>
@@ -126,7 +126,7 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
 
         {expertiseChoose > 0 && (
           <>
-            <label>Competenza expertise ({expertiseChoose} a scelta)</label>
+            <label>{tf('lu.expertise', 'Competenza expertise ({n} a scelta)', { n: expertiseChoose })}</label>
             <div>
               {expertiseFrom.map((sid) => (
                 <span
@@ -149,8 +149,8 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
         )}
         {errors.length > 0 && <div className="error">{errors.join('\n')}</div>}
         <div className="row" style={{ marginTop: 14 }}>
-          <button className="primary" onClick={submit}>Conferma level-up</button>
-          <button onClick={onClose}>Annulla</button>
+          <button className="primary" onClick={submit}>{t('lu.confirm', 'Conferma level-up')}</button>
+          <button onClick={onClose}>{t('lu.cancel', 'Annulla')}</button>
         </div>
       </div>
     </div>

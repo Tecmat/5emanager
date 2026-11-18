@@ -66,7 +66,7 @@ export default function App() {
       setLockErr('');
       setLockPw('');
     } else {
-      setLockErr('Password errata');
+      setLockErr(t('app.lockWrong', 'Password errata'));
     }
   };
 
@@ -75,19 +75,19 @@ export default function App() {
     return (
       <main>
         <div className="card" style={{ maxWidth: 360, margin: '80px auto' }}>
-          <h3>🔐 App bloccata</h3>
-          <div className="muted" style={{ marginBottom: 8 }}>Inserisci la password locale per aprire le tue schede.</div>
+          <h3>{t('app.lockTitle', '🔐 App bloccata')}</h3>
+          <div className="muted" style={{ marginBottom: 8 }}>{t('app.lockDesc', 'Inserisci la password locale per aprire le tue schede.')}</div>
           <input
             type="password"
             value={lockPw}
             autoFocus
             onChange={(e) => setLockPw(e.target.value)}
             onKeyDown={(e) => { if (e.key === 'Enter') tryUnlock(); }}
-            placeholder="Password locale"
+            placeholder={t('app.lockPh', 'Password locale')}
           />
-          {lockErr && <div className="error" style={{ marginTop: 6 }}>{lockErr}</div>}
+          {lockErr && <div className="error" style={{ marginTop: 6 }}>{t('app.lockWrong', 'Password errata')}</div>}
           <div style={{ marginTop: 10 }}>
-            <button className="primary" onClick={tryUnlock}>Sblocca</button>
+            <button className="primary" onClick={tryUnlock}>{t('app.lockBtn', 'Sblocca')}</button>
           </div>
         </div>
       </main>
@@ -106,8 +106,8 @@ export default function App() {
           <h1>⚔️ D&D 5e — {char.name}</h1>
           {viewChar && (
             <>
-              <span className="tag custom">👁 stai vedendo la scheda di {viewLabel} (sola lettura)</span>
-              <button onClick={() => setViewChar(null)} title="Torna alla tua scheda">✕ mia scheda</button>
+              <span className="tag custom">👁 {t('app.viewing', 'stai vedendo la scheda di')} {viewLabel} ({t('app.readonly', 'sola lettura')})</span>
+              <button onClick={() => setViewChar(null)} title={t('app.mySheetTitle', 'Torna alla tua scheda')}>{t('app.mySheet', '✕ mia scheda')}</button>
             </>
           )}
           {!viewChar && sheets.length > 1 && (
@@ -129,15 +129,15 @@ export default function App() {
             <button
               className={editing ? 'primary' : ''}
               onClick={() => setEditing((v) => !v)}
-              title={editing ? 'Chiudi la modalità modifica' : 'Modifica la scheda (campi editabili)'}
+              title={editing ? t('app.editDoneTitle', 'Chiudi la modalità modifica') : t('app.editTitle', 'Modifica la scheda (campi editabili)')}
             >
-              ✏️ {editing ? 'Fatto' : 'Modifica'}
+              ✏️ {editing ? t('app.editDone', 'Fatto') : t('app.edit', 'Modifica')}
             </button>
           )}
         </span>
         <span className="row">
           <span className="muted" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
-            {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : '⚪ offline'}
+            {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : t('app.offline', '⚪ offline')}
           </span>
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
           <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN">🌐 {lang.toUpperCase()}</button>
@@ -147,7 +147,7 @@ export default function App() {
       <main>
         {viewChar && (
           <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent2)' }}>
-            👁 Modalità vista: stai guardando la scheda di <b>{viewLabel}</b> come master — è <b>sola lettura</b> e si aggiorna in tempo reale. Per modificarla usa il pannello master in 🌐 Campagna (azioni 🔒). Torna alla tua scheda con ✕ in alto.
+            {t('app.viewBanner1', '👁 Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in 🌐 Campagna (azioni 🔒). Torna alla tua scheda con ✕ in alto.')}
           </div>
         )}
         <nav className="tabs">

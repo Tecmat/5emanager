@@ -340,25 +340,6 @@ function handleMessage(conn: Conn, raw: string): void {
       }
       return;
     }
-    if (msg.action.kind === 'addCustom') {
-      const player = c.players.find((p) => p.id === conn.playerId);
-      if (player?.role !== 'master') {
-        send(conn.ws, { t: 'error', message: 'Solo il master può aggiungere contenuti custom' });
-        return;
-      }
-      addCustom(c, msg.action.data);
-      saveCampaign(c);
-      broadcast(c);
-      return;
-    }
-    if (msg.action.kind === 'leave') {
-      c = removePlayer(c, conn.playerId);
-      campaigns.set(c.id, c);
-      conn.campaignId = undefined;
-      conn.playerId = undefined;
-      broadcast(c);
-      return;
-    }
     const reg = campaignRegistry(c);
     const [next, err] = applyAction(c, conn.playerId, reg, msg.action);
     if (err) {

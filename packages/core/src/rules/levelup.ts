@@ -1,6 +1,7 @@
 import type { Ability, Character, ClassDef, Feature, SpellSlotState } from '../types.js';
 import type { Registry } from '../registry.js';
 import { totalLevel, maxHp } from './derived.js';
+import { logJournal } from '../character.js';
 
 export const XP_TABLE = [
   0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000,
@@ -279,7 +280,7 @@ export function applyLevelUp(char: Character, reg: Registry, choices: LevelUpCho
   next.updatedAt = new Date().toISOString();
 
   if (errors.length > 0) return { character: char, grantedFeatures: [], errors };
-  return { character: next, grantedFeatures: granted, errors: [] };
+  return { character: logJournal(next, `Sale al livello ${totalLevel(next)} (${cls.name} ${newLevel})`), grantedFeatures: granted, errors: [] };
 }
 
 function applyProficiency(char: Character, e: { type: 'proficiency'; kind: string; value: string }): void {

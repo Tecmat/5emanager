@@ -17,6 +17,8 @@ export interface Combatant {
   conditionRounds: Record<string, number>;
   isPlayer: boolean;
   ac: number;
+  /** incantesimo a concentrazione correntemente attivo (id) */
+  concentrating?: string;
   speed: number;
   movement: number;
   attacks: AttackDef[];
@@ -57,6 +59,7 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
     conditionRounds: {},
     isPlayer: true,
     ac,
+    concentrating: char.concentrationSpellId,
     speed,
     movement: speed,
     attacks,
@@ -88,6 +91,7 @@ export function startPartyCombat(chars: Character[], reg: Registry): CombatState
       conditionRounds: {},
       isPlayer: true,
       ac,
+      concentrating: char.concentrationSpellId,
       speed,
       movement: speed,
       attacks,
@@ -265,7 +269,7 @@ export function syncPlayerHp(state: CombatState, char: Character, reg?: Registry
           if (w) attacks.push({ name: w.name, bonus: attackBonus(char, w).bonus, dice: w.damage, type: w.damageType });
         }
       }
-      return { ...c, hp: char.hp.current, conditions: [...char.conditions], ...(ac !== undefined ? { ac } : {}), speed, attacks };
+      return { ...c, hp: char.hp.current, conditions: [...char.conditions], concentrating: char.concentrationSpellId, ...(ac !== undefined ? { ac } : {}), speed, attacks };
     }),
   };
 }

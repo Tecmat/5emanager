@@ -86,3 +86,6 @@ option:hover, option:checked { background-color: var(--accent); color: #14161c; 
 :root[data-theme='light'] option:hover, :root[data-theme='light'] option:checked { color: #fffdf7; }
 input[type='file'] { color: var(--text); }
 input::placeholder, textarea::placeholder { color: var(--muted); }
+/* i controlli nativi (popup dei <select> in WebKitGTK/Chrome) seguono il tema */
+:root, :root[data-theme='dark'] { color-scheme: dark; }
+:root[data-theme='light'] { color-scheme: light; }

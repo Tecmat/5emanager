@@ -5,6 +5,7 @@ import {
   currentCombatant,
   damageCombatant,
   healCombatant,
+  logJournal,
   nextTurn,
   removeCombatant,
   rerollInitiatives,
@@ -16,7 +17,7 @@ import {
 import { useStore } from './store.js';
 
 export default function CombatTab() {
-  const { char } = useStore();
+  const { char, setChar, reg, t, tf } = useStore();
   const [combat, setCombat] = useState<CombatState | null>(null);
   const [name, setName] = useState('');
   const [hp, setHp] = useState(10);
@@ -27,38 +28,55 @@ export default function CombatTab() {
   if (!combat) {
     return (
       <div className="card" style={{ maxWidth: 480 }}>
-        <h3>Combattimento</h3>
-        <p className="muted">Avvia un incontro: il tuo personaggio entra con initiative tirata e i suoi PF attuali.</p>
-        <button className="primary" onClick={() => setCombat(syncPlayerHp(startCombat(char), char))}>⚔️ Avvia combattimento</button>
+        <h3>{t('cb.title', 'Combattimento')}</h3>
+        <p className="muted">{t('cb.startHint', 'Avvia un incontro: il tuo personaggio entra con initiative tirata e i suoi PF attuali.')}</p>
+        <button className="primary" onClick={() => setCombat(syncPlayerHp(startCombat(char), char))}>{t('cb.start', '⚔️ Avvia combattimento')}</button>
       </div>
     );
   }
 
   const cur = currentCombatant(combat);
 
+  const dropConcentration = () => {
+    if (!char?.concentrationSpellId) return;
+    const sp = reg.spells.get(char.concentrationSpellId)?.name ?? char.concentrationSpellId;
+    setChar(logJournal({ ...char, concentrationSpellId: undefined }, `Interrompe la concentrazione su ${sp}`));
+    setCombat((c) => (c ? { ...c, combatants: c.combatants.map((cb) => (cb.isPlayer ? { ...cb, concentrating: undefined } : cb)) } : c));
+  };
+
   return (
     <div className="grid">
       <div className="card">
-        <h3>Round {combat.round} {cur && <span className="tag custom"> turno: {cur.name}</span>}</h3>
+        <h3>{tf('cb.round', 'Round {n}', { n: combat.round })} {cur && <span className="tag custom"> {tf('cb.turn', 'turno: {name}', { name: cur.name })}</span>}</h3>
         <div className="row" style={{ marginBottom: 10 }}>
-          <button className="primary" onClick={() => setCombat(nextTurn(combat))}>Turno successivo ▶</button>
-          <button onClick={() => setCombat(rerollInitiatives(combat))}>🎲 Tira initiative</button>
-          <button className="danger" onClick={() => setCombat(null)}>Chiudi combattimento</button>
+          <button className="primary" onClick={() => setCombat(nextTurn(combat))}>{t('cb.next', 'Turno successivo ▶')}</button>
+          <button onClick={() => setCombat(rerollInitiatives(combat))}>{t('cb.reroll', '🎲 Tira initiative')}</button>
+          <button className="danger" onClick={() => setCombat(null)}>{t('cb.close', 'Chiudi combattimento')}</button>
         </div>
         <div className="row" style={{ marginBottom: 10 }}>
-          <input placeholder="Nome nemico" value={name} onChange={(e) => setName(e.target.value)} style={{ width: 160 }} />
+          <input placeholder={t('cb.enemyPh', 'Nome nemico')} value={name} onChange={(e) => setName(e.target.value)} style={{ width: 160 }} />
           <input type="number" min={1} value={hp} onChange={(e) => setHp(Number(e.target.value))} style={{ width: 70 }} />
-          <button onClick={() => { if (name.trim()) { setCombat(addCombatant(combat, { name: name.trim(), hp })); setName(''); } }}>+ Aggiungi</button>
+          <button onClick={() => { if (name.trim()) { setCombat(addCombatant(combat, { name: name.trim(), hp })); setName(''); } }}>{t('cb.add', '+ Aggiungi')}</button>
         </div>
         <table>
           <thead>
-            <tr><th>Init</th><th>Combattente</th><th>PF</th><th>Condizioni</th><th>Azioni</th></tr>
+            <tr><th>{t('cb.thInit', 'Init')}</th><th>{t('cb.thCombatant', 'Combattente')}</th><th>{t('cb.thHp', 'PF')}</th><th>{t('cb.thCond', 'Condizioni')}</th><th>{t('cb.thActions', 'Azioni')}</th></tr>
           </thead>
           <tbody>
             {combat.combatants.map((c, i) => (
               <tr key={c.id} style={i === combat.turnIndex ? { background: 'var(--panel2)' } : undefined}>
                 <td><b>{c.initiative}</b></td>
-                <td>{c.name} {c.isPlayer && <span className="tag">PG</span>}</td>
+                <td>
+                  {c.name} {c.isPlayer && <span className="tag">{t('cb.player', 'PG')}</span>}
+                  {c.concentrating && (
+                    <span className="tag custom" title={t('cb.concTitle', 'Concentrazione attiva')}>
+                      🎯 {reg.spells.get(c.concentrating)?.name ?? c.concentrating}
+                      {c.isPlayer && (
+                        <button style={{ padding: '0 5px', marginLeft: 4 }} title={t('cb.dropConc', 'Interrompi la concentrazione')} onClick={dropConcentration}>✕</button>
+                      )}
+                    </span>
+                  )}
+                </td>
                 <td>{c.hp}/{c.maxHp}</td>
                 <td>
                   <select
@@ -66,7 +84,7 @@ export default function CombatTab() {
                     onChange={(e) => { if (e.target.value) setCombat(setCombatantCondition(combat, c.id, e.target.value, true)); }}
                     style={{ width: 130, display: 'inline-block' }}
                   >
-                    <option value="">+ condizione</option>
+                    <option value="">{t('cb.addCond', '+ condizione')}</option>
                     {CONDITIONS.map((cd) => <option key={cd.id} value={cd.id}>{cd.name}</option>)}
                   </select>
                   {c.conditions.map((cd) => (

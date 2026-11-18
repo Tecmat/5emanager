@@ -1,67 +1,1185 @@
 [
-  { "id": "cone-of-cold", "name": "Cono di Freddo", "level": 5, "school": "evocation", "castingTime": "1 azione", "range": "sé (cono 18 m)", "components": "V, S, M", "duration": "Istantanea", "damage": "8d8", "description": "8d8 danni da freddo in un cono di 18 m; TS Con dimezza.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "wall-of-stone", "name": "Muro di Pietra", "level": 5, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Crei un muro di pietra modellabile.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "telekinesis", "name": "Telecinesi", "level": 5, "school": "transmutation", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Muovi un oggetto fino a 450 kg a distanza o spingi creature.", "classes": ["wizard"], "source": "srd" },
-  { "id": "dominate-person", "name": "Dominare Persona", "level": 5, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: controlli le azioni di un umanoide.", "classes": ["wizard"], "source": "srd" },
-  { "id": "cloudkill", "name": "Nuvola Letale", "level": 5, "school": "conjuration", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "damage": "5d8", "description": "Sfera di 6 m di gas velenoso: 5d8 danni da veleno; TS Con dimezza.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "antilife-shell", "name": "Guscio Anti-Vita", "level": 5, "school": "abjuration", "castingTime": "1 azione", "range": "sé (3 m)", "components": "V, S", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Barriera di 3 m: i viventi non possono attraversarla né colpire da dentro.", "classes": ["wizard"], "source": "srd" },
-  { "id": "awaken", "name": "Risveglio", "level": 5, "school": "transmutation", "castingTime": "8 ore", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Dai intelligenza a una bestia o a una pianta.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mass-cure-wounds", "name": "Cura Ferite di Massa", "level": 5, "school": "abjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "description": "Fino a 6 creature recuperano 3d8 + mod PF.", "higherLevel": "+1d8 per slot superiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "raise-dead", "name": "Resuscitare i Morti", "level": 5, "school": "necromancy", "castingTime": "1 ora", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Riporti in vita una creatura morta da non più di 10 giorni.", "classes": ["cleric"], "source": "srd" },
-  { "id": "greater-restoration", "name": "Restauro Maggiore", "level": 5, "school": "abjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Riduce exhausted, rimuove maledizioni, pietrificazione, ammaliamenti e malanni mentali.", "classes": ["cleric"], "source": "srd" },
-  { "id": "commune", "name": "Comunione", "level": 5, "school": "divination", "castingTime": "1 minuto", "range": "sé", "components": "V, S, M", "duration": "1 minuto", "ritual": true, "description": "Poni fino a 3 domande a una divinità e ottieni risposte vere.", "classes": ["cleric"], "source": "srd" },
-  { "id": "destructive-wave", "name": "Onda Distruttiva", "level": 5, "school": "evocation", "castingTime": "1 azione", "range": "sé (9 m)", "components": "V, S", "duration": "Istantanea", "damage": "5d6", "description": "5d6 danni necrotici e 5d6 danni sonori; TS Con dimezza uno dei due tipi.", "classes": ["paladin"], "source": "srd" },
-  { "id": "circle-of-power", "name": "Cerchio di Potere", "level": 5, "school": "abjuration", "castingTime": "1 azione", "range": "sé (9 m)", "components": "V, S", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Aura di 9 m: vantaggio sui TS contro magie e danni da magia dimezzati.", "classes": ["paladin"], "source": "srd" },
-  { "id": "dream", "name": "Sogno", "level": 5, "school": "illusion", "castingTime": "1 minuto", "range": "speciale", "components": "V, S, M", "duration": "8 ore", "description": "Entri nei sogni di una creatura per spiarla o influenzarla.", "classes": ["wizard"], "source": "srd" },
-  { "id": "scrying", "name": "Cristallomanzia", "level": 5, "school": "divination", "castingTime": "10 minuti", "range": "sé", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Vedi e senti una creatura che conosci a qualsiasi distanza.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "geas", "name": "Marchio", "level": 5, "school": "enchantment", "castingTime": "1 minuto", "range": "18 m", "components": "V", "duration": "30 giorni", "description": "TS Cha: imponi un comando; se disobbedisce subisce 5d10 danni psychi.", "classes": ["wizard", "cleric", "paladin"], "source": "srd" },
-  { "id": "wall-of-force", "name": "Muro di Forza", "level": 5, "school": "evocation", "castingTime": "1 azione", "range": "36 m", "components": "V, S, M", "duration": "concentrazione, fino a 10 minuti", "concentration": true, "description": "Muro invulnerabile ai danni (tranne Disintegra).", "classes": ["wizard"], "source": "srd" },
-  { "id": "planar-binding", "name": "Vincolo Planare", "level": 5, "school": "abjuration", "castingTime": "1 ora", "range": "18 m", "components": "V, S, M", "duration": "24 ore", "description": "TS Cha: lega un celestiale, elementale, fiendo o non morto a servirti.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "hold-monster", "name": "Blocca Mostro", "level": 5, "school": "enchantment", "castingTime": "1 azione", "range": "27 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "TS Wis: una creatura è paralizzata.", "higherLevel": "+1 bersaglio per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "modify-memory", "name": "Modificare Memoria", "level": 5, "school": "enchantment", "castingTime": "1 azione", "range": "tocco", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "TS Wis: alteri i ricordi delle ultime 24 ore di una creatura.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mass-curse", "name": "Maledizione di Massa", "level": 5, "school": "necromancy", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "1 minuto", "description": "TS Wis: fino a 6 creature maledette (svantaggio a una categoria a scelta).", "classes": ["wizard"], "source": "srd" },
-  { "id": "contact-other-plane", "name": "Contattare un Altro Piano", "level": 5, "school": "divination", "castingTime": "1 minuto", "range": "sé", "components": "V", "duration": "1 minuto", "ritual": true, "description": "Poni 5 domande a un'entità extraplanare.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "word-of-recall", "name": "Parola di Richiamo", "level": 6, "school": "conjuration", "castingTime": "1 azione", "range": "1,5 m", "components": "V", "duration": "Istantanea", "description": "Ti teletrasporti con fino a 5 creature in un luogo designato.", "classes": ["cleric"], "source": "srd" },
-  { "id": "heal", "name": "Guarigione", "level": 6, "school": "evocation", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "description": "Una creatura recupera 70 PF e cura cecità, sordità, malattie e avvelenamento.", "higherLevel": "+10 PF per slot superiore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "heroes-feast", "name": "Festino degli Eroi", "level": 6, "school": "conjuration", "castingTime": "10 minuti", "range": "sé", "components": "V, S, M", "duration": "Istantanea", "description": "Fino a 12 creature: immunità a paura e avvelenamento, +2d10 PF temporanei, TS Wis con vantaggio.", "classes": ["cleric"], "source": "srd" },
-  { "id": "planar-ally", "name": "Alleato Planare", "level": 6, "school": "conjuration", "castingTime": "10 minuti", "range": "18 m", "components": "V, S, M", "duration": "Istantanea", "description": "Convinci un'entità extraplanare a servirti per 24 ore.", "classes": ["cleric"], "source": "srd" },
-  { "id": "wind-walk", "name": "Camminare sul Vento", "level": 6, "school": "transmutation", "castingTime": "1 minuto", "range": "9 m", "components": "V, S, M", "duration": "8 ore", "description": "Tu e fino a 10 creature assumete forma di nuvola.", "classes": ["wizard"], "source": "srd" },
-  { "id": "move-earth", "name": "Muovere la Terra", "level": 6, "school": "transmutation", "castingTime": "1 azione", "range": "36 m", "components": "V, S, M", "duration": "concentrazione, fino a 2 ore", "concentration": true, "description": "Modifichi il terreno fangoso o sabbioso in un'area di 12 m.", "classes": ["wizard"], "source": "srd" },
-  { "id": "conjure-fey", "name": "Evocare Fatato", "level": 6, "school": "conjuration", "castingTime": "1 minuto", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Evoci una creatura fatata che combatte per te.", "classes": ["wizard"], "source": "srd" },
-  { "id": "true-seeing", "name": "Vera Vista", "level": 6, "school": "divination", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "1 ora", "description": "Vedi il vero aspetto delle cose: invisibilità, illusioni, Piano Etereo.", "classes": ["wizard", "cleric", "warlock"], "source": "srd" },
-  { "id": "forcecage", "name": "Gabbia di Forza", "level": 7, "school": "evocation", "castingTime": "1 azione", "range": "30 m", "components": "V, S, M", "duration": "1 ora", "damage": "5d10", "description": "Cubo o gabbia di forza invulnerabile: 5d10 danni da energia a chi è dentro a inizio turno.", "classes": ["wizard"], "source": "srd" },
-  { "id": "simulacrum", "name": "Simulacro", "level": 7, "school": "illusion", "castingTime": "12 ore", "range": "tocco", "components": "V, S, M", "duration": "Fino a dissoluzione", "description": "Crei una copia illusoria di una bestia o umanoide con metà PF.", "classes": ["wizard"], "source": "srd" },
-  { "id": "reverse-gravity", "name": "Gravità Inversa", "level": 7, "school": "transmutation", "castingTime": "1 azione", "range": "15 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "10d6", "description": "Cilindro di 15 m: le creature cadono verso l'alto; TS Des dimezza i danni.", "classes": ["wizard"], "source": "srd" },
-  { "id": "teleport", "name": "Teletrasporto", "level": 7, "school": "conjuration", "castingTime": "1 azione", "range": "illimitato", "components": "V", "duration": "Istantanea", "description": "Trasporti te e fino a 8 creature verso una destinazione che conosci sullo stesso piano.", "classes": ["wizard"], "source": "srd" },
-  { "id": "regenerate", "name": "Rigenerazione", "level": 7, "school": "transmutation", "castingTime": "1 minuto", "range": "tocco", "components": "V, S, M", "duration": "1 ora", "description": "Il bersaglio rigenera 4d8+15 PF e poi 1 PF a round.", "classes": ["cleric", "wizard"], "source": "srd" },
-  { "id": "resurrection", "name": "Resurrezione", "level": 7, "school": "necromancy", "castingTime": "1 ora", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Riporti in vita una creatura morta da non più di un secolo, curando ogni malanno.", "classes": ["cleric"], "source": "srd" },
-  { "id": "etherealness", "name": "Etereità", "level": 7, "school": "transmutation", "castingTime": "1 azione", "range": "sé", "components": "V, S, M", "duration": "fino a 8 ore", "description": "Entri nel Piano Etereo; vedi e senti il Piano Materiale in tonalità di grigio.", "classes": ["wizard", "cleric", "warlock"], "source": "srd" },
-  { "id": "plane-shift", "name": "Cambio di Piano", "level": 7, "school": "conjuration", "castingTime": "1 azione", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Trasporti te e fino a 8 creature su un altro piano di esistenza.", "classes": ["wizard", "cleric", "warlock"], "source": "srd" },
-  { "id": "project-image", "name": "Immagine Proiettata", "level": 7, "school": "illusion", "castingTime": "1 minuto", "range": "150 km", "components": "V, S, M", "duration": "24 ore", "description": "Crei un'illusione sensoriale che puoi muovere entro 150 km.", "classes": ["wizard"], "source": "srd" },
-  { "id": "delayed-blast-fireball", "name": "Palla di Fuoco Ritardata", "level": 7, "school": "evocation", "castingTime": "1 azione", "range": "45 m", "components": "V, S, M", "duration": "Fino a attivazione", "damage": "12d6", "description": "Sfera di 6 m ritardata: 12d6 danni da fuoco quando esplode.", "higherLevel": "+1d6 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "finger-of-death", "name": "Dito della Morte", "level": 7, "school": "necromancy", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "damage": "7d8+30", "description": "7d8+30 danni necrotici; TS Con dimezza. Se uccide, crea uno zombie.", "classes": ["wizard"], "source": "srd" },
-  { "id": "maze", "name": "Labirinto", "level": 8, "school": "conjuration", "castingTime": "1 azione", "range": "36 m", "components": "V, S", "duration": "fino a 10 minuti", "description": "TS Int (CD 20): una creatura è intrappolata in un labirinto extraplanare.", "classes": ["wizard"], "source": "srd" },
-  { "id": "antimagic-field", "name": "Campo Antimagia", "level": 8, "school": "abjuration", "castingTime": "1 azione", "range": "sé (3 m)", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Sfera di 3 m: la magia non funziona al suo interno.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "clone", "name": "Clone", "level": 8, "school": "necromancy", "castingTime": "1 ora", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Cresci un clone del bersaglio: se muore, la sua anima entra nel clone.", "classes": ["wizard"], "source": "srd" },
-  { "id": "control-weather", "name": "Controllare il Tempo", "level": 8, "school": "transmutation", "castingTime": "10 minuti", "range": "sé (7,5 km)", "components": "V, S, M", "duration": "concentrazione, fino a 8 ore", "concentration": true, "description": "Cambi il tempo atmosferico in un'area di 7,5 km.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "feeblemind", "name": "Mente Debole", "level": 8, "school": "enchantment", "castingTime": "1 azione", "range": "45 m", "components": "V, S, M", "duration": "Fino a dissoluzione", "description": "TS Int: il bersaglio ha Int 1 e non può lanciare, parlare o capire.", "classes": ["wizard"], "source": "srd" },
-  { "id": "power-word-stun", "name": "Parola di Potere: Stordire", "level": 8, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V", "duration": "Istantanea", "description": "TS Con: creature con meno di 150 PF sono stordite.", "classes": ["wizard"], "source": "srd" },
-  { "id": "sunburst", "name": "Eruzione Solare", "level": 8, "school": "evocation", "castingTime": "1 azione", "range": "sé (18 m)", "components": "V, S, M", "duration": "Istantanea", "damage": "12d6", "description": "Luce accecante: 12d6 danni radianti e cecità; TS Con dimezza e annulla la cecità.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "earthquake", "name": "Terremoto", "level": 8, "school": "evocation", "castingTime": "1 azione", "range": "150 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "12d6", "description": "Scuote il terreno in un raggio di 30 m: 12d6 danni contundenti e prono; TS Des dimezza.", "classes": ["wizard", "cleric"], "source": "srd" },
-  { "id": "incendiary-cloud", "name": "Nuvola Incendiaria", "level": 8, "school": "conjuration", "castingTime": "1 azione", "range": "45 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "10d8", "description": "Sfera di 6 m di fuoco: 10d8 danni da fuoco a inizio dei tuoi turni.", "higherLevel": "+1d8 per slot superiore.", "classes": ["wizard"], "source": "srd" },
-  { "id": "holy-aura", "name": "Aura Sacra", "level": 8, "school": "abjuration", "castingTime": "1 azione", "range": "sé (9 m)", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "damage": "10d6", "description": "Aura di 9 m: alleati con +4 CA e TS; 10d6 danni radianti ai malvagi che colpiscono gli alleati.", "classes": ["cleric"], "source": "srd" },
-  { "id": "dominate-monster", "name": "Dominare Mostro", "level": 8, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "TS Wis: controlli le azioni di qualsiasi creatura.", "classes": ["wizard"], "source": "srd" },
-  { "id": "power-word-kill", "name": "Parola di Potere: Uccidere", "level": 9, "school": "enchantment", "castingTime": "1 azione", "range": "18 m", "components": "V", "duration": "Istantanea", "description": "Le creature con meno di 100 PF muoiono istantaneamente.", "classes": ["wizard"], "source": "srd" },
-  { "id": "time-stop", "name": "Fermare il Tempo", "level": 9, "school": "transmutation", "castingTime": "1 azione", "range": "sé", "components": "V", "duration": "Istantanea", "description": "Fermi il tempo per 1d4+1 round: puoi muoverti e agire normalmente.", "classes": ["wizard"], "source": "srd" },
-  { "id": "wish", "name": "Desiderio", "level": 9, "school": "conjuration", "castingTime": "1 azione", "range": "sé", "components": "V", "duration": "Istantanea", "description": "Riplichi qualsiasi incantesimo di 8° livello o inferiore, o un effetto a scelta del master.", "classes": ["wizard"], "source": "srd" },
-  { "id": "meteor-swarm", "name": "Sciame di Meteore", "level": 9, "school": "evocation", "castingTime": "1 azione", "range": "300 m", "components": "V, S", "duration": "Istantanea", "damage": "20d6+20d6", "description": "Quattro meteore in un'area di 12 m: 20d6 fuoco + 20d6 contundenti; TS Des dimezza.", "classes": ["wizard"], "source": "srd" },
-  { "id": "true-resurrection", "name": "Vera Resurrezione", "level": 9, "school": "necromancy", "castingTime": "1 ora", "range": "tocco", "components": "V, S, M", "duration": "Istantanea", "description": "Riporti in vita una creatura morta da non più di 200 anni, con corpo sano.", "classes": ["cleric"], "source": "srd" },
-  { "id": "foresight", "name": "Preveggenza", "level": 9, "school": "divination", "castingTime": "1 minuto", "range": "tocco", "components": "V, S, M", "duration": "8 ore", "description": "Vantaggio su attacchi, TS e prove; gli attacchi contro di te hanno svantaggio.", "classes": ["wizard", "warlock"], "source": "srd" },
-  { "id": "invulnerability", "name": "Invulnerabilità", "level": 9, "school": "abjuration", "castingTime": "1 minuto", "range": "sé", "components": "V, S, M", "duration": "fino a 10 minuti", "concentration": true, "description": "Sei immune a tutti i danni.", "classes": ["wizard"], "source": "srd" },
-  { "id": "mass-heal", "name": "Cura di Massa", "level": 9, "school": "abjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S", "duration": "Istantanea", "description": "Fino a 700 PF di cura distribuiti tra le creature a scelta.", "classes": ["cleric"], "source": "srd" },
-  { "id": "prismatic-wall", "name": "Muro Prismatico", "level": 9, "school": "abjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S, M", "duration": "10 minuti", "description": "Muro multicolore: chi lo attraversa subisce danni e vari effetti (TS multipli).", "classes": ["wizard"], "source": "srd" },
-  { "id": "shapechange", "name": "Cambiaspetto", "level": 9, "school": "transmutation", "castingTime": "1 azione", "range": "sé", "components": "V, S, M", "duration": "concentrazione, fino a 1 ora", "concentration": true, "description": "Ti trasformi in un'altra creatura mantenendo le tue statistiche mentali.", "classes": ["wizard"], "source": "srd" },
-  { "id": "astral-projection", "name": "Proiezione Astrale", "level": 9, "school": "necromancy", "castingTime": "1 minuto", "range": "3 m", "components": "V, S, M", "duration": "Fino a dissoluzione", "description": "Tu e fino a 8 creature vi proiettate sul Piano Astrale.", "classes": ["wizard", "cleric", "warlock"], "source": "srd" },
-  { "id": "gate", "name": "Portale", "level": 9, "school": "conjuration", "castingTime": "1 azione", "range": "18 m", "components": "V, S, M", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Crei un portale verso un altro luogo o piano di esistenza.", "classes": ["wizard", "cleric", "warlock"], "source": "srd" },
-  { "id": "storm-of-vengeance", "name": "Tempesta di Vendetta", "level": 9, "school": "conjuration", "castingTime": "1 azione", "range": "300 m", "components": "V, S", "duration": "concentrazione, fino a 1 minuto", "concentration": true, "description": "Tempesta di 110 m: fulmini, tuono, grandine e vento fortissimo per 1 minuto.", "classes": ["wizard"], "source": "srd" }
+  {
+    "id": "cone-of-cold",
+    "name": "Cono di Freddo",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (cono 18 m)",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "8d8",
+    "description": "8d8 danni da freddo in un cono di 18 m; TS Con dimezza.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "wall-of-stone",
+    "name": "Muro di Pietra",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Crei un muro di pietra modellabile.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "telekinesis",
+    "name": "Telecinesi",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Muovi un oggetto fino a 450 kg a distanza o spingi creature.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dominate-person",
+    "name": "Dominare Persona",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: controlli le azioni di un umanoide.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "cloudkill",
+    "name": "Nuvola Letale",
+    "level": 5,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "damage": "5d8",
+    "description": "Sfera di 6 m di gas velenoso: 5d8 danni da veleno; TS Con dimezza.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "antilife-shell",
+    "name": "Guscio Anti-Vita",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé (3 m)",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Barriera di 3 m: i viventi non possono attraversarla né colpire da dentro.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "awaken",
+    "name": "Risveglio",
+    "level": 5,
+    "school": "transmutation",
+    "castingTime": "8 ore",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Dai intelligenza a una bestia o a una pianta.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mass-cure-wounds",
+    "name": "Cura Ferite di Massa",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Fino a 6 creature recuperano 3d8 + mod PF.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "bard",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "raise-dead",
+    "name": "Resuscitare i Morti",
+    "level": 5,
+    "school": "necromancy",
+    "castingTime": "1 ora",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Riporti in vita una creatura morta da non più di 10 giorni.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "greater-restoration",
+    "name": "Restauro Maggiore",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Riduce exhausted, rimuove maledizioni, pietrificazione, ammaliamenti e malanni mentali.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "commune",
+    "name": "Comunione",
+    "level": 5,
+    "school": "divination",
+    "castingTime": "1 minuto",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "1 minuto",
+    "ritual": true,
+    "description": "Poni fino a 3 domande a una divinità e ottieni risposte vere.",
+    "classes": [
+      "cleric"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "destructive-wave",
+    "name": "Onda Distruttiva",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (9 m)",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "5d6",
+    "description": "5d6 danni necrotici e 5d6 danni sonori; TS Con dimezza uno dei due tipi.",
+    "classes": [
+      "paladin",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "circle-of-power",
+    "name": "Cerchio di Potere",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé (9 m)",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Aura di 9 m: vantaggio sui TS contro magie e danni da magia dimezzati.",
+    "classes": [
+      "paladin",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dream",
+    "name": "Sogno",
+    "level": 5,
+    "school": "illusion",
+    "castingTime": "1 minuto",
+    "range": "speciale",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "description": "Entri nei sogni di una creatura per spiarla o influenzarla.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "scrying",
+    "name": "Cristallomanzia",
+    "level": 5,
+    "school": "divination",
+    "castingTime": "10 minuti",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Vedi e senti una creatura che conosci a qualsiasi distanza.",
+    "classes": [
+      "wizard",
+      "cleric"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "geas",
+    "name": "Marchio",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": "1 minuto",
+    "range": "18 m",
+    "components": "V",
+    "duration": "30 giorni",
+    "description": "TS Cha: imponi un comando; se disobbedisce subisce 5d10 danni psychi.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "paladin",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "wall-of-force",
+    "name": "Muro di Forza",
+    "level": 5,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 10 minuti",
+    "concentration": true,
+    "description": "Muro invulnerabile ai danni (tranne Disintegra).",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "planar-binding",
+    "name": "Vincolo Planare",
+    "level": 5,
+    "school": "abjuration",
+    "castingTime": "1 ora",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "24 ore",
+    "description": "TS Cha: lega un celestiale, elementale, fiendo o non morto a servirti.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "hold-monster",
+    "name": "Blocca Mostro",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "27 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "TS Wis: una creatura è paralizzata.",
+    "higherLevel": "+1 bersaglio per slot superiore.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "modify-memory",
+    "name": "Modificare Memoria",
+    "level": 5,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "TS Wis: alteri i ricordi delle ultime 24 ore di una creatura.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mass-curse",
+    "name": "Maledizione di Massa",
+    "level": 5,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "1 minuto",
+    "description": "TS Wis: fino a 6 creature maledette (svantaggio a una categoria a scelta).",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "contact-other-plane",
+    "name": "Contattare un Altro Piano",
+    "level": 5,
+    "school": "divination",
+    "castingTime": "1 minuto",
+    "range": "sé",
+    "components": "V",
+    "duration": "1 minuto",
+    "ritual": true,
+    "description": "Poni 5 domande a un'entità extraplanare.",
+    "classes": [
+      "wizard",
+      "warlock"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "word-of-recall",
+    "name": "Parola di Richiamo",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "1,5 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Ti teletrasporti con fino a 5 creature in un luogo designato.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "heal",
+    "name": "Guarigione",
+    "level": 6,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Una creatura recupera 70 PF e cura cecità, sordità, malattie e avvelenamento.",
+    "higherLevel": "+10 PF per slot superiore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "heroes-feast",
+    "name": "Festino degli Eroi",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": "10 minuti",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Fino a 12 creature: immunità a paura e avvelenamento, +2d10 PF temporanei, TS Wis con vantaggio.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "planar-ally",
+    "name": "Alleato Planare",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": "10 minuti",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Convinci un'entità extraplanare a servirti per 24 ore.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "wind-walk",
+    "name": "Camminare sul Vento",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": "1 minuto",
+    "range": "9 m",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "description": "Tu e fino a 10 creature assumete forma di nuvola.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "move-earth",
+    "name": "Muovere la Terra",
+    "level": 6,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 2 ore",
+    "concentration": true,
+    "description": "Modifichi il terreno fangoso o sabbioso in un'area di 12 m.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "conjure-fey",
+    "name": "Evocare Fatato",
+    "level": 6,
+    "school": "conjuration",
+    "castingTime": "1 minuto",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Evoci una creatura fatata che combatte per te.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "true-seeing",
+    "name": "Vera Vista",
+    "level": 6,
+    "school": "divination",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "description": "Vedi il vero aspetto delle cose: invisibilità, illusioni, Piano Etereo.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "warlock"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "forcecage",
+    "name": "Gabbia di Forza",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "30 m",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "damage": "5d10",
+    "description": "Cubo o gabbia di forza invulnerabile: 5d10 danni da energia a chi è dentro a inizio turno.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "simulacrum",
+    "name": "Simulacro",
+    "level": 7,
+    "school": "illusion",
+    "castingTime": "12 ore",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Fino a dissoluzione",
+    "description": "Crei una copia illusoria di una bestia o umanoide con metà PF.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "reverse-gravity",
+    "name": "Gravità Inversa",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "15 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "10d6",
+    "description": "Cilindro di 15 m: le creature cadono verso l'alto; TS Des dimezza i danni.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "teleport",
+    "name": "Teletrasporto",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "illimitato",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Trasporti te e fino a 8 creature verso una destinazione che conosci sullo stesso piano.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "regenerate",
+    "name": "Rigenerazione",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": "1 minuto",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "1 ora",
+    "description": "Il bersaglio rigenera 4d8+15 PF e poi 1 PF a round.",
+    "classes": [
+      "cleric",
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "resurrection",
+    "name": "Resurrezione",
+    "level": 7,
+    "school": "necromancy",
+    "castingTime": "1 ora",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Riporti in vita una creatura morta da non più di un secolo, curando ogni malanno.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "etherealness",
+    "name": "Etereità",
+    "level": 7,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "fino a 8 ore",
+    "description": "Entri nel Piano Etereo; vedi e senti il Piano Materiale in tonalità di grigio.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "plane-shift",
+    "name": "Cambio di Piano",
+    "level": 7,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Trasporti te e fino a 8 creature su un altro piano di esistenza.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "project-image",
+    "name": "Immagine Proiettata",
+    "level": 7,
+    "school": "illusion",
+    "castingTime": "1 minuto",
+    "range": "150 km",
+    "components": "V, S, M",
+    "duration": "24 ore",
+    "description": "Crei un'illusione sensoriale che puoi muovere entro 150 km.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "delayed-blast-fireball",
+    "name": "Palla di Fuoco Ritardata",
+    "level": 7,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "45 m",
+    "components": "V, S, M",
+    "duration": "Fino a attivazione",
+    "damage": "12d6",
+    "description": "Sfera di 6 m ritardata: 12d6 danni da fuoco quando esplode.",
+    "higherLevel": "+1d6 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "finger-of-death",
+    "name": "Dito della Morte",
+    "level": 7,
+    "school": "necromancy",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "7d8+30",
+    "description": "7d8+30 danni necrotici; TS Con dimezza. Se uccide, crea uno zombie.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "maze",
+    "name": "Labirinto",
+    "level": 8,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "36 m",
+    "components": "V, S",
+    "duration": "fino a 10 minuti",
+    "description": "TS Int (CD 20): una creatura è intrappolata in un labirinto extraplanare.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "antimagic-field",
+    "name": "Campo Antimagia",
+    "level": 8,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé (3 m)",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Sfera di 3 m: la magia non funziona al suo interno.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "clone",
+    "name": "Clone",
+    "level": 8,
+    "school": "necromancy",
+    "castingTime": "1 ora",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Cresci un clone del bersaglio: se muore, la sua anima entra nel clone.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "control-weather",
+    "name": "Controllare il Tempo",
+    "level": 8,
+    "school": "transmutation",
+    "castingTime": "10 minuti",
+    "range": "sé (7,5 km)",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 8 ore",
+    "concentration": true,
+    "description": "Cambi il tempo atmosferico in un'area di 7,5 km.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "feeblemind",
+    "name": "Mente Debole",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "45 m",
+    "components": "V, S, M",
+    "duration": "Fino a dissoluzione",
+    "description": "TS Int: il bersaglio ha Int 1 e non può lanciare, parlare o capire.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "power-word-stun",
+    "name": "Parola di Potere: Stordire",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "TS Con: creature con meno di 150 PF sono stordite.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "sunburst",
+    "name": "Eruzione Solare",
+    "level": 8,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "sé (18 m)",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "damage": "12d6",
+    "description": "Luce accecante: 12d6 danni radianti e cecità; TS Con dimezza e annulla la cecità.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "earthquake",
+    "name": "Terremoto",
+    "level": 8,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "150 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "12d6",
+    "description": "Scuote il terreno in un raggio di 30 m: 12d6 danni contundenti e prono; TS Des dimezza.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "incendiary-cloud",
+    "name": "Nuvola Incendiaria",
+    "level": 8,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "45 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "10d8",
+    "description": "Sfera di 6 m di fuoco: 10d8 danni da fuoco a inizio dei tuoi turni.",
+    "higherLevel": "+1d8 per slot superiore.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "holy-aura",
+    "name": "Aura Sacra",
+    "level": 8,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "sé (9 m)",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "damage": "10d6",
+    "description": "Aura di 9 m: alleati con +4 CA e TS; 10d6 danni radianti ai malvagi che colpiscono gli alleati.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "dominate-monster",
+    "name": "Dominare Mostro",
+    "level": 8,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "TS Wis: controlli le azioni di qualsiasi creatura.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "power-word-kill",
+    "name": "Parola di Potere: Uccidere",
+    "level": 9,
+    "school": "enchantment",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Le creature con meno di 100 PF muoiono istantaneamente.",
+    "classes": [
+      "wizard",
+      "bard"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "time-stop",
+    "name": "Fermare il Tempo",
+    "level": 9,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Fermi il tempo per 1d4+1 round: puoi muoverti e agire normalmente.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "wish",
+    "name": "Desiderio",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V",
+    "duration": "Istantanea",
+    "description": "Riplichi qualsiasi incantesimo di 8° livello o inferiore, o un effetto a scelta del master.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "meteor-swarm",
+    "name": "Sciame di Meteore",
+    "level": 9,
+    "school": "evocation",
+    "castingTime": "1 azione",
+    "range": "300 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "damage": "20d6+20d6",
+    "description": "Quattro meteore in un'area di 12 m: 20d6 fuoco + 20d6 contundenti; TS Des dimezza.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "true-resurrection",
+    "name": "Vera Resurrezione",
+    "level": 9,
+    "school": "necromancy",
+    "castingTime": "1 ora",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "Istantanea",
+    "description": "Riporti in vita una creatura morta da non più di 200 anni, con corpo sano.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "foresight",
+    "name": "Preveggenza",
+    "level": 9,
+    "school": "divination",
+    "castingTime": "1 minuto",
+    "range": "tocco",
+    "components": "V, S, M",
+    "duration": "8 ore",
+    "description": "Vantaggio su attacchi, TS e prove; gli attacchi contro di te hanno svantaggio.",
+    "classes": [
+      "wizard",
+      "warlock"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "invulnerability",
+    "name": "Invulnerabilità",
+    "level": 9,
+    "school": "abjuration",
+    "castingTime": "1 minuto",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "fino a 10 minuti",
+    "concentration": true,
+    "description": "Sei immune a tutti i danni.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "mass-heal",
+    "name": "Cura di Massa",
+    "level": 9,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S",
+    "duration": "Istantanea",
+    "description": "Fino a 700 PF di cura distribuiti tra le creature a scelta.",
+    "classes": [
+      "cleric",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "prismatic-wall",
+    "name": "Muro Prismatico",
+    "level": 9,
+    "school": "abjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "10 minuti",
+    "description": "Muro multicolore: chi lo attraversa subisce danni e vari effetti (TS multipli).",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "shapechange",
+    "name": "Cambiaspetto",
+    "level": 9,
+    "school": "transmutation",
+    "castingTime": "1 azione",
+    "range": "sé",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 ora",
+    "concentration": true,
+    "description": "Ti trasformi in un'altra creatura mantenendo le tue statistiche mentali.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "astral-projection",
+    "name": "Proiezione Astrale",
+    "level": 9,
+    "school": "necromancy",
+    "castingTime": "1 minuto",
+    "range": "3 m",
+    "components": "V, S, M",
+    "duration": "Fino a dissoluzione",
+    "description": "Tu e fino a 8 creature vi proiettate sul Piano Astrale.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "warlock",
+      "sorcerer",
+      "druid"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "gate",
+    "name": "Portale",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "18 m",
+    "components": "V, S, M",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Crei un portale verso un altro luogo o piano di esistenza.",
+    "classes": [
+      "wizard",
+      "cleric",
+      "warlock",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  },
+  {
+    "id": "storm-of-vengeance",
+    "name": "Tempesta di Vendetta",
+    "level": 9,
+    "school": "conjuration",
+    "castingTime": "1 azione",
+    "range": "300 m",
+    "components": "V, S",
+    "duration": "concentrazione, fino a 1 minuto",
+    "concentration": true,
+    "description": "Tempesta di 110 m: fulmini, tuono, grandine e vento fortissimo per 1 minuto.",
+    "classes": [
+      "wizard",
+      "sorcerer",
+      "druid",
+      "ranger"
+    ],
+    "source": "srd"
+  }
 ]

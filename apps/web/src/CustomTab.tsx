@@ -24,7 +24,7 @@ type Kind = 'spell' | 'weapon' | 'armor' | 'enemy' | 'feat' | 'race' | 'subclass
 const splitList = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 export default function CustomTab() {
-  const { reg, reloadCustom } = useStore();
+  const { reg, reloadCustom, t } = useStore();
   const [kind, setKind] = useState<Kind>('spell');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -178,92 +178,92 @@ export default function CustomTab() {
   };
 
   const tagList = (arr: { id: string; name: string }[]) =>
-    arr.length ? arr.map((x) => <span key={x.id} className="tag custom">{x.name}</span>) : <span className="muted">nessuno</span>;
+    arr.length ? arr.map((x) => <span key={x.id} className="tag custom">{x.name}</span>) : <span className="muted">{t('cu.none', 'nessuno')}</span>;
 
   return (
     <div className="grid cols2">
       <div className="card">
-        <h3>Aggiungi contenuto custom</h3>
-        <label>Tipo</label>
+        <h3>{t('cu.add', 'Aggiungi contenuto custom')}</h3>
+        <label>{t('cu.type', 'Tipo')}</label>
         <select value={kind} onChange={(e) => { setKind(e.target.value as Kind); setMsg(null); }}>
-          <option value="spell">Incantesimo</option>
-          <option value="weapon">Arma</option>
-          <option value="armor">Armatura/Scudo</option>
-          <option value="enemy">Nemico (statblock)</option>
-          <option value="feat">Talento (effetti DSL)</option>
-          <option value="race">Razza</option>
-          <option value="subclass">Archetipo</option>
-          <option value="class">Classe (form strutturato)</option>
+          <option value="spell">{t('cu.k.spell', 'Incantesimo')}</option>
+          <option value="weapon">{t('cu.k.weapon', 'Arma')}</option>
+          <option value="armor">{t('cu.k.armor', 'Armatura/Scudo')}</option>
+          <option value="enemy">{t('cu.k.enemy', 'Nemico (statblock)')}</option>
+          <option value="feat">{t('cu.k.feat', 'Talento (effetti DSL)')}</option>
+          <option value="race">{t('cu.k.race', 'Razza')}</option>
+          <option value="subclass">{t('cu.k.subclass', 'Archetipo')}</option>
+          <option value="class">{t('cu.k.class', 'Classe (form strutturato)')}</option>
         </select>
 
         {kind === 'spell' && (
           <>
-            <label>ID (es. dardo-del-drago)</label><input value={spell.id} onChange={(e) => setSpell({ ...spell, id: e.target.value })} />
-            <label>Nome</label><input value={spell.name} onChange={(e) => setSpell({ ...spell, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')} ({t('cu.idPh', 'es. dardo-del-drago')})</label><input value={spell.id} onChange={(e) => setSpell({ ...spell, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={spell.name} onChange={(e) => setSpell({ ...spell, name: e.target.value })} />
             <div className="grid cols2">
-              <div><label>Livello (0-9)</label><input type="number" min={0} max={9} value={spell.level} onChange={(e) => setSpell({ ...spell, level: Number(e.target.value) })} /></div>
-              <div><label>Scuola</label><select value={spell.school} onChange={(e) => setSpell({ ...spell, school: e.target.value as School })}>{SCHOOLS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
-              <div><label>Tempo</label><input value={spell.castingTime} onChange={(e) => setSpell({ ...spell, castingTime: e.target.value })} /></div>
-              <div><label>Portata</label><input value={spell.range} onChange={(e) => setSpell({ ...spell, range: e.target.value })} /></div>
-              <div><label>Componenti</label><input value={spell.components} onChange={(e) => setSpell({ ...spell, components: e.target.value })} placeholder="V, S, M (un diamante da 50 mo)" /></div>
-              <div><label>Durata</label><input value={spell.duration} onChange={(e) => setSpell({ ...spell, duration: e.target.value })} /></div>
-              <div><label>Dado danno (opz.)</label><input value={spell.damage} onChange={(e) => setSpell({ ...spell, damage: e.target.value })} placeholder="3d6" /></div>
-              <div><label>Classi (virgola)</label><input value={spell.classes} onChange={(e) => setSpell({ ...spell, classes: e.target.value })} /></div>
+              <div><label>{t('cu.level', 'Livello (0-9)')}</label><input type="number" min={0} max={9} value={spell.level} onChange={(e) => setSpell({ ...spell, level: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.school', 'Scuola')}</label><select value={spell.school} onChange={(e) => setSpell({ ...spell, school: e.target.value as School })}>{SCHOOLS.map((s) => <option key={s} value={s}>{s}</option>)}</select></div>
+              <div><label>{t('cu.castingTime', 'Tempo')}</label><input value={spell.castingTime} onChange={(e) => setSpell({ ...spell, castingTime: e.target.value })} /></div>
+              <div><label>{t('cu.range', 'Portata')}</label><input value={spell.range} onChange={(e) => setSpell({ ...spell, range: e.target.value })} /></div>
+              <div><label>{t('cu.components', 'Componenti')}</label><input value={spell.components} onChange={(e) => setSpell({ ...spell, components: e.target.value })} placeholder={t('cu.componentsPh', 'V, S, M (un diamante da 50 mo)')} /></div>
+              <div><label>{t('cu.duration', 'Durata')}</label><input value={spell.duration} onChange={(e) => setSpell({ ...spell, duration: e.target.value })} /></div>
+              <div><label>{t('cu.damage', 'Dado danno (opz.)')}</label><input value={spell.damage} onChange={(e) => setSpell({ ...spell, damage: e.target.value })} placeholder="3d6" /></div>
+              <div><label>{t('cu.classes', 'Classi (virgola)')}</label><input value={spell.classes} onChange={(e) => setSpell({ ...spell, classes: e.target.value })} /></div>
             </div>
             <label className="row"><input type="checkbox" checked={spell.ritual} onChange={(e) => setSpell({ ...spell, ritual: e.target.checked })} style={{ width: 'auto' }} /> Rituale (lanciabile senza slot)</label>
             <label className="row"><input type="checkbox" checked={spell.concentration} onChange={(e) => setSpell({ ...spell, concentration: e.target.checked })} style={{ width: 'auto' }} /> Concentrazione</label>
-            <label>Descrizione</label><textarea rows={3} value={spell.description} onChange={(e) => setSpell({ ...spell, description: e.target.value })} />
+            <label>{t('cu.description', 'Descrizione')}</label><textarea rows={3} value={spell.description} onChange={(e) => setSpell({ ...spell, description: e.target.value })} />
           </>
         )}
 
         {kind === 'weapon' && (
           <>
-            <label>ID</label><input value={weapon.id} onChange={(e) => setWeapon({ ...weapon, id: e.target.value })} />
-            <label>Nome</label><input value={weapon.name} onChange={(e) => setWeapon({ ...weapon, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={weapon.id} onChange={(e) => setWeapon({ ...weapon, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={weapon.name} onChange={(e) => setWeapon({ ...weapon, name: e.target.value })} />
             <div className="grid cols2">
-              <div><label>Categoria</label><select value={weapon.category} onChange={(e) => setWeapon({ ...weapon, category: e.target.value as 'simple' | 'martial' })}><option value="simple">simple</option><option value="martial">martial</option></select></div>
-              <div><label>Mischia/distanza</label><select value={weapon.type} onChange={(e) => setWeapon({ ...weapon, type: e.target.value as 'melee' | 'ranged' })}><option value="melee">melee</option><option value="ranged">ranged</option></select></div>
-              <div><label>Dado danno</label><input value={weapon.damage} onChange={(e) => setWeapon({ ...weapon, damage: e.target.value })} placeholder="1d8" /></div>
-              <div><label>Tipo danno</label><input value={weapon.damageType} onChange={(e) => setWeapon({ ...weapon, damageType: e.target.value })} /></div>
-              <div><label>Proprietà (virgola)</label><input value={weapon.properties} onChange={(e) => setWeapon({ ...weapon, properties: e.target.value })} placeholder="finesse, leggera" /></div>
-              <div><label>Peso</label><input type="number" value={weapon.weight} onChange={(e) => setWeapon({ ...weapon, weight: Number(e.target.value) })} /></div>
-              <div><label>Costo (MO)</label><input type="number" value={weapon.costGp} onChange={(e) => setWeapon({ ...weapon, costGp: Number(e.target.value) })} /></div>
-              <div><label>Bonus magico (0 = no)</label><input type="number" value={weapon.bonus} onChange={(e) => setWeapon({ ...weapon, bonus: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.category', 'Categoria')}</label><select value={weapon.category} onChange={(e) => setWeapon({ ...weapon, category: e.target.value as 'simple' | 'martial' })}><option value="simple">simple</option><option value="martial">martial</option></select></div>
+              <div><label>{t('cu.meleeRanged', 'Mischia/distanza')}</label><select value={weapon.type} onChange={(e) => setWeapon({ ...weapon, type: e.target.value as 'melee' | 'ranged' })}><option value="melee">melee</option><option value="ranged">ranged</option></select></div>
+              <div><label>{t('cu.damageDie', 'Dado danno')}</label><input value={weapon.damage} onChange={(e) => setWeapon({ ...weapon, damage: e.target.value })} placeholder="1d8" /></div>
+              <div><label>{t('cu.damageType', 'Tipo danno')}</label><input value={weapon.damageType} onChange={(e) => setWeapon({ ...weapon, damageType: e.target.value })} /></div>
+              <div><label>{t('cu.properties', 'Proprietà (virgola)')}</label><input value={weapon.properties} onChange={(e) => setWeapon({ ...weapon, properties: e.target.value })} placeholder={t('cu.propertiesPh', 'finesse, leggera')} /></div>
+              <div><label>{t('inv.weightL', 'Peso')}</label><input type="number" value={weapon.weight} onChange={(e) => setWeapon({ ...weapon, weight: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.cost', 'Costo (MO)')}</label><input type="number" value={weapon.costGp} onChange={(e) => setWeapon({ ...weapon, costGp: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.magicBonus', 'Bonus magico (0 = no)')}</label><input type="number" value={weapon.bonus} onChange={(e) => setWeapon({ ...weapon, bonus: Number(e.target.value) })} /></div>
             </div>
           </>
         )}
 
         {kind === 'armor' && (
           <>
-            <label>ID</label><input value={armor.id} onChange={(e) => setArmor({ ...armor, id: e.target.value })} />
-            <label>Nome</label><input value={armor.name} onChange={(e) => setArmor({ ...armor, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={armor.id} onChange={(e) => setArmor({ ...armor, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={armor.name} onChange={(e) => setArmor({ ...armor, name: e.target.value })} />
             <div className="grid cols2">
-              <div><label>Categoria</label><select value={armor.category} onChange={(e) => setArmor({ ...armor, category: e.target.value as typeof armor.category })}><option value="light">leggera</option><option value="medium">media</option><option value="heavy">pesante</option><option value="shield">scudo</option></select></div>
-              <div><label>CA</label><input type="number" value={armor.ac} onChange={(e) => setArmor({ ...armor, ac: Number(e.target.value) })} /></div>
-              <div><label>Des max (vuoto = illimitato)</label><input value={armor.maxDex} onChange={(e) => setArmor({ ...armor, maxDex: e.target.value })} /></div>
-              <div><label>Peso</label><input type="number" value={armor.weight} onChange={(e) => setArmor({ ...armor, weight: Number(e.target.value) })} /></div>
-              <div><label>Costo (MO)</label><input type="number" value={armor.costGp} onChange={(e) => setArmor({ ...armor, costGp: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.category', 'Categoria')}</label><select value={armor.category} onChange={(e) => setArmor({ ...armor, category: e.target.value as typeof armor.category })}><option value="light">leggera</option><option value="medium">media</option><option value="heavy">pesante</option><option value="shield">scudo</option></select></div>
+              <div><label>{t('cu.ac', 'CA')}</label><input type="number" value={armor.ac} onChange={(e) => setArmor({ ...armor, ac: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.maxDex', 'Des max (vuoto = illimitato)')}</label><input value={armor.maxDex} onChange={(e) => setArmor({ ...armor, maxDex: e.target.value })} /></div>
+              <div><label>{t('inv.weightL', 'Peso')}</label><input type="number" value={armor.weight} onChange={(e) => setArmor({ ...armor, weight: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.cost', 'Costo (MO)')}</label><input type="number" value={armor.costGp} onChange={(e) => setArmor({ ...armor, costGp: Number(e.target.value) })} /></div>
             </div>
           </>
         )}
 
         {kind === 'enemy' && (
           <>
-            <label>ID</label><input value={enemy.id} onChange={(e) => setEnemy({ ...enemy, id: e.target.value })} />
-            <label>Nome</label><input value={enemy.name} onChange={(e) => setEnemy({ ...enemy, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={enemy.id} onChange={(e) => setEnemy({ ...enemy, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={enemy.name} onChange={(e) => setEnemy({ ...enemy, name: e.target.value })} />
             <div className="grid cols3">
-              <div><label>PF</label><input type="number" value={enemy.hp} onChange={(e) => setEnemy({ ...enemy, hp: Number(e.target.value) })} /></div>
-              <div><label>CA</label><input type="number" value={enemy.ac} onChange={(e) => setEnemy({ ...enemy, ac: Number(e.target.value) })} /></div>
-              <div><label>Velocità</label><input type="number" value={enemy.speed} onChange={(e) => setEnemy({ ...enemy, speed: Number(e.target.value) })} /></div>
-              <div><label>CR (opz.)</label><input value={enemy.cr} onChange={(e) => setEnemy({ ...enemy, cr: e.target.value })} placeholder="1/4" /></div>
+              <div><label>{t('cu.hp', 'PF')}</label><input type="number" value={enemy.hp} onChange={(e) => setEnemy({ ...enemy, hp: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.ac', 'CA')}</label><input type="number" value={enemy.ac} onChange={(e) => setEnemy({ ...enemy, ac: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.speed', 'Velocità')}</label><input type="number" value={enemy.speed} onChange={(e) => setEnemy({ ...enemy, speed: Number(e.target.value) })} /></div>
+              <div><label>{t('cu.cr', 'CR (opz.)')}</label><input value={enemy.cr} onChange={(e) => setEnemy({ ...enemy, cr: e.target.value })} placeholder={t('cu.crPh', '1/4')} /></div>
             </div>
-            <label>Caratteristiche (opz., vuoto = 10)</label>
+            <label>{t('cu.abilities', 'Caratteristiche (opz., vuoto = 10)')}</label>
             <div className="grid cols3">
               {ABILITIES.map((ab) => (
                 <div key={ab}><label>{ab.toUpperCase()}</label><input type="number" value={(enemy as Record<string, string | number>)[ab]} onChange={(e) => setEnemy({ ...enemy, [ab]: e.target.value })} /></div>
               ))}
             </div>
-            <label>Attacchi</label>
+            <label>{t('cu.attacks', 'Attacchi')}</label>
             {attacks.map((a, i) => (
               <div key={i} className="row" style={{ marginBottom: 4 }}>
                 <input value={a.name} onChange={(e) => setAttacks(attacks.map((x, j) => (j === i ? { ...x, name: e.target.value } : x)))} placeholder="Nome" style={{ width: 110 }} />
@@ -279,9 +279,9 @@ export default function CustomTab() {
 
         {kind === 'feat' && (
           <>
-            <label>ID</label><input value={feat.id} onChange={(e) => setFeat({ ...feat, id: e.target.value })} />
-            <label>Nome</label><input value={feat.name} onChange={(e) => setFeat({ ...feat, name: e.target.value })} />
-            <label>Descrizione</label><textarea rows={2} value={feat.description} onChange={(e) => setFeat({ ...feat, description: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={feat.id} onChange={(e) => setFeat({ ...feat, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={feat.name} onChange={(e) => setFeat({ ...feat, name: e.target.value })} />
+            <label>{t('cu.description', 'Descrizione')}</label><textarea rows={2} value={feat.description} onChange={(e) => setFeat({ ...feat, description: e.target.value })} />
             <label>Effetti (mini-DSL, uno per riga)</label>
             <textarea rows={4} value={feat.effects} onChange={(e) => setFeat({ ...feat, effects: e.target.value })} placeholder={'+2 CA\nadvantage: saves vs magic\n+1d6 fire damage\nproficiency: skill stealth'} />
             <div className="muted">Forme: +N CA · advantage/disadvantage: attacks|saves|skills [vs X] · +NdX tipo damage · proficiency: skill/weapon/armor X · resistance/immunity/vulnerability: tipo · speed +N · darkvision N · max hp +N per level</div>
@@ -290,8 +290,8 @@ export default function CustomTab() {
 
         {kind === 'race' && (
           <>
-            <label>ID</label><input value={race.id} onChange={(e) => setRace({ ...race, id: e.target.value })} />
-            <label>Nome</label><input value={race.name} onChange={(e) => setRace({ ...race, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={race.id} onChange={(e) => setRace({ ...race, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={race.name} onChange={(e) => setRace({ ...race, name: e.target.value })} />
             <div className="grid cols2">
               <div><label>Velocità (piedi)</label><input type="number" value={race.speed} onChange={(e) => setRace({ ...race, speed: Number(e.target.value) })} /></div>
             </div>
@@ -308,13 +308,13 @@ export default function CustomTab() {
 
         {kind === 'subclass' && (
           <>
-            <label>ID</label><input value={subclass.id} onChange={(e) => setSubclass({ ...subclass, id: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={subclass.id} onChange={(e) => setSubclass({ ...subclass, id: e.target.value })} />
             <label>Classe</label>
             <select value={subclass.classId} onChange={(e) => setSubclass({ ...subclass, classId: e.target.value })}>
               <option value="">(scegli)</option>
               {[...reg.classes.values()].map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>
-            <label>Nome</label><input value={subclass.name} onChange={(e) => setSubclass({ ...subclass, name: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={subclass.name} onChange={(e) => setSubclass({ ...subclass, name: e.target.value })} />
             <label>Features JSON (livelli → array feature)</label>
             <textarea rows={8} value={subclass.features} onChange={(e) => setSubclass({ ...subclass, features: e.target.value })} />
           </>
@@ -322,8 +322,8 @@ export default function CustomTab() {
 
         {kind === 'class' && (
           <>
-            <label>ID</label><input value={cls.id} onChange={(e) => setCls({ ...cls, id: e.target.value })} />
-            <label>Nome</label><input value={cls.name} onChange={(e) => setCls({ ...cls, name: e.target.value })} />
+            <label>{t('cu.id', 'ID')}</label><input value={cls.id} onChange={(e) => setCls({ ...cls, id: e.target.value })} />
+            <label>{t('cu.name', 'Nome')}</label><input value={cls.name} onChange={(e) => setCls({ ...cls, name: e.target.value })} />
             <div className="grid cols2">
               <div><label>Dado vita</label><select value={cls.hitDie} onChange={(e) => setCls({ ...cls, hitDie: Number(e.target.value) })}>{[6, 8, 10, 12].map((d) => <option key={d} value={d}>d{d}</option>)}</select></div>
               <div><label>Caratteristica principale (virgola)</label><input value={cls.primaryAbility} onChange={(e) => setCls({ ...cls, primaryAbility: e.target.value })} /></div>
@@ -352,26 +352,26 @@ export default function CustomTab() {
         )}
 
         {msg && <div className={msg.ok ? 'ok' : 'error'} style={{ marginTop: 8, whiteSpace: 'pre-line' }}>{msg.text}</div>}
-        <div style={{ marginTop: 10 }}><button className="primary" onClick={submit}>Salva</button></div>
+        <div style={{ marginTop: 10 }}><button className="primary" onClick={submit}>{t('cu.save', 'Salva')}</button></div>
       </div>
 
       <div className="card">
-        <h3>I tuoi contenuti custom</h3>
-        <div><b>Incantesimi:</b> {tagList(customs.incantesimi)}</div>
-        <div style={{ marginTop: 6 }}><b>Armi:</b> {tagList(customs.armi)}</div>
-        <div style={{ marginTop: 6 }}><b>Armature:</b> {tagList(customs.armature)}</div>
-        <div style={{ marginTop: 6 }}><b>Nemici:</b> {tagList(customs.nemici)}</div>
-        <div style={{ marginTop: 6 }}><b>Talenti:</b> {tagList(customs.talenti)}</div>
-        <div style={{ marginTop: 6 }}><b>Razze:</b> {tagList(customs.razze)}</div>
-        <div style={{ marginTop: 6 }}><b>Archetipi:</b> {tagList(customs.archetipi)}</div>
-        <div style={{ marginTop: 6 }}><b>Classi:</b> {tagList(customs.classi)}</div>
+        <h3>{t('cu.listTitle', 'I tuoi contenuti custom')}</h3>
+        <div><b>{t('cu.lSpells', 'Incantesimi:')}</b> {tagList(customs.incantesimi)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lWeapons', 'Armi:')}</b> {tagList(customs.armi)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lArmors', 'Armature:')}</b> {tagList(customs.armature)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lEnemies', 'Nemici:')}</b> {tagList(customs.nemici)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lFeats', 'Talenti:')}</b> {tagList(customs.talenti)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lRaces', 'Razze:')}</b> {tagList(customs.razze)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lSubs', 'Archetipi:')}</b> {tagList(customs.archetipi)}</div>
+        <div style={{ marginTop: 6 }}><b>{t('cu.lClasses', 'Classi:')}</b> {tagList(customs.classi)}</div>
         <div className="row" style={{ marginTop: 10 }}>
-          <button onClick={exportPack}>📦 Esporta .5epack</button>
+          <button onClick={exportPack}>{t('cu.exportPack', '📦 Esporta .5epack')}</button>
           <label style={{ margin: 0 }} className="row">
-            <input type="file" accept="application/json,.json" onChange={importPack} style={{ width: 'auto' }} /> Importa .5epack
+            <input type="file" accept="application/json,.json" onChange={importPack} style={{ width: 'auto' }} /> {t('cu.importPack', 'Importa .5epack')}
           </label>
         </div>
-        <div className="muted" style={{ marginTop: 8 }}>I custom sono salvati in locale e si possono partager come file .5epack (JSON).</div>
+        <div className="muted" style={{ marginTop: 8 }}>{t('cu.packHint', 'I custom sono salvati in locale e si possono condividere come file .5epack (JSON).')}</div>
       </div>
     </div>
   );

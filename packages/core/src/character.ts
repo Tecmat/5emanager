@@ -129,6 +129,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     hp: { current: 0, temp: 0 },
     deathSaves: { successes: 0, failures: 0 },
     conditions: [],
+    journal: [],
     exhaustion: 0,
     spellsPreparedByClass: {},
     notes: '',
@@ -160,14 +161,24 @@ export function migrateCharacter(char: Character): Character {
     ...char,
     houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) },
     conditions: kept,
+    journal: char.journal ?? [],
     exhaustion,
     spellsPreparedByClass,
     deathSaves: char.deathSaves ?? { successes: 0, failures: 0 },
   };
 }
 
+const JOURNAL_MAX = 200;
+
+/** aggiunge una voce al diario di sessione (max 200, le più vecchie vengono scartate) */
+export function logJournal(char: Character, text: string): Character {
+  const entry = { at: new Date().toISOString(), text };
+  return { ...char, journal: [...(char.journal ?? []), entry].slice(-JOURNAL_MAX), updatedAt: entry.at };
+}
+
 export function addXp(char: Character, amount: number): Character {
-  return { ...char, xp: Math.max(0, char.xp + amount), updatedAt: new Date().toISOString() };
+  const next = { ...char, xp: Math.max(0, char.xp + amount), updatedAt: new Date().toISOString() };
+  return amount > 0 ? logJournal(next, `+${amount} XP (totale ${next.xp})`) : next;
 }
 
 export function damage(char: Character, amount: number): Character {
@@ -179,7 +190,8 @@ export function damage(char: Character, amount: number): Character {
   } else {
     current -= amount;
   }
-  return { ...char, hp: { current: Math.max(0, current), temp: Math.max(0, temp) }, updatedAt: new Date().toISOString() };
+  const next = { ...char, hp: { current: Math.max(0, current), temp: Math.max(0, temp) }, updatedAt: new Date().toISOString() };
+  return amount > 0 ? logJournal(next, `Subisce ${amount} danni (PF ${next.hp.current})`) : next;
 }
 
 export function heal(char: Character, amount: number, max: number): Character {
@@ -189,8 +201,9 @@ export function heal(char: Character, amount: number, max: number): Character {
   if (wasDown && next.hp.current > 0) {
     next.hp.current = Math.max(1, next.hp.current);
     next.deathSaves = { successes: 0, failures: 0 };
+    return logJournal(next, `Risveglia da 0 PF con ${next.hp.current} PF`);
   }
-  return next;
+  return amount > 0 ? logJournal(next, `Cura ${amount} PF (PF ${next.hp.current})`) : next;
 }
 
 /** registra un tiro della morte (a 0 PF): 3 successi = torni a 1 PF, 3 fallimenti = morto */
@@ -199,12 +212,13 @@ export function recordDeathSave(char: Character, success: boolean): Character {
   if (success) ds.successes = Math.min(3, ds.successes + 1);
   else ds.failures = Math.min(3, ds.failures + 1);
   const revived = ds.successes >= 3;
-  return {
+  const next = {
     ...char,
     deathSaves: ds,
     hp: revived ? { current: 1, temp: char.hp.temp } : char.hp,
     updatedAt: new Date().toISOString(),
   };
+  return logJournal(next, revived ? 'Tiro della morte: 3 successi — torna a 1 PF' : `Tiro della morte: ${success ? 'successo' : 'fallimento'} (${ds.successes}✓/${ds.failures}✗)`);
 }
 
 export function isDead(char: Character): boolean {

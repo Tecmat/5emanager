@@ -66,6 +66,7 @@ export type ClientAction =
   | { kind: 'masterHeal'; playerId: string; amount: number }
   | { kind: 'masterAddXp'; playerId: string; amount: number }
   | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean }
+  | { kind: 'dropConcentration' }
   | { kind: 'deleteCampaign' };
 
 /**
@@ -203,6 +204,18 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
       } else {
         c.characters[action.playerId] = action.on ? addCondition(ch, action.conditionId) : removeCondition(ch, action.conditionId);
         if (c.combat) c.combat = setCombatantCondition(c.combat, ch.id, action.conditionId, action.on, 99);
+      }
+      return [c];
+    }
+
+    case 'dropConcentration': {
+      const ch = c.characters[playerId];
+      if (ch) c.characters[playerId] = { ...ch, concentrationSpellId: undefined, updatedAt: new Date().toISOString() };
+      if (c.combat) {
+        c.combat = {
+          ...c.combat,
+          combatants: c.combat.combatants.map((cb) => (ch && cb.id === ch.id ? { ...cb, concentrating: undefined } : cb)),
+        };
       }
       return [c];
     }

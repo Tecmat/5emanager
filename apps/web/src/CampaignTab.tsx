@@ -20,6 +20,7 @@ import { P2PClient, P2PHost } from './p2p.js';
 
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
 function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
+  const { t } = useStore();
   const lvl = totalLevel(ch);
   const clsNames = ch.classLevels.map((cl) => `${reg.classes.get(cl.classId)?.name ?? cl.classId} ${cl.level}`).join(' / ');
   const slots = Object.entries(ch.spellSlots).filter(([, v]) => v.total > 0).sort((a, b) => Number(a[0]) - Number(b[0]));
@@ -30,7 +31,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
         <div>
           <b>{ch.name}</b> — {reg.races.get(ch.raceId)?.name} · {clsNames} (liv {lvl}){ch.background ? ` · ${ch.background}` : ''}{ch.alignment ? ` · ${ch.alignment}` : ''}
           <div className="muted">
-            PF {ch.hp.current}/{maxHp(ch, reg)}{ch.hp.temp > 0 ? ` (+${ch.hp.temp})` : ''} · CA {armorClass(ch, reg).ac} · Vel {speedOf(ch, reg)} · XP {ch.xp} · Esaurimento {ch.exhaustion ?? 0}
+            {t('sf.hp','PF')} {ch.hp.current}/{maxHp(ch, reg)}{ch.hp.temp > 0 ? ` (+${ch.hp.temp})` : ''} · {t('sf.ac','CA')} {armorClass(ch, reg).ac} · {t('sf.vel','Vel')} {speedOf(ch, reg)} · {t('sf.xp','XP')} {ch.xp} · {t('sf.exh','Esaurimento')} {ch.exhaustion ?? 0}
           </div>
         </div>
       </div>
@@ -40,38 +41,38 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
         ))}
       </div>
       <div style={{ marginTop: 4 }}>
-        <b>TS:</b> {ABILITIES.map((ab) => `${ab.toUpperCase()} ${savingThrowBonus(ch, ab, reg) >= 0 ? '+' : ''}${savingThrowBonus(ch, ab, reg)}`).join(' · ')}
-        {' '}<b>Passivi:</b> Percezione {passivePerception(ch)} · Intuizione {passiveInsight(ch)}
+        <b>{t('sf.ts', 'TS:')}</b> {ABILITIES.map((ab) => `${ab.toUpperCase()} ${savingThrowBonus(ch, ab, reg) >= 0 ? '+' : ''}${savingThrowBonus(ch, ab, reg)}`).join(' · ')}
+        {' '}<b>{t('sf.passive', 'Passivi:')}</b> {t('sf.perc', 'Percezione')} {passivePerception(ch)} · {t('sf.ins', 'Intuizione')} {passiveInsight(ch)}
       </div>
       <div style={{ marginTop: 4 }}>
-        <b>Competenze:</b> {ch.proficiency.skills.length ? ch.proficiency.skills.map((s) => `${SKILLS.find((x) => x.id === s)?.name ?? s} ${skillBonus(ch, s, reg) >= 0 ? '+' : ''}${skillBonus(ch, s, reg)}`).join(', ') : '—'}
-        {ch.proficiency.expertise.length > 0 && <> · expertise: {ch.proficiency.expertise.join(', ')}</>}
+        <b>{t('sf.skills', 'Competenze:')}</b> {ch.proficiency.skills.length ? ch.proficiency.skills.map((s) => `${SKILLS.find((x) => x.id === s)?.name ?? s} ${skillBonus(ch, s, reg) >= 0 ? '+' : ''}${skillBonus(ch, s, reg)}`).join(', ') : '—'}
+        {ch.proficiency.expertise.length > 0 && <> · {t('sf.expertise','expertise')}: {ch.proficiency.expertise.join(', ')}</>}
       </div>
       {slots.length > 0 && (
         <div style={{ marginTop: 4 }}>
-          <b>Slot:</b> {slots.map(([l, v]) => `${l}° ${v.total - v.used}/${v.total}`).join(' · ')}
-          {ch.concentrationSpellId && <> · concentrazione: {reg.spells.get(ch.concentrationSpellId)?.name}</>}
+          <b>{t('sf.slots', 'Slot:')}</b> {slots.map(([l, v]) => `${l}° ${v.total - v.used}/${v.total}`).join(' · ')}
+          {ch.concentrationSpellId && <> · {t('sf.conc', 'concentrazione:')} {reg.spells.get(ch.concentrationSpellId)?.name}</>}
         </div>
       )}
       {ch.spellsKnown.length > 0 && (
-        <div style={{ marginTop: 4 }}><b>Incantesimi conosciuti:</b> {ch.spellsKnown.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
+        <div style={{ marginTop: 4 }}><b>{t('sf.known', 'Incantesimi conosciuti:')}</b> {ch.spellsKnown.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
       )}
       {ch.spellsPrepared.length > 0 && (
-        <div style={{ marginTop: 4 }}><b>Preparati:</b> {ch.spellsPrepared.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
+        <div style={{ marginTop: 4 }}><b>{t('sf.prepared', 'Preparati:')}</b> {ch.spellsPrepared.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}</div>
       )}
       {ch.inventory.length > 0 && (
-        <div style={{ marginTop: 4 }}><b>Inventario:</b> {ch.inventory.map((i) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ''}${i.equipped ? ' (equip)' : ''}`).join(', ')}</div>
+        <div style={{ marginTop: 4 }}><b>{t('sf.inv', 'Inventario:')}</b> {ch.inventory.map((i) => `${i.name}${i.quantity > 1 ? ` x${i.quantity}` : ''}${i.equipped ? ' (equip)' : ''}`).join(', ')}</div>
       )}
-      <div style={{ marginTop: 4 }}><b>Valuta:</b> {ch.currency.gp} mo {ch.currency.sp} ma {ch.currency.ep} me {ch.currency.cp} mr {ch.currency.pp} mp</div>
-      {ch.feats.length > 0 && <div style={{ marginTop: 4 }}><b>Talenti:</b> {ch.feats.map((f) => reg.feats.get(f)?.name ?? f).join(', ')}</div>}
-      {ch.conditions.length > 0 && <div style={{ marginTop: 4 }}><b>Condizioni:</b> {ch.conditions.map((cd) => CONDITIONS.find((x) => x.id === cd)?.name ?? cd).join(', ')}</div>}
-      {ch.notes && <div style={{ marginTop: 4 }}><b>Note:</b> {ch.notes}</div>}
+      <div style={{ marginTop: 4 }}><b>{t('sf.currency', 'Valuta:')}</b> {ch.currency.gp} mo {ch.currency.sp} ma {ch.currency.ep} me {ch.currency.cp} mr {ch.currency.pp} mp</div>
+      {ch.feats.length > 0 && <div style={{ marginTop: 4 }}><b>{t('sf.feats', 'Talenti:')}</b> {ch.feats.map((f) => reg.feats.get(f)?.name ?? f).join(', ')}</div>}
+      {ch.conditions.length > 0 && <div style={{ marginTop: 4 }}><b>{t('sf.cond', 'Condizioni:')}</b> {ch.conditions.map((cd) => CONDITIONS.find((x) => x.id === cd)?.name ?? cd).join(', ')}</div>}
+      {ch.notes && <div style={{ marginTop: 4 }}><b>{t('sf.notes', 'Note:')}</b> {ch.notes}</div>}
     </div>
   );
 }
 
 export default function CampaignTab() {
-  const { reg, char, sheets, viewChar, viewLabel, setViewChar } = useStore();
+  const { reg, char, sheets, viewChar, viewLabel, setViewChar, t, tf } = useStore();
   const {
     conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
@@ -167,51 +168,50 @@ export default function CampaignTab() {
       return (
         <div className="grid" style={{ maxWidth: 560 }}>
           <div className="card">
-            <h3>📡 Campagna P2P — senza server</h3>
+            <h3>{t('cg.p2pTitle', '📡 Campagna P2P — senza server')}</h3>
             <div className="row" style={{ marginBottom: 8 }}>
-              <button onClick={() => setNetMode('server')}>🌐 Server remoto</button>
-              <button className="primary">📡 P2P (host sul mio dispositivo)</button>
+              <button onClick={() => setNetMode('server')}>{t('cg.remoteServer', '🌐 Server remoto')}</button>
+              <button className="primary">{t('cg.p2pHost', '📡 P2P (host sul mio dispositivo)')}</button>
             </div>
             <div className="row" style={{ marginBottom: 8 }}>
-              <button className={p2pSub === 'host' ? 'primary' : ''} onClick={() => setP2pSub('host')}>Faccio da host</button>
-              <button className={p2pSub === 'join' ? 'primary' : ''} onClick={() => setP2pSub('join')}>Mi unisco a un host</button>
+              <button className={p2pSub === 'host' ? 'primary' : ''} onClick={() => setP2pSub('host')}>{t('cg.host', 'Faccio da host')}</button>
+              <button className={p2pSub === 'join' ? 'primary' : ''} onClick={() => setP2pSub('join')}>{t('cg.joinHost', 'Mi unisco a un host')}</button>
             </div>
             {p2pSub === 'host' && (
               <>
-                <label>Nome campagna</label>
+                <label>{t('cg.campaignName', 'Nome campagna')}</label>
                 <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="La tomba perduta" />
-                <label>Password campagna</label>
+                <label>{t('cg.password', 'Password campagna')}</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(startP2PHost)} />
-                <label>Il tuo nome (master)</label>
+                <label>{t('cg.yourName', 'Il tuo nome')} (master)</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="Master" />
                 <div style={{ marginTop: 10 }}>
-                  <button className="primary" onClick={startP2PHost}>Avvia host P2P</button>
+                  <button className="primary" onClick={startP2PHost}>{t('cg.startHost', 'Avvia host P2P')}</button>
                 </div>
                 <div className="muted" style={{ marginTop: 8 }}>
-                  Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Gli amici, sulla tua stessa rete,
-                  si uniscono incollando un codice — dopo l'avvio li aggiungi dal pannello con "Aggiungi giocatori".
+                  {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Gli amici, sulla tua stessa rete, si uniscono incollando un codice — dopo l'avvio li aggiungi dal pannello con \"Aggiungi giocatori\".")}
                 </div>
               </>
             )}
             {p2pSub === 'join' && (
               <>
-                <label>Il tuo nome</label>
+                <label>{t('cg.yourName', 'Il tuo nome')}</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Eroe" />
-                <label>Password campagna</label>
+                <label>{t('cg.password', 'Password campagna')}</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
                 <div style={{ marginTop: 10 }}>
-                  <button onClick={genP2POffer}>1️⃣ Genera codice invito</button>
+                  <button onClick={genP2POffer}>{t('cg.genOffer', '1️⃣ Genera codice invito')}</button>
                 </div>
                 {offerBlob && (
                   <>
-                    <label>Copia questo codice e mandalo all'host (WhatsApp/Telegram…)</label>
+                    <label>{t('cg.copyToHost', 'Copia questo codice e mandalo all\'host (WhatsApp/Telegram…)')}</label>
                     <textarea readOnly rows={3} value={offerBlob} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
                   </>
                 )}
-                <label>2️⃣ Incolla qui la risposta dell'host</label>
+                <label>{t('cg.pasteAnswer', '2️⃣ Incolla qui la risposta dell\'host')})</label>
                 <textarea rows={3} value={answerBlob} onChange={(e) => setAnswerBlob(e.target.value)} style={{ width: '100%' }} />
                 <div style={{ marginTop: 10 }}>
-                  <button className="primary" onClick={connectP2PJoin} disabled={!answerBlob.trim()}>Connetti</button>
+                  <button className="primary" onClick={connectP2PJoin} disabled={!answerBlob.trim()}>{t('cg.connect', 'Connetti')}</button>
                 </div>
               </>
             )}
@@ -223,12 +223,12 @@ export default function CampaignTab() {
     return (
       <div className="grid" style={{ maxWidth: 560 }}>
         <div className="card">
-          <h3>🌐 Server</h3>
+          <h3>{t('cg.server', '🌐 Server')}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             <span className="tag custom">server remoto</span>
-            <button onClick={() => setNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (WebRTC), senza server">📡 oppure P2P</button>
+            <button onClick={() => setNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (WebRTC), senza server">{t('cg.orP2p', '📡 oppure P2P')}</button>
           </div>
-          <label>Server WebSocket</label>
+          <label>{t('cg.wsUrl', 'Server WebSocket')}</label>
           <div className="row">
             <input
               value={url}
@@ -241,15 +241,15 @@ export default function CampaignTab() {
             <datalist id="saved-servers">
               {servers.map((s) => <option key={s} value={s} />)}
             </datalist>
-            <button onClick={checkConnection} disabled={pingState.status === 'checking'} title="Controllo manuale della connessione (puoi ripeterlo per aggiornare)">
-              {pingState.status === 'checking' ? 'Ping…' : '🔌 Verifica connessione'}
+            <button onClick={checkConnection} disabled={pingState.status === 'checking'} title={t('cg.checkTitle', 'Controllo manuale della connessione (puoi ripeterlo per aggiornare)')}>
+              {pingState.status === 'checking' ? t('cg.ping', 'Ping…') : t('cg.check', '🔌 Verifica connessione')}
             </button>
           </div>
-          {pingState.status === 'ok' && <div className="ok" style={{ marginTop: 6 }}>✅ Connesso — ping {pingState.rtt} ms</div>}
+          {pingState.status === 'ok' && <div className="ok" style={{ marginTop: 6 }}>{tf('cg.connected', '✅ Connesso — ping {n} ms', { n: pingState.rtt })}</div>}
           {pingState.status === 'error' && <div className="error" style={{ marginTop: 6 }}>❌ {pingState.message}</div>}
           {servers.length > 0 && (
             <div className="row" style={{ marginTop: 8 }}>
-              <span className="muted">Server salvati:</span>
+              <span className="muted">{t('cg.savedServers', 'Server salvati:')}</span>
               {servers.map((s) => (
                 <button key={s} className="tag" style={{ cursor: 'pointer' }} onClick={() => setUrl(s)}>{s}</button>
               ))}
@@ -258,54 +258,54 @@ export default function CampaignTab() {
         </div>
 
         <div className="card">
-          <h3>👤 Account</h3>
+          <h3>{t('cg.account', '👤 Account')}</h3>
           {auth ? (
             <>
-              <div className="ok">✅ Loggato come <b>{auth.username}</b> — {auth.characters.length} scheda/e in libreria</div>
+              <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={logout}>Esci dall'account</button>
+                <button onClick={logout}>{t('cg.logout', 'Esci dall\'account')}</button>
               </div>
             </>
           ) : (
             <>
               <div className="row">
                 <input value={accountName} onChange={(e) => setAccountName(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder="Username" style={{ flex: 1 }} />
-                <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder="Password (verificata dal server)" style={{ flex: 1 }} />
+                <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder={t('cg.pwServer', 'Password (verificata dal server)')} style={{ flex: 1 }} />
               </div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={() => doRegister(accountName, accountPw)}>Registrati</button>
-                <button className="primary" onClick={() => doLogin(accountName, accountPw)}>Login</button>
+                <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
+                <button className="primary" onClick={() => doLogin(accountName, accountPw)}>{t('cg.login', 'Login')}</button>
               </div>
               {notice && <div className="ok" style={{ marginTop: 6 }}>ℹ️ {notice}</div>}
               <div className="muted" style={{ marginTop: 6 }}>
-                La registrazione crea una <b>richiesta</b> che l'admin approva dal pannello <code>/admin</code>; la password è verificata lato server (hash sha256, mai in chiaro).
+                {t('cg.regNote', 'La registrazione crea una richiesta che l\'admin approva dal pannello /admin; la password è verificata lato server (hash sha256, mai in chiaro).')}
               </div>
             </>
           )}
         </div>
 
         <div className="card">
-          <h3>🎲 Campagna multiplayer</h3>
+          <h3>{t('cg.campaign', '🎲 Campagna multiplayer')}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
-            <button className={mode === 'create' ? 'primary' : ''} onClick={() => setMode('create')}>Crea campagna (master)</button>
-            <button className={mode === 'join' ? 'primary' : ''} onClick={() => setMode('join')}>Unisciti a una campagna</button>
+            <button className={mode === 'create' ? 'primary' : ''} onClick={() => setMode('create')}>{t('cg.create', 'Crea campagna (master)')}</button>
+            <button className={mode === 'join' ? 'primary' : ''} onClick={() => setMode('join')}>{t('cg.join', 'Unisciti a una campagna')}</button>
           </div>
-          <label>Il tuo nome</label>
+          <label>{t('cg.yourName', 'Il tuo nome')}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="Eroe" />
           {mode === 'create' && (
             <>
-              <label>Nome campagna</label>
+              <label>{t('cg.campaignName', 'Nome campagna')}</label>
               <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="La tomba perduta" />
             </>
           )}
           {mode === 'join' && (
             <>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={refreshCampaignList}>📋 Aggiorna lista dal server</button>
+                <button onClick={refreshCampaignList}>{t('cg.refreshList', '📋 Aggiorna lista dal server')}</button>
               </div>
               {savedCampaigns.length > 0 && (
                 <>
-                  <label>Campagne salvate</label>
+                  <label>{t('cg.savedCampaigns', 'Campagne salvate')}</label>
                   <select
                     value={joinId}
                     onChange={(e) => {
@@ -314,29 +314,29 @@ export default function CampaignTab() {
                       if (sc && sc.server !== url) setUrl(sc.server);
                     }}
                   >
-                    <option value="">— scegli una campagna salvata —</option>
+                    <option value="">{t('cg.pickSaved', '— scegli una campagna salvata —')}</option>
                     {savedCampaigns.map((c) => <option key={c.server + c.id} value={c.id}>{c.name} ({c.id}) @ {c.server}</option>)}
                   </select>
                 </>
               )}
               {campaignList.length > 0 && (
                 <>
-                  <label>Campagne sul server</label>
+                  <label>{t('cg.onServer', 'Campagne sul server')}</label>
                   <select value={joinId} onChange={(e) => setJoinId(e.target.value)}>
-                    <option value="">— scegli campagna —</option>
+                    <option value="">{t('cg.pick', '— scegli campagna —')}</option>
                     {campaignList.map((c) => <option key={c.id} value={c.id}>{c.name} ({c.id}, {c.players} giocatori)</option>)}
                   </select>
                 </>
               )}
-              <label>ID campagna (manuale)</label>
-              <input value={joinId} onChange={(e) => setJoinId(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="id a 8 caratteri" />
+              <label>{t('cg.idManual', 'ID campagna (manuale)')}</label>
+              <input value={joinId} onChange={(e) => setJoinId(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder={t('cg.idPh', 'id a 8 caratteri')} />
               <label className="row" style={{ marginTop: 6 }}>
                 <input type="checkbox" checked={asMaster} onChange={(e) => setAsMaster(e.target.checked)} style={{ width: 'auto' }} />
-                <span>Entra come <b>master</b> (serve la password della campagna; possibile solo se nessun master è collegato)</span>
+                <span>{tf('cg.asMaster', 'Entra come master (serve la password della campagna; possibile solo se nessun master è collegato)', {})}</span>
               </label>
             </>
           )}
-          <label>Password campagna</label>
+          <label>{t('cg.password', 'Password campagna')}</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} />
           {error && <div className="error">{error}</div>}
           <div style={{ marginTop: 10 }}>
@@ -345,12 +345,11 @@ export default function CampaignTab() {
               disabled={conn.phase === 'connecting'}
               onClick={() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); }}
             >
-              {conn.phase === 'connecting' ? 'Connessione...' : mode === 'create' ? 'Crea e entra' : 'Entra'}
+              {conn.phase === 'connecting' ? t('cg.connecting', 'Connessione...') : mode === 'create' ? t('cg.createEnter', 'Crea e entra') : t('cg.enter', 'Entra')}
             </button>
           </div>
           <div className="muted" style={{ marginTop: 10 }}>
-            Avvia il server con <code>npm run server</code> (porta 3001): serve la web app e il WebSocket.
-            Pannello admin del server: <code>/admin</code>. In modalità "Crea" diventi il master.
+            {t('cg.serverHint', 'Avvia il server con npm run server (porta 3001): serve la web app e il WebSocket. Pannello admin del server: /admin. In modalità "Crea" diventi il master.')}
           </div>
         </div>
       </div>
@@ -367,38 +366,43 @@ export default function CampaignTab() {
   return (
     <div className="grid">
       <div className="card">
-        <h3>🌐 {campaign.name} <span className="tag custom">{you.role === 'master' ? 'Master' : 'Giocatore'}</span> <span className="muted">id {campaign.id}</span></h3>
+        <h3>🌐 {campaign.name} <span className="tag custom">{you.role === 'master' ? t('cg.master', 'Master') : t('cg.player', 'Giocatore')}</span> <span className="muted">id {campaign.id}</span></h3>
         <div className="row">
-          <b>Giocatori:</b>
+          <b>{t('cg.players', 'Giocatori:')}</b>
           {campaign.players.map((p) => (
             <span key={p.id} className={`tag ${p.id === you.id ? 'custom' : ''}`}>
-              {p.name}{p.role === 'master' ? ' 👑' : ''}{campaign.characters[p.id] ? ` — ${campaign.characters[p.id].name}` : ' (senza scheda)'}
+              {p.name}{p.role === 'master' ? ' 👑' : ''}{campaign.characters[p.id] ? ` — ${campaign.characters[p.id].name}` : ` ${t('cg.withoutSheet', '(senza scheda)')}`}
             </span>
           ))}
         </div>
         <div className="row" style={{ marginTop: 8 }}>
           <button onClick={checkConnection} disabled={pingState.status === 'checking'} title="Controllo manuale (ripetibile per aggiornare)">
-            {pingState.status === 'checking' ? 'Ping…' : '🔌 Verifica connessione'}
+            {pingState.status === 'checking' ? t('cg.ping', 'Ping…') : t('cg.check', '🔌 Verifica connessione')}
           </button>
           {pingState.status === 'ok' && <span className="ok">✅ {pingState.rtt} ms</span>}
           {pingState.status === 'error' && <span className="error">❌ {pingState.message}</span>}
           {isMaster && (
             <button
               className="danger"
-              onClick={() => { if (confirm(`Eliminare definitivamente la campagna "${campaign.name}" (${campaign.id})? Tutti i partecipanti verranno disconnessi.`)) act({ kind: 'deleteCampaign' }); }}
+              onClick={() => { if (confirm(tf('cg.deleteConfirm', 'Eliminare definitivamente la campagna "{name}" ({id})? Tutti i partecipanti verranno disconnessi.', { name: campaign.name, id: campaign.id }))) act({ kind: 'deleteCampaign' }); }}
             >
-              🗑 Elimina campagna
+              {t('cg.deleteCampaign', '🗑️ Elimina campagna')}
             </button>
           )}
-          <button onClick={exitP2P}>Esci</button>
+          <button onClick={exitP2P}>{t('cg.exit', 'Esci')}</button>
+          {char?.concentrationSpellId && (
+            <span className="tag custom">{tf('cg.concChip', '🎯 {name}', { name: reg.spells.get(char.concentrationSpellId)?.name ?? char.concentrationSpellId })}
+              <button style={{ padding: '0 5px', marginLeft: 4 }} title={t('cg.dropConc', 'Interrompi la concentrazione')} onClick={() => act({ kind: 'dropConcentration' })}>✕</button>
+            </span>
+          )}
         </div>
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
       </div>
 
       {hostRef.current && isMaster && (
         <div className="card">
-          <h3>📨 Aggiungi giocatori (P2P)</h3>
-          <label>Incolla qui il codice (offer) del giocatore</label>
+          <h3>{t('cg.addPlayers', '📨 Aggiungi giocatori (P2P)')}</h3>
+          <label>{t('cg.pasteOffer', 'Incolla qui il codice (offer) del giocatore')}</label>
           <textarea rows={3} value={peerOffer} onChange={(e) => setPeerOffer(e.target.value)} style={{ width: '100%' }} />
           <div style={{ marginTop: 6 }}>
             <button
@@ -413,23 +417,23 @@ export default function CampaignTab() {
                 }
               }}
             >
-              Genera risposta per il giocatore
+              {t('cg.genAnswer', 'Genera risposta per il giocatore')}
             </button>
           </div>
           {peerAnswer && (
             <>
-              <label style={{ marginTop: 8 }}>Risposta da copiare e mandare al giocatore</label>
+              <label style={{ marginTop: 8 }}>{t('cg.answerToCopy', 'Risposta da copiare e mandare al giocatore')}</label>
               <textarea readOnly rows={3} value={peerAnswer} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
             </>
           )}
           <div className="muted" style={{ marginTop: 6 }}>
-            Giocatori connessi: {campaign.players.map((p) => p.name).join(', ') || 'solo te'}
+            {tf('cg.peersConnected', 'Giocatori connessi: {list}', { list: campaign.players.map((p) => p.name).join(', ') || t('cg.onlyYou', 'solo te') })}
           </div>
         </div>
       )}
 
       <div className="card">
-        <h3>📤 Scegli la scheda da usare in campagna</h3>
+        <h3>📤 {t('cg.pickSheet', '🗂 Scegli la scheda da usare in campagna')}</h3>
         {sheets.length > 0 && (
           <div className="row">
             <select value={localPick || char?.id || ''} onChange={(e) => setLocalPick(e.target.value)}>
@@ -442,45 +446,45 @@ export default function CampaignTab() {
                 if (c) act({ kind: 'setCharacter', character: c });
               }}
             >
-              Carica scheda locale
+              {t('cg.loadLocal', 'Carica scheda locale')}
             </button>
           </div>
         )}
         {auth && auth.characters.length > 0 && (
           <div className="row" style={{ marginTop: 6 }}>
             <select value={accPick} onChange={(e) => setAccPick(e.target.value)}>
-              <option value="">— scheda dalla libreria di {auth.username} —</option>
+              <option value="">{tf('cg.fromAccount', '— scheda dalla libreria di {u} —', { u: auth.username })}</option>
               {auth.characters.map((c) => <option key={c.id} value={c.id}>{c.name} (liv {totalLevel(c)})</option>)}
             </select>
-            <button disabled={!accPick} onClick={() => act({ kind: 'useCharacter', characterId: accPick })}>Carica da account</button>
+            <button disabled={!accPick} onClick={() => act({ kind: 'useCharacter', characterId: accPick })}>{t('cg.loadAccount', 'Carica da account')}</button>
           </div>
         )}
         {auth && char && (
           <div className="row" style={{ marginTop: 6 }}>
             <button onClick={() => act({ kind: 'saveCharacter', character: char })}>
-              💾 Salva "{char.name}" nella libreria dell'account ({auth.username})
+              {tf('cg.saveToAccount', '💾 Salva "{name}" nella libreria dell\'account ({u})', { name: char.name, u: auth.username })}
             </button>
           </div>
         )}
-        {!auth && <div className="muted" style={{ marginTop: 6 }}>La connessione resta attiva anche cambiando tab. Esci e fai login dall'account per salvare le schede sul server e riutilizzarle in altre campagne.</div>}
+        {!auth && <div className="muted" style={{ marginTop: 6 }}>{t('cg.noAuthHint', 'La connessione resta attiva anche cambiando tab. Esci e fai login dall\'account per salvare le schede sul server e riutilizzarle in altre campagne.')}</div>}
       </div>
 
       {isMaster && (
         <div className="card">
-          <h3>🖥 Schermo del master</h3>
+          <h3>{t('cg.dmScreen', '🖥 Schermo del master')}</h3>
           <table>
             <thead>
-              <tr><th>Giocatore</th><th>PG</th><th>Liv</th><th>PF</th><th>CA</th><th>Percez. passiva</th><th>Intuizione passiva</th><th>Condizioni</th></tr>
+              <tr><th>{t('cg.thPlayer', 'Giocatore')}</th><th>{t('cg.thChar', 'PG')}</th><th>{t('cg.thLevel', 'Liv')}</th><th>{t('cg.thHp', 'PF')}</th><th>{t('cg.thAc', 'CA')}</th><th>{t('cg.thPassPerc', 'Percez. passiva')}</th><th>{t('cg.thPassIns', 'Intuizione passiva')}</th><th>{t('cg.thCond', 'Condizioni')}</th></tr>
             </thead>
             <tbody>
               {campaign.players.map((p) => {
                 const ch = campaign.characters[p.id];
-                if (!ch) return <tr key={p.id}><td>{p.name}</td><td className="muted" colSpan={7}>senza scheda</td></tr>;
+                if (!ch) return <tr key={p.id}><td>{p.name}</td><td className="muted" colSpan={7}>{t('cg.noSheet', 'senza scheda')}</td></tr>;
                 return (
                   <tr key={p.id}>
                     <td>
                       {p.name}{p.role === 'master' ? ' 👑' : ''}
-                      {ch && <button style={{ marginLeft: 6, padding: '0 6px' }} title="Vedi la scheda completa di questo giocatore" onClick={() => setViewChar(ch, p.name)}>👁</button>}
+                      {ch && <button style={{ marginLeft: 6, padding: '0 6px' }} title={t('cg.seeFullTitle', 'Vedi la scheda completa di questo giocatore')} onClick={() => setViewChar(ch, p.name)}>👁</button>}
                     </td>
                     <td>{ch.name}</td>
                     <td>{totalLevel(ch)}</td>
@@ -488,7 +492,7 @@ export default function CampaignTab() {
                     <td>{armorClass(ch, reg).ac}</td>
                     <td>{passivePerception(ch)}</td>
                     <td>{passiveInsight(ch)}</td>
-                    <td>{ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}{ch.exhaustion > 0 && <span className="tag custom">esaurimento {ch.exhaustion}</span>}</td>
+                    <td>{ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}{ch.exhaustion > 0 && <span className="tag custom">{tf('cg.exhaustionTag', 'esaurimento {n}', { n: ch.exhaustion })}</span>}</td>
                   </tr>
                 );
               })}
@@ -499,7 +503,7 @@ export default function CampaignTab() {
 
       {isMaster && (
         <div className="card">
-          <h3>👑 Pannello master — schede e status dei giocatori</h3>
+          <h3>{t('cg.masterPanel', '👑 Pannello master — schede e status dei giocatori')}</h3>
           {campaign.players.length === 0 && <div className="muted">Nessun giocatore collegato.</div>}
           {campaign.players.map((p) => {
             const ch = campaign.characters[p.id];
@@ -515,21 +519,21 @@ export default function CampaignTab() {
                       <span className="tag">XP {ch.xp}</span>
                       {ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}
                     </span>
-                  ) : <span className="muted"> (senza scheda)</span>}
+                  ) : <span className="muted"> {t('cg.withoutSheet', '(senza scheda)')}</span>}
                 </summary>
                 {ch && (
                   <div style={{ marginTop: 6 }}>
                     <div className="row" style={{ marginBottom: 6 }}>
-                      <button className="primary" onClick={() => setViewChar(ch, p.name)}>👁 vedi scheda completa</button>
-                      <button className="danger" onClick={() => act({ kind: 'masterDamage', playerId: p.id, amount: 5 })}>🔒 −5 PF</button>
-                      <button onClick={() => act({ kind: 'masterHeal', playerId: p.id, amount: 5 })}>🔒 +5 PF</button>
-                      <button onClick={() => act({ kind: 'masterAddXp', playerId: p.id, amount: 300 })}>🔒 +300 XP</button>
+                      <button className="primary" onClick={() => setViewChar(ch, p.name)}>{t('cg.seeFull', '👁 vedi scheda completa')}</button>
+                      <button className="danger" onClick={() => act({ kind: 'masterDamage', playerId: p.id, amount: 5 })}>🔒 {t('cg.m5', '🔫 −5 PF')}</button>
+                      <button onClick={() => act({ kind: 'masterHeal', playerId: p.id, amount: 5 })}>🔒 {t('cg.p5', '🔫 +5 PF')}</button>
+                      <button onClick={() => act({ kind: 'masterAddXp', playerId: p.id, amount: 300 })}>🔒 {t('cg.xp300', '🔫 +300 XP')}</button>
                       <select value="" onChange={(e) => { if (e.target.value) act({ kind: 'masterSetCondition', playerId: p.id, conditionId: e.target.value, on: true }); }}>
-                        <option value="">🔒 + condizione…</option>
+                        <option value="">{t('cg.addCond', '🔫 + condizione…')}</option>
                         {CONDITIONS.map((cd) => <option key={cd.id} value={cd.id}>{cd.name}</option>)}
                       </select>
                       <select value="" onChange={(e) => { if (e.target.value) act({ kind: 'masterSetCondition', playerId: p.id, conditionId: e.target.value, on: false }); }}>
-                        <option value="">🔒 − condizione…</option>
+                        <option value="">{t('cg.remCond', '🔫 − condizione…')}</option>
                         {ch.conditions.map((cd) => <option key={cd} value={cd}>{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</option>)}
                       </select>
                     </div>
@@ -539,62 +543,65 @@ export default function CampaignTab() {
               </details>
             );
           })}
-          <div className="muted" style={{ marginTop: 4 }}>Le azioni 🔒 sono applicate di nascosto: non finiscono nel log pubblico del combattimento.</div>
+          <div className="muted" style={{ marginTop: 4 }}>{t('cg.secretNote', 'Le azioni 🔫 sono applicate di nascosto: non finiscono nel log pubblico del combattimento.')}</div>
         </div>
       )}
 
       {isMaster && !combat && (
         <div className="card">
-          <h3>👑 Avvio combattimento</h3>
+          <h3>👑 {t('cg.startCombat', 'Avvio combattimento')}</h3>
           <div className="row">
             <button className="primary" onClick={() => act({ kind: 'startCombat' })} disabled={Object.keys(campaign.characters).length === 0}>
-              ⚔️ Avvia combattimento
+              {t('cg.startCombatBtn', '⚔️ Avvia combattimento')}
             </button>
           </div>
-          <div className="muted" style={{ marginTop: 6 }}>I giocatori devono aver caricato la scheda. Il combattimento parte con tutti i PG.</div>
+          <div className="muted" style={{ marginTop: 6 }}>{t('cg.startCombatHint', 'I giocatori devono aver caricato la scheda. Il combattimento parte con tutti i PG.')}</div>
         </div>
       )}
 
       {combat && (
         <div className="card">
-          <h3>⚔️ Combattimento — Round {combat.round} {cur && <span className="tag custom"> turno: {cur.name}</span>}</h3>
+          <h3>⚔️ {tf('cg.combat', '⚔️ Combattimento — Round {n}', { n: combat.round })} {cur && <span className="tag custom"> {tf('cb.turn', 'turno: {name}', { name: cur.name })}</span>}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             {isMaster && (
               <>
                 <select value={enemyId} onChange={(e) => setEnemyId(e.target.value)} style={{ width: 140 }}>
-                  <option value="">+ nemico...</option>
+                  <option value="">{t('cg.addEnemy', '+ nemico...')}</option>
                   {[...reg.enemies.values()].map((e) => <option key={e.id} value={e.id}>{e.name} (CA {e.ac}, {e.hp} PF)</option>)}
                 </select>
-                <button disabled={!enemyId} onClick={() => { act({ kind: 'addEnemy', enemyId, count: 1 }); setEnemyId(''); }}>Aggiungi</button>
-                <button onClick={() => act({ kind: 'rollInitiative' })}>🎲 Initiative</button>
-                <button className="danger" onClick={() => act({ kind: 'endCombat' })}>Fine combattimento</button>
+                <button disabled={!enemyId} onClick={() => { act({ kind: 'addEnemy', enemyId, count: 1 }); setEnemyId(''); }}>{t('cg.add', 'Aggiungi')}</button>
+                <button onClick={() => act({ kind: 'rollInitiative' })}>{t('cg.initiative', '🎲 Initiative')}</button>
+                <button className="danger" onClick={() => act({ kind: 'endCombat' })}>{t('cg.endCombat', 'Fine combattimento')}</button>
               </>
             )}
             {(isMyTurn || isMaster) && (
-              <button className="primary" onClick={() => act({ kind: 'nextTurn' })}>Turno ▶</button>
+              <button className="primary" onClick={() => act({ kind: 'nextTurn' })}>{t('cg.next', 'Turno ▶')}</button>
             )}
           </div>
 
           <table>
             <thead>
-              <tr><th>Init</th><th>Combattente</th><th>PF</th><th>CA</th><th>Condizioni</th><th>Economia</th><th>Azioni</th></tr>
+              <tr><th>{t('cg.thInit', 'Init')}</th><th>{t('cg.thCombatant', 'Combattente')}</th><th>{t('cg.thHp', 'PF')}</th><th>{t('cg.thAc', 'CA')}</th><th>{t('cg.thCond', 'Condizioni')}</th><th>{t('cg.thEconomy', 'Economia')}</th><th>{t('cg.thActions', 'Azioni')}</th></tr>
             </thead>
             <tbody>
               {combat.combatants.map((c, i) => (
                 <tr key={c.id} style={i === combat.turnIndex ? { background: 'var(--panel2)' } : undefined}>
                   <td><b>{c.initiative}</b></td>
-                  <td>{c.name} {c.isPlayer && <span className="tag">PG</span>}</td>
+                  <td>
+                    {c.name} {c.isPlayer && <span className="tag">{t('cb.player', 'PG')}</span>}
+                    {c.concentrating && <span className="tag custom" title={t('cb.concTitle', 'Concentrazione attiva')}>{tf('cg.concChip', '🎯 {name}', { name: reg.spells.get(c.concentrating)?.name ?? c.concentrating })}</span>}
+                  </td>
                   <td>{c.hp}/{c.maxHp}</td>
                   <td>{c.ac}</td>
                   <td>{c.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}{c.conditionRounds[cd] ? ` (${c.conditionRounds[cd]})` : ''}</span>)}</td>
                   <td className="muted" style={{ fontSize: 11 }}>
-                    {c.actionUsed ? '❌azione' : '✅azione'} · {c.bonusUsed ? '❌bonus' : '✅bonus'} · {c.reactionUsed ? '❌reazione' : '✅reazione'} · 🏃{c.movement}
+                    {c.actionUsed ? tf('cg.used', '❌{w}', { w: t('cg.action', 'azione') }) : tf('cg.free', '✅{w}', { w: t('cg.action', 'azione') })} · {c.bonusUsed ? tf('cg.used', '❌{w}', { w: t('cg.bonusW', 'bonus') }) : tf('cg.free', '✅{w}', { w: t('cg.bonusW', 'bonus') })} · {c.reactionUsed ? tf('cg.used', '❌{w}', { w: t('cg.reactionW', 'reazione') }) : tf('cg.free', '✅{w}', { w: t('cg.reactionW', 'reazione') })} · 🏃{c.movement}
                   </td>
                   <td>
                     {(isMyTurn || isMaster) && cur?.id === c.id && (
                       <span className="row">
                         <select value={targetId} onChange={(e) => setTargetId(e.target.value)} style={{ width: 110 }}>
-                          <option value="">bersaglio...</option>
+                          <option value="">{t('cg.target', 'bersaglio...')}</option>
                           {combat.combatants.filter((t) => t.id !== c.id).map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
                         </select>
                         {c.attacks.map((a, ai) => (
@@ -605,9 +612,12 @@ export default function CampaignTab() {
                         ))}
                         <input type="number" value={moveAmt} onChange={(e) => setMoveAmt(Number(e.target.value))} style={{ width: 60 }} />
                         <button disabled={c.movement <= 0} onClick={() => act({ kind: 'move', amount: moveAmt })}>🏃</button>
-                        <button disabled={c.bonusUsed} onClick={() => act({ kind: 'useBonus' })}>⚡bonus</button>
-                        <button disabled={c.reactionUsed} onClick={() => act({ kind: 'useReaction' })}>🛡️reazione</button>
+                        <button disabled={c.bonusUsed} onClick={() => act({ kind: 'useBonus' })}>{t('cg.bonus', '⚡bonus')}</button>
+                        <button disabled={c.reactionUsed} onClick={() => act({ kind: 'useReaction' })}>{t('cg.reaction', '🛡️reazione')}</button>
                       </span>
+                    )}
+                    {c.isPlayer && c.concentrating && cur?.id === c.id && (isMyTurn || isMaster) && (
+                      <button title={t('cg.dropConc', 'Interrompi la concentrazione')} onClick={() => act({ kind: 'dropConcentration' })}>🎯✕</button>
                     )}
                     {isMaster && (
                       <span className="row">
@@ -623,7 +633,7 @@ export default function CampaignTab() {
           {isMaster && (
             <div className="row" style={{ marginTop: 8 }}>
               <select value="" onChange={(e) => { if (e.target.value && cur) act({ kind: 'setCondition', targetId: cur.id, conditionId: e.target.value, on: true, rounds: 2 }); }} style={{ width: 160 }}>
-                <option value="">+ condizione al turno corrente...</option>
+                <option value="">{t('cg.addCondTurn', '+ condizione al turno corrente...')}</option>
                 {CONDITIONS.map((cd) => <option key={cd.id} value={cd.id}>{cd.name}</option>)}
               </select>
             </div>
@@ -633,7 +643,7 @@ export default function CampaignTab() {
 
       {combat && (
         <div className="card">
-          <h3>📜 Log</h3>
+          <h3>{t('cg.log', '📜 Log')}</h3>
           <div style={{ maxHeight: 220, overflow: 'auto', fontSize: 12 }}>
             {[...combat.log].reverse().slice(0, 30).map((l, i) => <div key={i} className="muted">{l}</div>)}
           </div>
@@ -641,7 +651,7 @@ export default function CampaignTab() {
       )}
 
       {!combat && !isMaster && (
-        <div className="card"><h3>⏳ In attesa...</h3><div className="muted">Il master avvierà il combattimento. Assicurati di aver caricato la tua scheda.</div></div>
+        <div className="card"><h3>{t('cg.waiting', '⏳ In attesa...')}</h3><div className="muted">{t('cg.waitingHint', 'Il master avvierà il combattimento. Assicurati di aver caricato la tua scheda.')}</div></div>
       )}
     </div>
   );

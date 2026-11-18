@@ -3,6 +3,7 @@ import type { Registry } from '../registry.js';
 import { casterLevel, cantripsKnown } from './levelup.js';
 import { abilityModifier, maxHp } from './derived.js';
 import { updateItem } from './inventory.js';
+import { logJournal } from '../character.js';
 
 export interface CasterSummary {
   classId: string;
@@ -190,7 +191,7 @@ export function castSpell(char: Character, spellId: string, slotLevel: number, r
   };
   const mat = consumeMaterialComponent(next, spell);
   next = mat.character;
-  return { character: next, warning: mat.warning };
+  return { character: logJournal(next, `Lancia ${spell.name} (slot ${slotLevel}°)`), warning: mat.warning };
 }
 
 /** lancio come rituale: nessuno slot consumato (richiede spell.ritual), +10 minuti */
@@ -206,7 +207,7 @@ export function castSpellRitual(char: Character, spellId: string, reg: Registry)
   };
   const mat = consumeMaterialComponent(next, spell);
   next = mat.character;
-  return { character: next, ritual: true, warning: mat.warning };
+  return { character: logJournal(next, `Lancia ${spell.name} come rituale`), ritual: true, warning: mat.warning };
 }
 
 /** riposo lungo: recupera slot, HP e concentration */

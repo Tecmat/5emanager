@@ -9,7 +9,7 @@ import {
 } from '@dnd5e/core';
 import { SRD_DATA, createSrdRegistry } from '@dnd5e/data-srd';
 import { loadJSON, saveJSON } from './storage.js';
-import { getLang, storeLang, t as translate, type Lang } from './i18n.js';
+import { getLang, storeLang, t as translate, tf as translateF, type Lang } from './i18n.js';
 
 const SHEETS_KEY = 'dnd5e.sheets.v2';
 const LEGACY_CHAR_KEY = 'dnd5e.character.v1';
@@ -62,6 +62,7 @@ interface Store {
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string, fallback?: string) => string;
+  tf: (key: string, fallback: string, vars: Record<string, string | number>) => string;
 }
 
 const StoreCtx = createContext<Store | null>(null);
@@ -180,6 +181,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     lang,
     setLang: (l: Lang) => { storeLang(l); setLangState(l); },
     t: (key: string, fallback?: string) => translate(lang, key, fallback),
+    tf: (key: string, fallback: string, vars: Record<string, string | number>) => translateF(lang, key, fallback, vars),
   };
   return <StoreCtx.Provider value={value}>{children}</StoreCtx.Provider>;
 }

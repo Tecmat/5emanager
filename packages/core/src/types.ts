@@ -301,6 +301,8 @@ export interface Character {
   deathSaves: { successes: number; failures: number };
   /** condizioni attive (es. 'avvelenato', 'invisibile') */
   conditions: string[];
+  /** diario di sessione: eventi automatici (XP, danni, level-up...) + note manuali */
+  journal: { at: string; text: string }[];
   /** livello di esaurimento 0-6 (6 = morte) */
   exhaustion: number;
   /** incantesimi preparati divisi per classe (multiclasse): classId -> spellId[] */

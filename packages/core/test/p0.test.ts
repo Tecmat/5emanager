@@ -15,6 +15,7 @@ import {
   exhaustionEffects,
   hasAdvantage,
   isMaterialConsumed,
+  learnableSpells,
   materialText,
   maxHp,
   moveItemToContainer,
@@ -198,5 +199,19 @@ describe('P0: mini-DSL effetti', () => {
     expect(damageBonusDice(c, reg)).toEqual([{ dice: '1d6', type: 'fire' }]);
     expect(hasAdvantage(c, reg, 'save', 'magic')).toBe(true);
     expect(hasAdvantage(c, reg, 'attack')).toBe(false);
+  });
+});
+
+describe('fix dati: tutte le classi lancianti hanno incantesimi imparabili', () => {
+  it('bard/sorcerer/druid/ranger possono imparare incantesimi entro il limite', () => {
+    for (const classId of ['bard', 'sorcerer', 'druid', 'ranger', 'wizard', 'cleric']) {
+      const c = makeChar(classId);
+      const learnable = learnableSpells(c, reg);
+      expect(learnable.length).toBeGreaterThan(10);
+      const first = learnable.find((s) => s.level === 1)!;
+      const r = addSpellKnown(c, first.id, reg);
+      expect(r.error).toBeUndefined();
+      expect(r.character.spellsKnown).toContain(first.id);
+    }
   });
 });

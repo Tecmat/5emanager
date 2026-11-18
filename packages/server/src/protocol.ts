@@ -1,25 +1,6 @@
-import type { Character, CombatState, HouseRules, SrdData } from '@dnd5e/core';
+import type { Campaign, Character, ClientAction, PlayerInfo, SrdData } from '@dnd5e/core';
 
-export interface PlayerInfo {
-  id: string;
-  name: string;
-  role: 'master' | 'player';
-  characterId?: string;
-}
-
-export interface Campaign {
-  id: string;
-  name: string;
-  passwordHash: string;
-  houseRules: HouseRules;
-  /** contenuti custom della campagna (aggiunti al set SRD) */
-  custom: Partial<SrdData>;
-  players: PlayerInfo[];
-  characters: Record<string, Character>;
-  combat: CombatState | null;
-  createdAt: string;
-  updatedAt: string;
-}
+export type { Campaign, PlayerInfo, ClientAction } from '@dnd5e/core';
 
 export type ClientMessage =
   | { t: 'create'; name: string; password: string; campaignName: string }
@@ -42,31 +23,6 @@ export type ClientMessage =
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
   | { t: 'action'; action: ClientAction };
 
-export type ClientAction =
-  | { kind: 'setCharacter'; character: Character }
-  | { kind: 'startCombat' }
-  | { kind: 'addEnemy'; enemyId: string; count?: number }
-  | { kind: 'rollInitiative' }
-  | { kind: 'attack'; targetId: string; attackIndex?: number }
-  | { kind: 'move'; amount: number }
-  | { kind: 'useBonus' }
-  | { kind: 'useReaction' }
-  | { kind: 'setCondition'; targetId: string; conditionId: string; on: boolean; rounds?: number }
-  | { kind: 'damage'; targetId: string; amount: number }
-  | { kind: 'heal'; targetId: string; amount: number }
-  | { kind: 'nextTurn' }
-  | { kind: 'endCombat' }
-  | { kind: 'addCustom'; data: Partial<SrdData> }
-  | { kind: 'leave' }
-  | { kind: 'saveCharacter'; character: Character }
-  | { kind: 'deleteCharacter'; characterId: string }
-  | { kind: 'useCharacter'; characterId: string }
-  // pannello master: modificano la scheda del giocatore SENZA escribirlo nel log pubblico (segreto)
-  | { kind: 'masterDamage'; playerId: string; amount: number }
-  | { kind: 'masterHeal'; playerId: string; amount: number }
-  | { kind: 'masterAddXp'; playerId: string; amount: number }
-  | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean }
-  | { kind: 'deleteCampaign' };
 
 export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
