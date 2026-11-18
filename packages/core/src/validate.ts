@@ -1,5 +1,5 @@
 import { ABILITIES } from './types.js';
-import type { ArmorDef, ClassDef, FeatDef, RaceDef, SpellDef, SubclassDef, WeaponDef } from './types.js';
+import type { ArmorDef, ClassDef, EnemyDef, FeatDef, RaceDef, SpellDef, SubclassDef, WeaponDef } from './types.js';
 
 const DICE_RE = /^\d+d\d+(\s*[+-]\s*\d+)?$/;
 const MULTI_DICE_RE = /^(\d+d\d+(\s*[+-]\s*\d+)?\s*\+\s*)*\d+d\d+(\s*[+-]\s*\d+)?$/;
@@ -75,6 +75,7 @@ export function validateFeature(f: unknown, level: number): string[] {
         const ab = (e as Record<string, unknown>).ability;
         if (!ABILITIES.includes(ab as never)) errors.push(`feature ${o.id}: ability di spellcasting non valida`);
       }
+      if (et === 'effect' && typeof (e as Record<string, unknown>).text !== 'string') errors.push(`feature ${o.id}: effect richiede text (stringa)`);
     }
   }
   return errors;
@@ -146,5 +147,24 @@ export function validateFeatDef(f: Partial<FeatDef>): string[] {
   if (!f.name) errors.push('name mancante');
   if (!f.description) errors.push('description mancante');
   if (!Array.isArray(f.effects) || f.effects.length === 0) errors.push('effects deve essere un array non vuoto');
+  return errors;
+}
+
+export function validateEnemyDef(e: Partial<EnemyDef>): string[] {
+  const errors: string[] = [];
+  if (!isId(e.id)) errors.push('id non valido');
+  if (!e.name) errors.push('name mancante');
+  if (typeof e.hp !== 'number' || e.hp <= 0) errors.push('hp deve essere > 0');
+  if (typeof e.ac !== 'number' || e.ac <= 0) errors.push('ac deve essere > 0');
+  if (typeof e.speed !== 'number' || e.speed < 0) errors.push('speed deve essere >= 0');
+  if (!Array.isArray(e.attacks) || e.attacks.length === 0) errors.push('attacks deve essere un array non vuoto');
+  else for (const a of e.attacks) {
+    if (!a?.name) errors.push('ogni attacco deve avere name');
+    if (typeof a?.bonus !== 'number') errors.push(`attacco ${a?.name}: bonus mancante`);
+    if (!a?.dice || !/^\d+d\d+(\s*[+-]\s*\d+)?$/.test(a.dice)) errors.push(`attacco ${a?.name}: dice non valido (es. 1d6+3)`);
+  }
+  if (e.abilities) for (const k of Object.keys(e.abilities)) {
+    if (!ABILITIES.includes(k as never)) errors.push(`caratteristica non valida: ${k}`);
+  }
   return errors;
 }

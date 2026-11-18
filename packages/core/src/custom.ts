@@ -1,8 +1,9 @@
-import type { ArmorDef, ClassDef, FeatDef, RaceDef, SpellDef, SubclassDef, WeaponDef } from './types.js';
+import type { ArmorDef, ClassDef, EnemyDef, FeatDef, RaceDef, SpellDef, SubclassDef, WeaponDef } from './types.js';
 import type { Registry } from './registry.js';
 import {
   validateArmorDef,
   validateClassDef,
+  validateEnemyDef,
   validateFeatDef,
   validateRaceDef,
   validateSpellDef,
@@ -57,4 +58,9 @@ export function addCustomRace(reg: Registry, race: RaceDef): AddResult<RaceDef> 
 export function addCustomFeat(reg: Registry, feat: FeatDef): AddResult<FeatDef> {
   const f = { ...feat, source: 'custom' as const };
   return register(reg.feats, f, validateFeatDef(f), 'Talento');
+}
+
+export function addCustomEnemy(reg: Registry, enemy: EnemyDef): AddResult<EnemyDef> {
+  const e = { ...enemy, source: 'custom' as const };
+  return register(reg.enemies, e, validateEnemyDef(e), 'Nemico');
 }
