@@ -45,6 +45,10 @@ async function loadSheetsAsync(): Promise<SheetStoreData> {
 
 interface Store {
   reg: Registry;
+  /** personaggio "in vista" (es. scheda di un giocatore vista dal master): se impostato, char punterà a lui */
+  viewChar: Character | null;
+  viewLabel: string | null;
+  setViewChar: (c: Character | null, label?: string | null) => void;
   char: Character | null;
   sheets: Character[];
   setChar: (c: Character) => void;
@@ -110,7 +114,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const char = (data.activeId && data.sheets[data.activeId]) || null;
+  const [viewChar, setViewCharState] = useState<Character | null>(null);
+  const [viewLabel, setViewLabel] = useState<string | null>(null);
+  const setViewChar = (c: Character | null, label?: string | null) => {
+    setViewCharState(c);
+    setViewLabel(c ? (label ?? c.name) : null);
+  };
+
+  const ownChar = (data.activeId && data.sheets[data.activeId]) || null;
+  // in modalità vista (master che guarda un giocatore) char è la scheda vista, in sola lettura
+  const char = viewChar ?? ownChar;
 
   const sheets = useMemo(
     () => Object.values(data.sheets).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? '')),
@@ -118,6 +131,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   );
 
   const setChar = (c: Character) => {
+    if (viewChar) return; // sola lettura in modalità vista
     if (!data.activeId) return;
     persist({ ...data, sheets: { ...data.sheets, [data.activeId]: c } });
   };
@@ -150,6 +164,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: Store = {
     reg,
+    viewChar,
+    viewLabel,
+    setViewChar,
     char,
     sheets,
     setChar,

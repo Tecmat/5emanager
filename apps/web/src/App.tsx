@@ -29,7 +29,7 @@ function loadLock(): LockRec {
 }
 
 export default function App() {
-  const { char, sheets, selectSheet, lang, setLang, t } = useStore();
+  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar } = useStore();
   const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
@@ -43,6 +43,14 @@ export default function App() {
   useEffect(() => {
     if (char) setCreating(false);
   }, [char]);
+
+  // in modalità vista (master che guarda un giocatore) si apre la panoramica;esco dalla campagna -> torno alla mia scheda
+  useEffect(() => {
+    if (viewChar) setTab('panoramica');
+  }, [viewChar]);
+  useEffect(() => {
+    if (conn.phase !== 'online' && viewChar) setViewChar(null);
+  }, [conn.phase, viewChar, setViewChar]);
 
   const toggleTheme = () => {
     const t2 = theme === 'dark' ? 'light' : 'dark';
@@ -96,7 +104,13 @@ export default function App() {
         <span className="row">
           {char.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
           <h1>⚔️ D&D 5e — {char.name}</h1>
-          {sheets.length > 1 && (
+          {viewChar && (
+            <>
+              <span className="tag custom">👁 stai vedendo la scheda di {viewLabel} (sola lettura)</span>
+              <button onClick={() => setViewChar(null)} title="Torna alla tua scheda">✕ mia scheda</button>
+            </>
+          )}
+          {!viewChar && sheets.length > 1 && (
             <select
               value={char.id}
               onChange={(e) => selectSheet(e.target.value)}
@@ -108,14 +122,18 @@ export default function App() {
               ))}
             </select>
           )}
-          <button onClick={() => setCreating(true)} title={t('cf.title', 'Crea un nuovo personaggio')}>{t('app.new', '＋ Nuovo')}</button>
-          <button
-            className={editing ? 'primary' : ''}
-            onClick={() => setEditing((v) => !v)}
-            title={editing ? 'Chiudi la modalità modifica' : 'Modifica la scheda (campi editabili)'}
-          >
-            ✏️ {editing ? 'Fatto' : 'Modifica'}
-          </button>
+          {!viewChar && (
+            <button onClick={() => setCreating(true)} title={t('cf.title', 'Crea un nuovo personaggio')}>{t('app.new', '＋ Nuovo')}</button>
+          )}
+          {!viewChar && (
+            <button
+              className={editing ? 'primary' : ''}
+              onClick={() => setEditing((v) => !v)}
+              title={editing ? 'Chiudi la modalità modifica' : 'Modifica la scheda (campi editabili)'}
+            >
+              ✏️ {editing ? 'Fatto' : 'Modifica'}
+            </button>
+          )}
         </span>
         <span className="row">
           <span className="muted" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
@@ -127,6 +145,11 @@ export default function App() {
         </span>
       </header>
       <main>
+        {viewChar && (
+          <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent2)' }}>
+            👁 Modalità vista: stai guardando la scheda di <b>{viewLabel}</b> come master — è <b>sola lettura</b> e si aggiorna in tempo reale. Per modificarla usa il pannello master in 🌐 Campagna (azioni 🔒). Torna alla tua scheda con ✕ in alto.
+          </div>
+        )}
         <nav className="tabs">
           {(
             [

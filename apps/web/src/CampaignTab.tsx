@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   ABILITIES,
   CONDITIONS,
@@ -70,7 +70,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
 }
 
 export default function CampaignTab() {
-  const { reg, char, sheets } = useStore();
+  const { reg, char, sheets, viewChar, viewLabel, setViewChar } = useStore();
   const {
     conn, auth, error, setError, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
@@ -93,6 +93,14 @@ export default function CampaignTab() {
   const onEnter = (fn: () => void) => (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') { e.preventDefault(); fn(); }
   };
+
+  // modalità vista: tieni la scheda del giocatore sincronizzata con lo stato della campagna
+  useEffect(() => {
+    if (conn.phase === 'online' && viewChar) {
+      const ch = conn.campaign.characters[viewChar.id];
+      if (ch && ch !== viewChar) setViewChar(ch, viewLabel);
+    }
+  }, [conn, viewChar, viewLabel, setViewChar]);
 
   if (conn.phase !== 'online') {
     return (
@@ -315,7 +323,10 @@ export default function CampaignTab() {
                 if (!ch) return <tr key={p.id}><td>{p.name}</td><td className="muted" colSpan={7}>senza scheda</td></tr>;
                 return (
                   <tr key={p.id}>
-                    <td>{p.name}{p.role === 'master' ? ' 👑' : ''}</td>
+                    <td>
+                      {p.name}{p.role === 'master' ? ' 👑' : ''}
+                      {ch && <button style={{ marginLeft: 6, padding: '0 6px' }} title="Vedi la scheda completa di questo giocatore" onClick={() => setViewChar(ch, p.name)}>👁</button>}
+                    </td>
                     <td>{ch.name}</td>
                     <td>{totalLevel(ch)}</td>
                     <td>{ch.hp.current}/{maxHp(ch, reg)}</td>
@@ -354,6 +365,7 @@ export default function CampaignTab() {
                 {ch && (
                   <div style={{ marginTop: 6 }}>
                     <div className="row" style={{ marginBottom: 6 }}>
+                      <button className="primary" onClick={() => setViewChar(ch, p.name)}>👁 vedi scheda completa</button>
                       <button className="danger" onClick={() => act({ kind: 'masterDamage', playerId: p.id, amount: 5 })}>🔒 −5 PF</button>
                       <button onClick={() => act({ kind: 'masterHeal', playerId: p.id, amount: 5 })}>🔒 +5 PF</button>
                       <button onClick={() => act({ kind: 'masterAddXp', playerId: p.id, amount: 300 })}>🔒 +300 XP</button>
