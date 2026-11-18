@@ -52,6 +52,11 @@
 
   <div class="card">
     <h2>Campagne</h2>
+    <div class="row" style="margin-bottom:8px">
+      <input id="newcamp-name" placeholder="Nome nuova campagna" style="width:220px">
+      <input id="newcamp-pw" type="password" placeholder="Password campagna" style="width:160px">
+      <button id="newcamp">＋ Crea campagna</button>
+    </div>
     <table>
       <thead><tr><th>ID</th><th>Nome</th><th>Giocatori</th><th>Combattimento</th><th>Creata</th><th>Aggiornata</th><th></th></tr></thead>
       <tbody id="campaigns"></tbody>
@@ -95,12 +100,23 @@ function render(state) {
     tr.innerHTML = '<td><code>' + esc(c.id) + '</code></td><td>' + esc(c.name) + '</td><td>' + c.players + '</td>' +
       '<td>' + (c.inCombat ? '⚔️ in corso' : '—') + '</td><td class="muted">' + fmtDate(c.createdAt) + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
     const td = document.createElement('td');
+    td.className = 'row';
+    const edit = document.createElement('button');
+    edit.textContent = '✏️ Modifica';
+    edit.onclick = () => {
+      const name = prompt('Nuovo nome (vuoto = invariato):', c.name);
+      if (name === null) return;
+      const pw = prompt('Nuova password (vuoto = invariata):');
+      if (pw === null) return;
+      ws.send(JSON.stringify({ t: 'adminUpdateCampaign', id: c.id, name: name || undefined, password: pw || undefined }));
+    };
     const btn = document.createElement('button');
     btn.className = 'danger';
     btn.textContent = 'Elimina';
     btn.onclick = () => {
       if (confirm('Eliminare la campagna "' + c.name + '" (' + c.id + ') dal disco?')) ws.send(JSON.stringify({ t: 'adminDeleteCampaign', id: c.id }));
     };
+    td.appendChild(edit);
     td.appendChild(btn);
     tr.appendChild(td);
     ct.appendChild(tr);
@@ -146,6 +162,14 @@ function connect() {
 
 document.getElementById('connect').onclick = connect;
 document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };
+document.getElementById('newcamp').onclick = () => {
+  const name = document.getElementById('newcamp-name').value.trim();
+  const pw = document.getElementById('newcamp-pw').value;
+  if (!name) { err('Inserisci il nome della campagna'); return; }
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminCreateCampaign', name, password: pw }));
+  document.getElementById('newcamp-name').value = '';
+  document.getElementById('newcamp-pw').value = '';
+};
 connect();
 </script>
 </body>

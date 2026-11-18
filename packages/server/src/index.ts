@@ -13,6 +13,7 @@ import {
   addPlayer,
   checkPassword,
   createCampaign,
+  createCampaignAdmin,
   deleteCampaign,
   ensureDataDir,
   listCampaigns,
@@ -20,6 +21,7 @@ import {
   loadCampaign,
   removePlayer,
   saveCampaign,
+  updateCampaign,
 } from './campaign.js';
 import {
   accountCharacters,
@@ -28,6 +30,7 @@ import {
   deleteAccountCharacter,
   getAccount,
   loadAccounts,
+  loginAccount,
   registerAccount,
   saveAccountCharacter,
   sessionUsername,
@@ -153,7 +156,7 @@ function handleMessage(conn: Conn, raw: string): void {
 
   if (msg.t === 'register') {
     try {
-      const acc = registerAccount(msg.username.trim());
+      const acc = registerAccount(msg.username.trim(), msg.password);
       conn.token = createSession(acc.username);
       send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
     } catch (e) {
@@ -163,14 +166,13 @@ function handleMessage(conn: Conn, raw: string): void {
   }
 
   if (msg.t === 'login') {
-    // TODO: verificare la password lato server. Per ora solo username (la password vive solo lato client).
-    const acc = getAccount(msg.username.trim());
-    if (!acc) {
-      send(conn.ws, { t: 'error', message: 'Account non trovato: prima devi registrarti' });
-      return;
+    try {
+      const acc = loginAccount(msg.username.trim(), msg.password);
+      conn.token = createSession(acc.username);
+      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
     }
-    conn.token = createSession(acc.username);
-    send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
     return;
   }
 
@@ -184,12 +186,21 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
     }
     try {
+      if (msg.t === 'adminCreateCampaign') {
+        if (!msg.name.trim()) throw new Error('Nome campagna mancante');
+        const c = createCampaignAdmin(msg.name.trim(), msg.password ?? '');
+        campaigns.set(c.id, c);
+      }
+      if (msg.t === 'adminUpdateCampaign') {
+        const next = updateCampaign(msg.id, { name: msg.name, password: msg.password });
+        campaigns.set(next.id, next);
+      }
       if (msg.t === 'adminDeleteCampaign') {
         if (!deleteCampaign(msg.id)) throw new Error('Campagna non trovata: ' + msg.id);
         campaigns.delete(msg.id);
@@ -276,6 +287,24 @@ function handleMessage(conn: Conn, raw: string): void {
         return;
       }
       msg.action = { kind: 'setCharacter', character: ch };
+    }
+    if (msg.action.kind === 'deleteCampaign') {
+      const player = c.players.find((p) => p.id === conn.playerId);
+      if (player?.role !== 'master') {
+        send(conn.ws, { t: 'error', message: 'Solo il master può eliminare la campagna' });
+        return;
+      }
+      const cid = c.id;
+      campaigns.delete(cid);
+      deleteCampaign(cid);
+      for (const cc of conns) {
+        if (cc.campaignId === cid) {
+          send(cc.ws, { t: 'campaignDeleted', id: cid });
+          cc.campaignId = undefined;
+          cc.playerId = undefined;
+        }
+      }
+      return;
     }
     if (msg.action.kind === 'addCustom') {
       const player = c.players.find((p) => p.id === conn.playerId);

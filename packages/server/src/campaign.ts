@@ -95,6 +95,34 @@ export function createCampaign(name: string, password: string, master: PlayerInf
   return c;
 }
 
+/** campagna creata dall'admin: senza master collegato, il primo che entra come master (con password) lo diventa */
+export function createCampaignAdmin(name: string, password: string): Campaign {
+  const c: Campaign = {
+    id: randomUUID().slice(0, 8),
+    name,
+    passwordHash: hashPassword(password),
+    houseRules: { ...DEFAULT_HOUSE_RULES },
+    custom: {},
+    players: [],
+    characters: {},
+    combat: null,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+  saveCampaign(c);
+  return c;
+}
+
+/** rinomina e/o cambia password di una campagna (admin) */
+export function updateCampaign(id: string, patch: { name?: string; password?: string }): Campaign {
+  const c = loadCampaign(id);
+  if (!c) throw new Error('Campagna non trovata: ' + id);
+  if (patch.name !== undefined && patch.name.trim()) c.name = patch.name.trim();
+  if (patch.password !== undefined && patch.password.length > 0) c.passwordHash = hashPassword(patch.password);
+  saveCampaign(c);
+  return c;
+}
+
 export function checkPassword(c: Campaign, password: string): boolean {
   return c.passwordHash === hashPassword(password);
 }

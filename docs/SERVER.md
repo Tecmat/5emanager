@@ -35,26 +35,31 @@ Apri `http://<host>:3001/` da più dispositivi (stessa rete) → tab **🌐 Camp
 
 Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando
 nessun master è collegato), `list`, `ping` (check connessione, con `id` ecoato),
-`register` / `login` (account per username), `adminAuth` / `adminList` /
+`register` / `login` (account con **password verificata lato server**, hash sha256),
+`adminAuth` / `adminList` / `adminCreateCampaign` / `adminUpdateCampaign` /
 `adminDeleteCampaign` / `adminDeleteAccount` (pannello admin), `action` (setCharacter,
 startCombat, addEnemy, rollInitiative, attack, move, useBonus, useReaction, setCondition,
 damage, heal, nextTurn, endCombat, addCustom, leave, **saveCharacter**, **deleteCharacter**,
-**useCharacter**, **masterDamage / masterHeal / masterAddXp / masterSetCondition** —
+**useCharacter**, **deleteCampaign** (solo master: elimina la campagna),
+**masterDamage / masterHeal / masterAddXp / masterSetCondition** —
 azioni del master "segrete", non scritte nel log pubblico)
 
 Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`, `auth`
-(token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`), `error`
+(token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`),
+`campaignDeleted` (la campagna è stata eliminata), `error`
 
 ## Account e libreria schede
 
-- `register { username }` / `login { username }` → `auth { token, username, characters }`;
-  le sessioni sono in memoria (token → username) e si perdono al riavvio del server
-- **Le password degli account per ora sono SOLO lato client**: il server registra/accede
-  per username e non le vede mai (TODO verifica lato server). L'hash sha256 resta nel
-  localStorage del browser.
+- `register { username, password }` / `login { username, password }` → `auth { token, username, characters }`;
+  la password è **verificata lato server** (solo l'hash sha256 è salvato in `accounts.data`;
+  gli account legacy senza hash impostano la password alla prima login)
+- le sessioni sono in memoria (token → username) e si perdono al riavvio del server
 - `saveCharacter` / `deleteCharacter` salvano la scheda nella libreria dell'account
   (persistente in `accounts.data` dentro la data dir); `useCharacter` la carica in campagna
   al posto di `setCharacter`
+- il master può eliminare la campagna con l'azione `deleteCampaign` (tutti i partecipanti
+  ricevono `campaignDeleted`); l'admin gestisce le campagne da `/admin`
+  (crea/modifica/elimina, con `adminCreateCampaign`/`adminUpdateCampaign`)
 
 ## Persistenza e regole per campagna
 
@@ -83,7 +88,8 @@ nel log pubblico.
 
 ## Sicurezza
 
-Pensato per **LAN / rete privata / tailscale**: password di campagna (sha256), account per
-username (password ancora solo lato client) e pannello admin optionally protetto da
-`DND5E_ADMIN_TOKEN`. Non esporlo su Internet pubblico senza un reverse proxy con TLS +
-auth aggiuntiva.
+Pensato per **LAN / rete privata / tailscale**: password di campagna e di account (sha256,
+verificate lato server) e pannello admin protetto da `DND5E_ADMIN_TOKEN` (se impostata).
+Su LAN la password viaggia in chiaro sul WebSocket: **non esporlo su Internet pubblico senza
+un reverse proxy con TLS** (wss) + auth aggiuntiva. Per proteggere le schede offline in
+locale c'è il blocco app con password locale (lato client, vedi web app).

@@ -25,14 +25,15 @@ export type ClientMessage =
   | { t: 'create'; name: string; password: string; campaignName: string }
   | { t: 'join'; campaignId: string; password: string; name: string; role?: 'master' | 'player' }
   | { t: 'list' }
-  // TODO: verifica password lato server. Per ora le password degli account restano SOLO lato client:
-  // il server registra/accede per username e non vede mai la password.
-  | { t: 'register'; username: string }
-  | { t: 'login'; username: string }
+  // account: la password viene registrata/verificata LATO SERVER (hash sha256, mai in chiaro)
+  | { t: 'register'; username: string; password: string }
+  | { t: 'login'; username: string; password: string }
   | { t: 'ping'; id: string }
   // pannello admin del server (LAN): se DND5E_ADMIN_TOKEN e' impostato, adminAuth deve contenerlo
   | { t: 'adminAuth'; token: string }
   | { t: 'adminList' }
+  | { t: 'adminCreateCampaign'; name: string; password: string }
+  | { t: 'adminUpdateCampaign'; id: string; name?: string; password?: string }
   | { t: 'adminDeleteCampaign'; id: string }
   | { t: 'adminDeleteAccount'; username: string }
   | { t: 'action'; action: ClientAction };
@@ -60,7 +61,8 @@ export type ClientAction =
   | { kind: 'masterDamage'; playerId: string; amount: number }
   | { kind: 'masterHeal'; playerId: string; amount: number }
   | { kind: 'masterAddXp'; playerId: string; amount: number }
-  | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean };
+  | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean }
+  | { kind: 'deleteCampaign' };
 
 export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
@@ -73,4 +75,5 @@ export type ServerMessage =
       campaigns: { id: string; name: string; players: number; inCombat: boolean; createdAt: string; updatedAt: string }[];
       accounts: { username: string; characters: number; createdAt: string }[];
     }
+  | { t: 'campaignDeleted'; id: string }
   | { t: 'error'; message: string };

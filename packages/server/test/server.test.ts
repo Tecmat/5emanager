@@ -146,7 +146,7 @@ describe('server multiplayer', () => {
     const pong = await c.waitFor((m) => m.t === 'pong' && m.id === 'p1');
     expect(typeof pong.serverTime).toBe('number');
 
-    c.send({ t: 'register', username: 'tecmat' });
+    c.send({ t: 'register', username: 'tecmat', password: 'pw123' });
     let auth = await c.waitFor((m) => m.t === 'auth');
     expect(auth.username).toBe('tecmat');
     expect(auth.characters).toEqual([]);
@@ -154,14 +154,21 @@ describe('server multiplayer', () => {
 
     // username duplicato (case-insensitive) -> errore
     const dup = await connect();
-    dup.send({ t: 'register', username: 'TECMAT' });
+    dup.send({ t: 'register', username: 'TECMAT', password: 'altra' });
     const err = await dup.waitFor((m) => m.t === 'error');
     expect(err.message).toContain('registrato');
     dup.ws.close();
 
-    // login da un'altra connessione: la password non viene mai inviata al server
+    // login con password sbagliata -> errore (verifica lato server)
+    const bad = await connect();
+    bad.send({ t: 'login', username: 'tecmat', password: 'sbagliata' });
+    const errBad = await bad.waitFor((m) => m.t === 'error');
+    expect(errBad.message).toContain('Password');
+    bad.ws.close();
+
+    // login da un'altra connessione con la password giusta
     const c2 = await connect();
-    c2.send({ t: 'login', username: 'tecmat' });
+    c2.send({ t: 'login', username: 'tecmat', password: 'pw123' });
     auth = await c2.waitFor((m) => m.t === 'auth');
     expect(auth.token).toBeTruthy();
 
@@ -252,7 +259,7 @@ describe('server multiplayer', () => {
     const as1 = await adm.waitFor((m) => m.t === 'adminState');
     expect(as1.campaigns.some((c: any) => c.id === cid)).toBe(true);
 
-    adm.send({ t: 'register', username: 'da-eliminare' });
+    adm.send({ t: 'register', username: 'da-eliminare', password: 'pw456' });
     await adm.waitFor((m) => m.t === 'auth');
     adm.send({ t: 'adminList' });
     await adm.waitFor((m) => m.t === 'adminState' && m.accounts.some((a: any) => a.username === 'da-eliminare'));
@@ -263,6 +270,52 @@ describe('server multiplayer', () => {
     expect(as3.campaigns.some((c: any) => c.id === cid)).toBe(false);
 
     m2.ws.close();
+    p.ws.close();
+    adm.ws.close();
+  }, 15000);
+
+  it('admin crea/modifica campagne + master elimina la campagna dal pannello', async () => {
+    const adm = await connect();
+    adm.send({ t: 'adminAuth', token: 'test-admin-token' });
+    await adm.waitFor((m) => m.t === 'adminState');
+
+    // crea una campagna dall'admin
+    adm.send({ t: 'adminCreateCampaign', name: 'Campagna Admin', password: 'segreta' });
+    const as1 = await adm.waitFor((m) => m.t === 'adminState' && m.campaigns.some((c: any) => c.name === 'Campagna Admin'));
+    const adminCid: string = as1.campaigns.find((c: any) => c.name === 'Campagna Admin').id;
+
+    // la modifica (rinomina + nuova password)
+    adm.send({ t: 'adminUpdateCampaign', id: adminCid, name: 'Campagna Admin 2', password: 'nuova' });
+    const as2 = await adm.waitFor((m) => m.t === 'adminState' && m.campaigns.some((c: any) => c.id === adminCid && c.name === 'Campagna Admin 2'));
+    expect(as2.campaigns.find((c: any) => c.id === adminCid).name).toBe('Campagna Admin 2');
+
+    // il primo che entra con la nuova password e role master diventa master
+    const m = await connect();
+    m.send({ t: 'join', campaignId: adminCid, password: 'nuova', name: 'DM', role: 'master' });
+    const w = await m.waitFor((m2) => m2.t === 'welcome');
+    expect(w.you.role).toBe('master');
+
+    // un player non può eliminare la campagna
+    const p = await connect();
+    p.send({ t: 'join', campaignId: adminCid, password: 'nuova', name: 'PG' });
+    await p.waitFor((m2) => m2.t === 'welcome');
+    p.send({ t: 'action', action: { kind: 'deleteCampaign' } });
+    const ep = await p.waitFor((m2) => m2.t === 'error');
+    expect(ep.message).toContain('master');
+
+    // il master sì: tutti ricevono campaignDeleted
+    m.send({ t: 'action', action: { kind: 'deleteCampaign' } });
+    const del = await m.waitFor((m2) => m2.t === 'campaignDeleted' && m2.id === adminCid);
+    expect(del.id).toBe(adminCid);
+    const delP = await p.waitFor((m2) => m2.t === 'campaignDeleted' && m2.id === adminCid);
+    expect(delP.id).toBe(adminCid);
+
+    // la campagna non è più in lista
+    adm.send({ t: 'adminList' });
+    const as4 = await adm.waitFor((m2) => m2.t === 'adminState' && !m2.campaigns.some((c: any) => c.id === adminCid));
+    expect(as4.campaigns.some((c: any) => c.id === adminCid)).toBe(false);
+
+    m.ws.close();
     p.ws.close();
     adm.ws.close();
   }, 15000);
