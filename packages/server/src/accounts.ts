@@ -71,6 +71,14 @@ export function deleteAccountCharacter(username: string, characterId: string): v
   saveAccounts(accounts);
 }
 
+export function deleteAccount(username: string): void {
+  const accounts = loadAccounts();
+  const key = username.toLowerCase();
+  if (!accounts[key]) throw new Error('Account non trovato');
+  delete accounts[key];
+  saveAccounts(accounts);
+}
+
 export function createSession(username: string): string {
   const token = randomUUID();
   sessions.set(token, username);

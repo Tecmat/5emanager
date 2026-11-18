@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_HOUSE_RULES, type Character, type SrdData } from '@dnd5e/core';
 import type { Campaign, PlayerInfo } from './protocol.js';
@@ -43,6 +43,39 @@ export function listCampaigns(): { id: string; name: string; players: number }[]
       }
     })
     .filter(Boolean) as { id: string; name: string; players: number }[];
+}
+
+export interface CampaignSummary {
+  id: string;
+  name: string;
+  players: number;
+  inCombat: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export function listCampaignsDetailed(): CampaignSummary[] {
+  ensureDataDir();
+  return readdirSync(DATA_DIR)
+    .filter((f) => f.endsWith('.json'))
+    .map((f) => {
+      try {
+        const c = loadCampaign(f.replace(/\.json$/, ''));
+        return c && typeof c.id === 'string'
+          ? { id: c.id, name: c.name, players: c.players.length, inCombat: !!c.combat, createdAt: c.createdAt, updatedAt: c.updatedAt }
+          : null;
+      } catch {
+        return null;
+      }
+    })
+    .filter(Boolean) as CampaignSummary[];
+}
+
+export function deleteCampaign(id: string): boolean {
+  const p = campaignPath(id);
+  if (!existsSync(p)) return false;
+  unlinkSync(p);
+  return true;
 }
 
 export function createCampaign(name: string, password: string, master: PlayerInfo): Campaign {

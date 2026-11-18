@@ -1,217 +1,28 @@
-import { useEffect, useRef, useState } from 'react';
-import { CONDITIONS, totalLevel, type Character, type CombatState } from '@dnd5e/core';
-import { NetClient, defaultWsUrl } from './net.js';
+import { useState } from 'react';
+import { ABILITIES, CONDITIONS, armorClass, maxHp, totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
-
-interface PlayerInfo {
-  id: string;
-  name: string;
-  role: 'master' | 'player';
-  characterId?: string;
-}
-
-interface CampaignT {
-  id: string;
-  name: string;
-  players: PlayerInfo[];
-  characters: Record<string, Character>;
-  combat: CombatState | null;
-}
-
-type ConnState =
-  | { phase: 'offline' }
-  | { phase: 'connecting'; error?: string }
-  | { phase: 'online'; campaign: CampaignT; you: PlayerInfo };
-
-interface AuthState {
-  token: string;
-  username: string;
-  characters: Character[];
-}
-
-type PingState =
-  | { status: 'idle' }
-  | { status: 'checking' }
-  | { status: 'ok'; rtt: number }
-  | { status: 'error'; message: string };
-
-interface SavedCampaign {
-  server: string;
-  id: string;
-  name: string;
-}
-
-const SERVERS_KEY = 'dnd5e.servers.v1';
-const JOINED_KEY = 'dnd5e.joined.v1';
-const ACCOUNT_KEY = 'dnd5e.account.v1';
-
-function loadServers(): string[] {
-  try { return JSON.parse(localStorage.getItem(SERVERS_KEY) ?? '[]') as string[]; } catch { return []; }
-}
-
-function loadJoined(): SavedCampaign[] {
-  try { return JSON.parse(localStorage.getItem(JOINED_KEY) ?? '[]') as SavedCampaign[]; } catch { return []; }
-}
-
-/** hash SHA-256 usato SOLO lato client per la password dell'account */
-async function sha256Hex(s: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('5e-' + s));
-  return [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
-}
+import { useNet } from './netStore.js';
 
 export default function CampaignTab() {
   const { reg, char, sheets } = useStore();
-  const [conn, setConn] = useState<ConnState>({ phase: 'offline' });
-  const [url, setUrl] = useState(defaultWsUrl());
-  const [name, setName] = useState('');
+  const {
+    conn, auth, error, setError, pingState, campaignList,
+    url, setUrl, name, setName, servers, savedCampaigns,
+    act, connect, disconnect, checkConnection, refreshCampaignList,
+    doRegister, doLogin, logout,
+  } = useNet();
+  const [mode, setMode] = useState<'create' | 'join'>('create');
   const [password, setPassword] = useState('');
   const [campaignName, setCampaignName] = useState('');
   const [joinId, setJoinId] = useState('');
-  const [campaignList, setCampaignList] = useState<{ id: string; name: string; players: number }[]>([]);
-  const [mode, setMode] = useState<'create' | 'join'>('create');
-  const [error, setError] = useState('');
+  const [asMaster, setAsMaster] = useState(false);
+  const [accountName, setAccountName] = useState('');
+  const [accountPw, setAccountPw] = useState('');
+  const [localPick, setLocalPick] = useState('');
+  const [accPick, setAccPick] = useState('');
   const [targetId, setTargetId] = useState('');
   const [enemyId, setEnemyId] = useState('');
   const [moveAmt, setMoveAmt] = useState(6);
-  const netRef = useRef<NetClient | null>(null);
-  const [auth, setAuth] = useState<AuthState | null>(null);
-  const [lastUsername, setLastUsername] = useState('');
-  const [accountName, setAccountName] = useState('');
-  const [accountPw, setAccountPw] = useState('');
-  const [pingState, setPingState] = useState<PingState>({ status: 'idle' });
-  const [servers, setServers] = useState<string[]>(loadServers);
-  const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>(loadJoined);
-  const [localPick, setLocalPick] = useState('');
-  const [accPick, setAccPick] = useState('');
-
-  const send = (m: unknown) => netRef.current?.send(m);
-  const act = (action: unknown) => send({ t: 'action', action });
-
-  useEffect(() => {
-    return () => netRef.current?.close();
-  }, []);
-
-  const rememberServer = (u: string) => {
-    setServers((prev) => {
-      const next = [u, ...prev.filter((s) => s !== u)].slice(0, 8);
-      try { localStorage.setItem(SERVERS_KEY, JSON.stringify(next)); } catch { /* quota */ }
-      return next;
-    });
-  };
-
-  const rememberJoined = (c: SavedCampaign) => {
-    setSavedCampaigns((prev) => {
-      const next = [c, ...prev.filter((x) => !(x.id === c.id && x.server === c.server))].slice(0, 20);
-      try { localStorage.setItem(JOINED_KEY, JSON.stringify(next)); } catch { /* quota */ }
-      return next;
-    });
-  };
-
-  const attachHandlers = (net: NetClient, serverUrl: string) => {
-    net.onMessage((m) => {
-      if (m.t === 'welcome') {
-        setConn({ phase: 'online', campaign: m.campaign, you: m.you });
-        rememberJoined({ server: serverUrl, id: m.campaign.id, name: m.campaign.name });
-      } else if (m.t === 'state') {
-        setConn((c) => (c.phase === 'online' ? { ...c, campaign: m.campaign } : c));
-      } else if (m.t === 'campaigns') {
-        setCampaignList(m.list);
-      } else if (m.t === 'auth') {
-        setAuth({ token: m.token, username: m.username, characters: m.characters });
-        setLastUsername(m.username);
-      } else if (m.t === 'error') {
-        setError(m.message);
-      } else if (m.t === 'closed') {
-        setConn({ phase: 'offline' });
-      }
-    });
-  };
-
-  const ensureNet = async (): Promise<NetClient> => {
-    const cur = netRef.current;
-    if (cur && cur.ws && cur.ws.readyState === WebSocket.OPEN) return cur;
-    cur?.close();
-    const net = new NetClient();
-    netRef.current = net;
-    attachHandlers(net, url);
-    await net.connect(url);
-    rememberServer(url);
-    return net;
-  };
-
-  const checkConnection = async () => {
-    setPingState({ status: 'checking' });
-    try {
-      const net = await ensureNet();
-      const res = await net.ping();
-      setPingState({ status: 'ok', rtt: Math.round(res.rtt) });
-    } catch (e) {
-      setPingState({ status: 'error', message: (e as Error).message });
-    }
-  };
-
-  const refreshCampaignList = async () => {
-    setError('');
-    try {
-      const net = await ensureNet();
-      net.send({ t: 'list' });
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const doRegister = async () => {
-    setError('');
-    const username = accountName.trim();
-    if (!username) { setError('Inserisci uno username'); return; }
-    try {
-      const hash = await sha256Hex(accountPw);
-      localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ username, hash }));
-    } catch { /* crypto non disponibile: password solo in memoria */ }
-    try {
-      const net = await ensureNet();
-      net.send({ t: 'register', username });
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const doLogin = async () => {
-    setError('');
-    const username = accountName.trim();
-    if (!username) { setError('Inserisci lo username'); return; }
-    // la password viene verificata SOLO lato client (per ora il server non la vede)
-    try {
-      const raw = localStorage.getItem(ACCOUNT_KEY);
-      if (raw) {
-        const rec = JSON.parse(raw) as { username: string; hash: string };
-        if (rec.username.toLowerCase() === username.toLowerCase()) {
-          const hash = await sha256Hex(accountPw);
-          if (hash !== rec.hash) { setError('Password errata (controllo locale)'); return; }
-        }
-      }
-    } catch { /* ignora */ }
-    try {
-      const net = await ensureNet();
-      net.send({ t: 'login', username });
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  };
-
-  const connect = async () => {
-    setError('');
-    setConn({ phase: 'connecting' });
-    try {
-      const net = await ensureNet();
-      if (lastUsername) net.send({ t: 'login', username: lastUsername });
-      if (mode === 'create') net.send({ t: 'create', name: name || 'Giocatore', password, campaignName: campaignName || 'Nuova campagna' });
-      else net.send({ t: 'join', campaignId: joinId, password, name: name || 'Giocatore' });
-    } catch (e) {
-      setError((e as Error).message);
-      setConn({ phase: 'offline' });
-    }
-  };
 
   if (conn.phase !== 'online') {
     return (
@@ -252,7 +63,7 @@ export default function CampaignTab() {
             <>
               <div className="ok">✅ Loggato come <b>{auth.username}</b> — {auth.characters.length} scheda/e in libreria</div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={() => { setAuth(null); setLastUsername(''); setAccountName(''); setAccountPw(''); }}>Esci dall'account</button>
+                <button onClick={logout}>Esci dall'account</button>
               </div>
             </>
           ) : (
@@ -262,8 +73,8 @@ export default function CampaignTab() {
                 <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} placeholder="Password" style={{ flex: 1 }} />
               </div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={doRegister}>Registrati</button>
-                <button className="primary" onClick={doLogin}>Login</button>
+                <button onClick={() => doRegister(accountName, accountPw)}>Registrati</button>
+                <button className="primary" onClick={() => doLogin(accountName, accountPw)}>Login</button>
               </div>
               <div className="muted" style={{ marginTop: 6 }}>
                 Per ora la password resta solo su questo dispositivo (hash in localStorage): non viene inviata al server.
@@ -318,18 +129,27 @@ export default function CampaignTab() {
               )}
               <label>ID campagna (manuale)</label>
               <input value={joinId} onChange={(e) => setJoinId(e.target.value)} placeholder="id a 8 caratteri" />
+              <label className="row" style={{ marginTop: 6 }}>
+                <input type="checkbox" checked={asMaster} onChange={(e) => setAsMaster(e.target.checked)} style={{ width: 'auto' }} />
+                <span>Entra come <b>master</b> (serve la password della campagna; possibile solo se nessun master è collegato)</span>
+              </label>
             </>
           )}
           <label>Password campagna</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
           {error && <div className="error">{error}</div>}
           <div style={{ marginTop: 10 }}>
-            <button className="primary" disabled={conn.phase === 'connecting'} onClick={connect}>
+            <button
+              className="primary"
+              disabled={conn.phase === 'connecting'}
+              onClick={() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); }}
+            >
               {conn.phase === 'connecting' ? 'Connessione...' : mode === 'create' ? 'Crea e entra' : 'Entra'}
             </button>
           </div>
           <div className="muted" style={{ marginTop: 10 }}>
-            Avvia il server con <code>npm run server</code> (porta 3001): serve la web app e il WebSocket. In modalità "Crea" diventi il master.
+            Avvia il server con <code>npm run server</code> (porta 3001): serve la web app e il WebSocket.
+            Pannello admin del server: <code>/admin</code>. In modalità "Crea" diventi il master.
           </div>
         </div>
       </div>
@@ -342,7 +162,6 @@ export default function CampaignTab() {
   const myCharId = char?.id;
   const isMyTurn = !!(combat && cur && cur.isPlayer && cur.id === myCharId);
   const isMaster = you.role === 'master';
-  const myCombatant = combat?.combatants.find((c) => c.id === myCharId);
 
   return (
     <div className="grid">
@@ -362,7 +181,7 @@ export default function CampaignTab() {
           </button>
           {pingState.status === 'ok' && <span className="ok">✅ {pingState.rtt} ms</span>}
           {pingState.status === 'error' && <span className="error">❌ {pingState.message}</span>}
-          <button onClick={() => { netRef.current?.close(); setConn({ phase: 'offline' }); }}>Esci</button>
+          <button onClick={disconnect}>Esci</button>
         </div>
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
       </div>
@@ -401,17 +220,65 @@ export default function CampaignTab() {
             </button>
           </div>
         )}
-        {!auth && <div className="muted" style={{ marginTop: 6 }}>Esci e fai login dall'account per salvare le schede sul server e riutilizzarle in altre campagne.</div>}
+        {!auth && <div className="muted" style={{ marginTop: 6 }}>La connessione resta attiva anche cambiando tab. Esci e fai login dall'account per salvare le schede sul server e riutilizzarle in altre campagne.</div>}
       </div>
+
+      {isMaster && (
+        <div className="card">
+          <h3>👑 Pannello master — schede e status dei giocatori</h3>
+          {campaign.players.length === 0 && <div className="muted">Nessun giocatore collegato.</div>}
+          {campaign.players.map((p) => {
+            const ch = campaign.characters[p.id];
+            return (
+              <details key={p.id} style={{ marginBottom: 6 }}>
+                <summary style={{ cursor: 'pointer' }}>
+                  <b>{p.name}</b> {p.role === 'master' ? '👑' : ''}
+                  {ch ? (
+                    <span className="row" style={{ display: 'inline-flex', marginLeft: 8 }}>
+                      <span className="tag custom">{ch.name} — liv {totalLevel(ch)}</span>
+                      <span className="tag">PF {ch.hp.current}/{maxHp(ch, reg)}</span>
+                      <span className="tag">CA {armorClass(ch, reg).ac}</span>
+                      <span className="tag">XP {ch.xp}</span>
+                      {ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}
+                    </span>
+                  ) : <span className="muted"> (senza scheda)</span>}
+                </summary>
+                {ch && (
+                  <div style={{ marginTop: 6 }}>
+                    <div className="row" style={{ marginBottom: 6 }}>
+                      <button className="danger" onClick={() => act({ kind: 'masterDamage', playerId: p.id, amount: 5 })}>🔒 −5 PF</button>
+                      <button onClick={() => act({ kind: 'masterHeal', playerId: p.id, amount: 5 })}>🔒 +5 PF</button>
+                      <button onClick={() => act({ kind: 'masterAddXp', playerId: p.id, amount: 300 })}>🔒 +300 XP</button>
+                      <select value="" onChange={(e) => { if (e.target.value) act({ kind: 'masterSetCondition', playerId: p.id, conditionId: e.target.value, on: true }); }}>
+                        <option value="">🔒 + condizione…</option>
+                        {CONDITIONS.map((cd) => <option key={cd.id} value={cd.id}>{cd.name}</option>)}
+                      </select>
+                      <select value="" onChange={(e) => { if (e.target.value) act({ kind: 'masterSetCondition', playerId: p.id, conditionId: e.target.value, on: false }); }}>
+                        <option value="">🔒 − condizione…</option>
+                        {ch.conditions.map((cd) => <option key={cd} value={cd}>{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</option>)}
+                      </select>
+                    </div>
+                    <div className="muted" style={{ fontSize: 12 }}>
+                      Caratteristiche: {ABILITIES.map((ab) => `${ab.toUpperCase()} ${ch.abilityScores[ab]}`).join(' · ')}<br />
+                      Incantesimi conosciuti: {ch.spellsKnown.length} · Oggetti: {ch.inventory.length} · Competenze: {ch.proficiency.skills.join(', ') || '—'}
+                      {ch.notes ? <><br />Note: {ch.notes}</> : null}
+                    </div>
+                  </div>
+                )}
+              </details>
+            );
+          })}
+          <div className="muted" style={{ marginTop: 4 }}>Le azioni 🔒 sono applicate di nascosto: non finiscono nel log pubblico del combattimento.</div>
+        </div>
+      )}
 
       {isMaster && !combat && (
         <div className="card">
-          <h3>👑 Pannello master</h3>
+          <h3>👑 Avvio combattimento</h3>
           <div className="row">
             <button className="primary" onClick={() => act({ kind: 'startCombat' })} disabled={Object.keys(campaign.characters).length === 0}>
               ⚔️ Avvia combattimento
             </button>
-            <button onClick={() => act({ kind: 'rollInitiative' })} disabled={!combat}>🎲 Rilancia initiative</button>
           </div>
           <div className="muted" style={{ marginTop: 6 }}>I giocatori devono aver caricato la scheda. Il combattimento parte con tutti i PG.</div>
         </div>

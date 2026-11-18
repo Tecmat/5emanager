@@ -30,6 +30,11 @@ export type ClientMessage =
   | { t: 'register'; username: string }
   | { t: 'login'; username: string }
   | { t: 'ping'; id: string }
+  // pannello admin del server (LAN): se DND5E_ADMIN_TOKEN e' impostato, adminAuth deve contenerlo
+  | { t: 'adminAuth'; token: string }
+  | { t: 'adminList' }
+  | { t: 'adminDeleteCampaign'; id: string }
+  | { t: 'adminDeleteAccount'; username: string }
   | { t: 'action'; action: ClientAction };
 
 export type ClientAction =
@@ -50,7 +55,12 @@ export type ClientAction =
   | { kind: 'leave' }
   | { kind: 'saveCharacter'; character: Character }
   | { kind: 'deleteCharacter'; characterId: string }
-  | { kind: 'useCharacter'; characterId: string };
+  | { kind: 'useCharacter'; characterId: string }
+  // pannello master: modificano la scheda del giocatore SENZA escribirlo nel log pubblico (segreto)
+  | { kind: 'masterDamage'; playerId: string; amount: number }
+  | { kind: 'masterHeal'; playerId: string; amount: number }
+  | { kind: 'masterAddXp'; playerId: string; amount: number }
+  | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean };
 
 export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
@@ -58,4 +68,9 @@ export type ServerMessage =
   | { t: 'state'; campaign: Campaign }
   | { t: 'auth'; token: string; username: string; characters: Character[] }
   | { t: 'pong'; id: string; serverTime: number }
+  | {
+      t: 'adminState';
+      campaigns: { id: string; name: string; players: number; inCombat: boolean; createdAt: string; updatedAt: string }[];
+      accounts: { username: string; characters: number; createdAt: string }[];
+    }
   | { t: 'error'; message: string };

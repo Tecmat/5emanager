@@ -33,10 +33,14 @@ Apri `http://<host>:3001/` da più dispositivi (stessa rete) → tab **🌐 Camp
 
 ## Protocollo (JSON su WebSocket)
 
-Client→Server: `create`, `join`, `list`, `ping` (check connessione, con `id` ecoato),
-`register` / `login` (account per username), `action` (setCharacter, startCombat, addEnemy,
-rollInitiative, attack, move, useBonus, useReaction, setCondition, damage, heal, nextTurn,
-endCombat, addCustom, leave, **saveCharacter**, **deleteCharacter**, **useCharacter**)
+Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando
+nessun master è collegato), `list`, `ping` (check connessione, con `id` ecoato),
+`register` / `login` (account per username), `adminAuth` / `adminList` /
+`adminDeleteCampaign` / `adminDeleteAccount` (pannello admin), `action` (setCharacter,
+startCombat, addEnemy, rollInitiative, attack, move, useBonus, useReaction, setCondition,
+damage, heal, nextTurn, endCombat, addCustom, leave, **saveCharacter**, **deleteCharacter**,
+**useCharacter**, **masterDamage / masterHeal / masterAddXp / masterSetCondition** —
+azioni del master "segrete", non scritte nel log pubblico)
 
 Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`, `auth`
 (token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`), `error`
@@ -60,8 +64,26 @@ Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`,
   uniti al set SRD nel registry del server — la campagna può avere il "suo set di regole, classi e razze"
 - Le house-rules della campagna sono nel modello (`campaign.houseRules`)
 
+## Pannello admin del server (`/admin`)
+
+Il server serve una pagina di amministrazione su `http://<server>:3001/admin` (funziona anche
+senza build della web app): elenca campagne (con stato combattimento) e account, con
+eliminazione. I comandi admin viaggiano sullo stesso WebSocket (`adminAuth`/`adminList`/
+`adminDeleteCampaign`/`adminDeleteAccount`). Se la variabile d'ambiente
+**`DND5E_ADMIN_TOKEN`** è impostata, `adminAuth` deve contenere quel token; se non è
+impostata l'accesso è libero (ok per LAN — vedi sotto).
+
+## Pannello master nell'app
+
+Il master vede in campagna le schede di tutti i giocatori (PF, CA, XP, condizioni,
+caratteristiche, competenze, note) e può applicare **di nascosto** danni, cure, XP e
+condizioni (`masterDamage`/`masterHeal`/`masterAddXp`/`masterSetCondition`): queste azioni
+aggiornano la scheda del giocatore (e il combattente, se in combattimento) **senza** voce
+nel log pubblico.
+
 ## Sicurezza
 
-Pensato per **LAN / rete privata / tailscale**: password di campagna (sha256) e account per
-username (password ancora solo lato client). Non esporlo su Internet pubblico senza un
-reverse proxy con TLS + auth aggiuntiva.
+Pensato per **LAN / rete privata / tailscale**: password di campagna (sha256), account per
+username (password ancora solo lato client) e pannello admin optionally protetto da
+`DND5E_ADMIN_TOKEN`. Non esporlo su Internet pubblico senza un reverse proxy con TLS +
+auth aggiuntiva.

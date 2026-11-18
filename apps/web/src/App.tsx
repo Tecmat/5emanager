@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
+import { useNet } from './netStore.js';
 import CreateForm from './CreateForm.js';
 import Overview from './Overview.js';
 import SpellsTab from './SpellsTab.js';
@@ -13,6 +14,7 @@ type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'camp
 
 export default function App() {
   const { char, sheets, selectSheet } = useStore();
+  const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
   const [creating, setCreating] = useState(false);
@@ -53,6 +55,9 @@ export default function App() {
           <button onClick={() => setCreating(true)} title="Crea un nuovo personaggio">＋ Nuovo</button>
         </span>
         <span className="row">
+          <span className="muted" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
+            {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : '⚪ offline'}
+          </span>
           <span className="muted">Gestore schede{sheets.length > 1 ? ` · ${sheets.length} schede` : ''}</span>
           <button onClick={toggleTheme} title="Cambia tema">{theme === 'dark' ? '🌙' : '☀️'}</button>
         </span>

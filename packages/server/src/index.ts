@@ -1,6 +1,7 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { existsSync, readFileSync, statSync } from 'node:fs';
-import { extname, join, normalize } from 'node:path';
+import { extname, dirname, join, normalize } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
@@ -12,8 +13,10 @@ import {
   addPlayer,
   checkPassword,
   createCampaign,
+  deleteCampaign,
   ensureDataDir,
   listCampaigns,
+  listCampaignsDetailed,
   loadCampaign,
   removePlayer,
   saveCampaign,
@@ -21,8 +24,10 @@ import {
 import {
   accountCharacters,
   createSession,
+  deleteAccount,
   deleteAccountCharacter,
   getAccount,
+  loadAccounts,
   registerAccount,
   saveAccountCharacter,
   sessionUsername,
@@ -32,6 +37,9 @@ import { applyAction } from './combat-ops.js';
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
 const STATIC_DIR = process.env.DND5E_STATIC_DIR ?? join(process.cwd(), 'apps', 'web', 'dist');
+const ADMIN_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'admin.html');
+/** se impostata, il pannello admin (/admin) richiede questo token nei messaggi adminAuth */
+const ADMIN_TOKEN = process.env.DND5E_ADMIN_TOKEN ?? '';
 
 const MIME: Record<string, string> = {
   '.html': 'text/html; charset=utf-8',
@@ -46,12 +54,23 @@ const MIME: Record<string, string> = {
 };
 
 function serveStatic(req: IncomingMessage, res: ServerResponse): void {
+  const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  if (rawPath === '/admin' || rawPath === '/admin.html') {
+    if (existsSync(ADMIN_PAGE)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
+      res.end(readFileSync(ADMIN_PAGE));
+    } else {
+      res.writeHead(404);
+      res.end('admin page non trovata');
+    }
+    return;
+  }
   if (!existsSync(STATIC_DIR)) {
     res.writeHead(503, { 'content-type': 'text/plain; charset=utf-8' });
     res.end('Web app non ancora buildata: esegui `npm run build -w @dnd5e/web`');
     return;
   }
-  let path = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  let path = rawPath;
   if (path === '/') path = '/index.html';
   const file = normalize(join(STATIC_DIR, path));
   if (!file.startsWith(normalize(STATIC_DIR)) || !existsSync(file) || !statSync(file).isFile()) {
@@ -84,6 +103,8 @@ interface Conn {
   playerId?: string;
   /** token di sessione account (dopo register/login) */
   token?: string;
+  /** true dopo adminAuth riuscito */
+  admin?: boolean;
 }
 
 const conns = new Set<Conn>();
@@ -98,6 +119,18 @@ function broadcast(campaign: Campaign): void {
   for (const c of conns) {
     if (c.campaignId === campaign.id) send(c.ws, msg);
   }
+}
+
+function sendAdminState(ws: WebSocket): void {
+  send(ws, {
+    t: 'adminState',
+    campaigns: listCampaignsDetailed(),
+    accounts: Object.values(loadAccounts()).map((a) => ({
+      username: a.username,
+      characters: Object.keys(a.characters).length,
+      createdAt: a.createdAt,
+    })),
+  });
 }
 
 function handleMessage(conn: Conn, raw: string): void {
@@ -141,6 +174,35 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
+  if (msg.t === 'adminAuth') {
+    if (ADMIN_TOKEN && msg.token !== ADMIN_TOKEN) {
+      send(conn.ws, { t: 'error', message: 'Token admin non valido' });
+      return;
+    }
+    conn.admin = true;
+    sendAdminState(conn.ws);
+    return;
+  }
+
+  if (msg.t === 'adminList' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount') {
+    if (!conn.admin) {
+      send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
+      return;
+    }
+    try {
+      if (msg.t === 'adminDeleteCampaign') {
+        if (!deleteCampaign(msg.id)) throw new Error('Campagna non trovata: ' + msg.id);
+        campaigns.delete(msg.id);
+      }
+      if (msg.t === 'adminDeleteAccount') deleteAccount(msg.username);
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+      return;
+    }
+    sendAdminState(conn.ws);
+    return;
+  }
+
   if (msg.t === 'create') {
     const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: 'master' };
     const c = createCampaign(msg.campaignName, msg.password, player);
@@ -163,7 +225,12 @@ function handleMessage(conn: Conn, raw: string): void {
       return;
     }
     campaigns.set(c.id, c);
-    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'player' : 'player' };
+    // rientro come master: concesso se non c'è già un master collegato (la password della campagna protegge l'accesso)
+    if (msg.role === 'master' && c.players.some((p) => p.role === 'master')) {
+      send(conn.ws, { t: 'error', message: 'C\'è già un master collegato in questa campagna' });
+      return;
+    }
+    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'master' : 'player' };
     addPlayer(c, player);
     conn.campaignId = c.id;
     conn.playerId = player.id;

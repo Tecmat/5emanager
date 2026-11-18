@@ -1,11 +1,17 @@
 import {
+  addCondition,
   addEnemy,
+  addXp,
   attack,
   currentCombatant,
+  damage,
   damageCombatant,
+  heal,
   healCombatant,
+  maxHp,
   moveCombatant,
   nextTurn,
+  removeCondition,
   rerollInitiatives,
   setCombatantCondition,
   startPartyCombat,
@@ -119,6 +125,30 @@ export function applyAction(c: Campaign, playerId: string, reg: Registry, action
       if (!c.combat) return [c, 'Nessun combattimento in corso'];
       if (!isMaster && !isTurn) return [c, 'Non è il tuo turno'];
       c.combat = nextTurn(c.combat);
+      saveCampaign(c);
+      return [c];
+    }
+
+    // --- pannello master: agisce sul PG "di nascosto" (nessuna voce nel log pubblico) ---
+    case 'masterDamage':
+    case 'masterHeal':
+    case 'masterAddXp':
+    case 'masterSetCondition': {
+      if (!isMaster) return [c, 'Solo il master può usare queste azioni'];
+      const ch = c.characters[action.playerId];
+      if (!ch) return [c, 'Quel giocatore non ha caricato la scheda'];
+      if (action.kind === 'masterDamage') {
+        c.characters[action.playerId] = damage(ch, action.amount);
+        if (c.combat) c.combat = damageCombatant(c.combat, ch.id, action.amount);
+      } else if (action.kind === 'masterHeal') {
+        c.characters[action.playerId] = heal(ch, action.amount, maxHp(ch, reg));
+        if (c.combat) c.combat = healCombatant(c.combat, ch.id, action.amount);
+      } else if (action.kind === 'masterAddXp') {
+        c.characters[action.playerId] = addXp(ch, action.amount);
+      } else {
+        c.characters[action.playerId] = action.on ? addCondition(ch, action.conditionId) : removeCondition(ch, action.conditionId);
+        if (c.combat) c.combat = setCombatantCondition(c.combat, ch.id, action.conditionId, action.on, 99);
+      }
       saveCampaign(c);
       return [c];
     }

@@ -7,6 +7,7 @@ import { addItem, createCharacter, type Character } from '@dnd5e/core';
 import { createSrdRegistry } from '@dnd5e/data-srd';
 
 process.env.DND5E_DATA_DIR = mkdtempSync(join(tmpdir(), 'dnd5e-test-'));
+process.env.DND5E_ADMIN_TOKEN = 'test-admin-token';
 
 let server: Awaited<ReturnType<typeof import('../src/index.js').createDndServer>>;
 let port: number;
@@ -192,5 +193,77 @@ describe('server multiplayer', () => {
     c2.ws.close();
     master.ws.close();
     anon.ws.close();
+  }, 15000);
+
+  it('rientro come master, pannello master (azioni segrete) e pannello admin', async () => {
+    // il master crea la campagna e poi si disconnette: resta senza giocatori
+    const m1 = await connect();
+    m1.send({ t: 'create', name: 'DM', password: 'pw', campaignName: 'Rientro master' });
+    const w1 = await m1.waitFor((m) => m.t === 'welcome');
+    const cid: string = w1.campaign.id;
+    m1.ws.close();
+    await new Promise((r) => setTimeout(r, 200));
+
+    // rientro come master (password corretta, nessun master collegato)
+    const m2 = await connect();
+    m2.send({ t: 'join', campaignId: cid, password: 'pw', name: 'DM2', role: 'master' });
+    const w2 = await m2.waitFor((m) => m.t === 'welcome');
+    expect(w2.you.role).toBe('master');
+
+    // un secondo master è rifiutato
+    const m3 = await connect();
+    m3.send({ t: 'join', campaignId: cid, password: 'pw', name: 'Falso', role: 'master' });
+    const e3 = await m3.waitFor((m) => m.t === 'error');
+    expect(e3.message).toContain('master');
+    m3.ws.close();
+
+    // un player entra e carica la scheda
+    const p = await connect();
+    p.send({ t: 'join', campaignId: cid, password: 'pw', name: 'PG' });
+    const pw2 = await p.waitFor((m) => m.t === 'welcome');
+    const pid: string = pw2.you.id;
+    expect(pw2.you.role).toBe('player');
+    const ch = makeChar('Vittima', 'fighter');
+    p.send({ t: 'action', action: { kind: 'setCharacter', character: ch } });
+    const st0 = await m2.waitFor((m) => m.t === 'state' && Object.keys(m.campaign.characters).length === 1);
+    const hp0: number = st0.campaign.characters[pid].hp.current;
+    expect(hp0).toBeGreaterThan(0);
+
+    // il player non può usare le azioni master
+    p.send({ t: 'action', action: { kind: 'masterDamage', playerId: pid, amount: 4 } });
+    const ep = await p.waitFor((m) => m.t === 'error');
+    expect(ep.message).toContain('master');
+
+    // il master applica danni e una condizione "di nascosto" (senza voce nel log)
+    m2.send({ t: 'action', action: { kind: 'masterDamage', playerId: pid, amount: 4 } });
+    const st1 = await m2.waitFor((m) => m.t === 'state' && m.campaign.characters[pid]?.hp.current === hp0 - 4);
+    expect(st1.campaign.combat).toBeNull();
+    m2.send({ t: 'action', action: { kind: 'masterSetCondition', playerId: pid, conditionId: 'prone', on: true } });
+    await m2.waitFor((m) => m.t === 'state' && m.campaign.characters[pid]?.conditions.includes('prone'));
+    m2.send({ t: 'action', action: { kind: 'masterAddXp', playerId: pid, amount: 300 } });
+    await m2.waitFor((m) => m.t === 'state' && m.campaign.characters[pid]?.xp === 300);
+
+    // --- pannello admin ---
+    const adm = await connect();
+    adm.send({ t: 'adminAuth', token: 'sbagliato' });
+    const ea = await adm.waitFor((m) => m.t === 'error');
+    expect(ea.message).toContain('Token admin');
+    adm.send({ t: 'adminAuth', token: 'test-admin-token' });
+    const as1 = await adm.waitFor((m) => m.t === 'adminState');
+    expect(as1.campaigns.some((c: any) => c.id === cid)).toBe(true);
+
+    adm.send({ t: 'register', username: 'da-eliminare' });
+    await adm.waitFor((m) => m.t === 'auth');
+    adm.send({ t: 'adminList' });
+    await adm.waitFor((m) => m.t === 'adminState' && m.accounts.some((a: any) => a.username === 'da-eliminare'));
+    adm.send({ t: 'adminDeleteAccount', username: 'da-eliminare' });
+    await adm.waitFor((m) => m.t === 'adminState' && !m.accounts.some((a: any) => a.username === 'da-eliminare'));
+    adm.send({ t: 'adminDeleteCampaign', id: cid });
+    const as3 = await adm.waitFor((m) => m.t === 'adminState' && !m.campaigns.some((c: any) => c.id === cid));
+    expect(as3.campaigns.some((c: any) => c.id === cid)).toBe(false);
+
+    m2.ws.close();
+    p.ws.close();
+    adm.ws.close();
   }, 15000);
 });
