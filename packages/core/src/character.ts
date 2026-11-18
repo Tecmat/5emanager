@@ -129,6 +129,8 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     hp: { current: 0, temp: 0 },
     deathSaves: { successes: 0, failures: 0 },
     conditions: [],
+    exhaustion: 0,
+    spellsPreparedByClass: {},
     notes: '',
     createdAt: now,
     updatedAt: now,
@@ -140,10 +142,26 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
 
 /** riempie i campi nuovi mancanti nelle schede salvate con versioni precedenti */
 export function migrateCharacter(char: Character): Character {
+  const conditions = char.conditions ?? [];
+  // migra la vecchia condizione "exhaustion-N" nel campo exhaustion
+  let exhaustion = char.exhaustion ?? 0;
+  const kept = conditions.filter((c) => {
+    const m = c.match(/^exhaustion-(\d)$/);
+    if (m) exhaustion = Math.max(exhaustion, Number(m[1]));
+    return !m;
+  });
+  // migra spellsPrepared nel formato per-classe (prima classe)
+  const spellsPreparedByClass = char.spellsPreparedByClass ?? {};
+  if (Object.keys(spellsPreparedByClass).length === 0 && (char.spellsPrepared?.length ?? 0) > 0) {
+    const firstClass = char.classLevels[0]?.classId ?? 'default';
+    spellsPreparedByClass[firstClass] = [...(char.spellsPrepared ?? [])];
+  }
   return {
     ...char,
     houseRules: { ...DEFAULT_HOUSE_RULES, ...(char.houseRules ?? {}) },
-    conditions: char.conditions ?? [],
+    conditions: kept,
+    exhaustion,
+    spellsPreparedByClass,
     deathSaves: char.deathSaves ?? { successes: 0, failures: 0 },
   };
 }

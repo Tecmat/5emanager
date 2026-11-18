@@ -1,6 +1,8 @@
 import type { Ability, ArmorDef, Character, ItemKind, WeaponDef } from '../types.js';
 import type { Registry } from '../registry.js';
 import { SKILLS } from '../types.js';
+import { exhaustionEffects } from './exhaustion.js';
+import { acBonusFromEffects, maxHpBonusFromEffects, proficiencyFromEffects } from './effects.js';
 
 export function abilityModifier(score: number): number {
   return Math.floor((score - 10) / 2);
@@ -29,22 +31,33 @@ export function classSavingThrows(char: Character, reg: Registry): Set<Ability> 
 
 export function savingThrowBonus(char: Character, ability: Ability, reg: Registry): number {
   let bonus = modifierOf(char, ability);
-  if (classSavingThrows(char, reg).has(ability)) bonus += proficiencyBonus(totalLevel(char));
+  const eff = proficiencyFromEffects(char, reg);
+  if (classSavingThrows(char, reg).has(ability) || eff.saves.includes(ability)) bonus += proficiencyBonus(totalLevel(char));
   return bonus;
 }
 
-export function skillBonus(char: Character, skillId: string): number {
+export function skillBonus(char: Character, skillId: string, reg?: Registry): number {
   const skill = SKILLS.find((s) => s.id === skillId);
   if (!skill) return 0;
   let bonus = modifierOf(char, skill.ability);
   const pb = proficiencyBonus(totalLevel(char));
-  if (char.proficiency.skills.includes(skillId)) bonus += pb;
+  const eff = reg ? proficiencyFromEffects(char, reg) : null;
+  const prof = char.proficiency.skills.includes(skillId) || (eff?.skills.includes(skillId.toLowerCase()) ?? false);
+  if (prof) bonus += pb;
   if (char.proficiency.expertise.includes(skillId)) bonus += pb;
   return bonus;
 }
 
+export function passiveSkill(char: Character, skillId: string): number {
+  return 10 + skillBonus(char, skillId);
+}
+
 export function passivePerception(char: Character): number {
-  return 10 + skillBonus(char, 'perception');
+  return passiveSkill(char, 'perception');
+}
+
+export function passiveInsight(char: Character): number {
+  return passiveSkill(char, 'insight');
 }
 
 export function initiativeBonus(char: Character): number {
@@ -87,6 +100,11 @@ export function armorClass(char: Character, reg: Registry): { ac: number; breakd
     const s = shield.ac + (shield.bonus ?? 0);
     ac += s;
     breakdown.push(`scudo: +${s}`);
+  }
+  const effAc = acBonusFromEffects(char, reg);
+  if (effAc !== 0) {
+    ac += effAc;
+    breakdown.push(`effetti: ${effAc >= 0 ? '+' : ''}${effAc} CA`);
   }
   for (const cl of char.classLevels) {
     const cls = reg.classes.get(cl.classId);
@@ -152,20 +170,37 @@ export function maxHp(char: Character, reg: Registry): number {
       hp += i === 0 ? die : cl.hitDiceRolled[i];
     }
   }
-  return hp;
+  hp += maxHpBonusFromEffects(char, reg);
+  // esaurimento liv 4: PF massimi dimezzati
+  if (exhaustionEffects(char).maxHpHalved) hp = Math.floor(hp / 2);
+  return Math.max(1, hp);
 }
 
 /** bonus attacco e CD dei tiri salvezza degli incantesimi (8 + proficiency + mod caratteristica) */
-export function spellcastingInfo(char: Character, reg: Registry): { classId: string; ability: Ability; attackBonus: number; saveDC: number } | null {
+export interface SpellcastingInfo {
+  classId: string;
+  ability: Ability;
+  attackBonus: number;
+  saveDC: number;
+}
+
+/** bonus attacco e CD dei TS degli incantesimi (8 + proficiency + mod caratteristica), per ogni classe lanciante */
+export function spellcastingInfoAll(char: Character, reg: Registry): SpellcastingInfo[] {
+  const out: SpellcastingInfo[] = [];
   for (const cl of char.classLevels) {
     const sc = reg.classes.get(cl.classId)?.spellcasting;
     if (sc && cl.level > 0) {
       const mod = modifierOf(char, sc.ability);
       const pb = proficiencyBonus(totalLevel(char));
-      return { classId: cl.classId, ability: sc.ability, attackBonus: 8 + pb + mod, saveDC: 8 + pb + mod };
+      out.push({ classId: cl.classId, ability: sc.ability, attackBonus: 8 + pb + mod, saveDC: 8 + pb + mod });
     }
   }
-  return null;
+  return out;
+}
+
+/** primo lanciatore (compatibilità) */
+export function spellcastingInfo(char: Character, reg: Registry): SpellcastingInfo | null {
+  return spellcastingInfoAll(char, reg)[0] ?? null;
 }
 
 export function carryingCapacity(char: Character): { normal: number; encumbered: number; heavyLoad: number; pushDrag: number } {

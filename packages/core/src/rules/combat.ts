@@ -1,7 +1,10 @@
 import type { AttackDef, Character } from '../types.js';
 import type { Registry } from '../registry.js';
-import { rollDice } from './dice.js';
+import { rollDice, type AdvantageMode } from './dice.js';
 import { armorClass, attackBonus, carryingCapacity, modifierOf } from './derived.js';
+import { conditionDef } from './conditions.js';
+import { exhaustionEffects } from './exhaustion.js';
+import { speedBonusFromEffects } from './effects.js';
 
 export interface Combatant {
   id: string;
@@ -33,8 +36,7 @@ const DEFAULT_SPEED = 30;
 
 export function startCombat(char: Character, reg?: Registry): CombatState {
   const ac = reg ? armorClass(char, reg).ac : 10;
-  const race = reg?.races.get(char.raceId);
-  const speed = race?.speed ?? DEFAULT_SPEED;
+  const speed = speedOf(char, reg);
   const attacks: AttackDef[] = [];
   if (reg) {
     for (const item of char.inventory) {
@@ -69,7 +71,7 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
 export function startPartyCombat(chars: Character[], reg: Registry): CombatState {
   const combatants: Combatant[] = chars.map((char) => {
     const ac = armorClass(char, reg).ac;
-    const speed = reg.races.get(char.raceId)?.speed ?? DEFAULT_SPEED;
+    const speed = speedOf(char, reg);
     const attacks: AttackDef[] = [];
     for (const item of char.inventory) {
       if (!item.equipped || item.kind !== 'weapon' || !item.refId) continue;
@@ -254,7 +256,7 @@ export function syncPlayerHp(state: CombatState, char: Character, reg?: Registry
     ...state,
     combatants: state.combatants.map((c) => {
       if (!c.isPlayer) return c;
-      const speed = reg?.races.get(char.raceId)?.speed ?? c.speed;
+      const speed = speedOf(char, reg ?? undefined) || c.speed;
       const attacks: AttackDef[] = [];
       if (reg) {
         for (const item of char.inventory) {
@@ -301,9 +303,16 @@ export interface AttackOutcome {
   damageRolls: number[];
 }
 
+export interface AttackMods {
+  advantage?: boolean;
+  disadvantage?: boolean;
+  /** dadi danno extra dagli effetti (es. "1d6" fuoco) */
+  extraDamageDice?: string[];
+}
+
 /** attacco con tiro automatico: d20 + bonus contro la CA del bersaglio; 20 = critico (dadi raddoppiati) */
-export function resolveAttack(attacker: Combatant, target: Combatant, attack: AttackDef): AttackOutcome {
-  const roll = rollDice('1d20')!;
+export function resolveAttack(attacker: Combatant, target: Combatant, attack: AttackDef, mode: AdvantageMode = 'none', extraDice: string[] = []): AttackOutcome {
+  const roll = rollDice('1d20', mode)!;
   const crit = roll.rolls[0] === 20;
   const total = roll.total + attack.bonus;
   const hit = crit || total >= target.ac;
@@ -316,17 +325,27 @@ export function resolveAttack(attacker: Combatant, target: Combatant, attack: At
       damageRolls = dmg.rolls.map((r) => r * times);
       damage = damageRolls.reduce((a, b) => a + b, 0) + dmg.mod;
     }
+    for (const extra of extraDice) {
+      const ex = rollDice(extra);
+      if (ex) {
+        damageRolls.push(...ex.rolls.map((r) => r * times));
+        damage += ex.rolls.reduce((a, b) => a + b, 0) * times + ex.mod;
+      }
+    }
   }
   return { hit, crit, roll: roll.total, total, damage, damageRolls };
 }
 
-export function attack(state: CombatState, attackerId: string, targetId: string, attackIndex = 0): CombatState {
+export function attack(state: CombatState, attackerId: string, targetId: string, attackIndex = 0, mods?: AttackMods): CombatState {
   const attacker = state.combatants.find((c) => c.id === attackerId);
   const target = state.combatants.find((c) => c.id === targetId);
   if (!attacker || !target) return state;
   const atk = attacker.attacks[attackIndex] ?? attacker.attacks[0];
   if (!atk) return { ...state, log: [...state.log, `⚠️ ${attacker.name} non ha attacchi disponibili.`] };
-  const outcome = resolveAttack(attacker, target, atk);
+  // svantaggio da condizioni dell'attaccante + mod del chiamante
+  const condDisadvantage = attacker.conditions.some((c) => conditionDef(c)?.imposesDisadvantage);
+  const mode: AdvantageMode = mods?.disadvantage || condDisadvantage ? 'disadvantage' : mods?.advantage ? 'advantage' : 'none';
+  const outcome = resolveAttack(attacker, target, atk, mode, mods?.extraDamageDice ?? []);
   let log = [...state.log];
   let combatants = state.combatants;
   if (outcome.hit) {
@@ -340,8 +359,14 @@ export function attack(state: CombatState, attackerId: string, targetId: string,
   return { ...state, combatants, log };
 }
 
+/** velocità effettiva: razza + bonus effetti, dimezzata a esaurimento 2, 0 a esaurimento 5 */
 export function speedOf(char: Character, reg?: Registry): number {
-  return reg?.races.get(char.raceId)?.speed ?? DEFAULT_SPEED;
+  const base = reg?.races.get(char.raceId)?.speed ?? DEFAULT_SPEED;
+  const fx = exhaustionEffects(char);
+  if (fx.speedZero) return 0;
+  let speed = base + (reg ? speedBonusFromEffects(char, reg) : 0);
+  if (fx.speedHalved) speed = Math.floor(speed / 2);
+  return Math.max(0, speed);
 }
 
 export { carryingCapacity };

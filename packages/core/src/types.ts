@@ -42,7 +42,9 @@ export type FeatureEffect =
   | { type: 'unarmoredDefense'; ability: Ability }
   | { type: 'expertise'; choose: number; from: string[] }
   | { type: 'resource'; id: string; name: string; dice?: string; uses?: number; usesPerLevel?: number; usesTable?: Record<number, number>; shortRest?: boolean; longRest?: boolean }
-  | { type: 'custom'; description: string; data?: Record<string, unknown> };
+  | { type: 'custom'; description: string; data?: Record<string, unknown> }
+  /** mini-DSL degli effetti, es. "+2 CA", "advantage: saves vs magic", "+1d6 fire damage", "proficiency: skill stealth" (interpretato da rules/effects.ts) */
+  | { type: 'effect'; text: string };
 
 export interface Feature {
   id: string;
@@ -138,6 +140,8 @@ export interface SpellDef {
   ritual?: boolean;
   concentration?: boolean;
   damage?: string;
+  /** se il componente materiale (M) viene consumato dal lancio (default: true se c'è M, a meno che la descrizione non dica il contrario) */
+  materialConsumed?: boolean;
   /** classi SRD che possono averlo nella lista */
   classes?: string[];
   source: 'srd' | 'custom';
@@ -221,6 +225,10 @@ export interface InventoryItem {
   magic: boolean;
   attuned: boolean;
   notes?: string;
+  /** cariche/usi dell'oggetto (pozioni, bacchette, munizioni...) */
+  charges?: { current: number; max: number };
+  /** id del contenitore che contiene questo oggetto (zaino dentro zaino) */
+  containerId?: string;
 }
 
 export interface ClassLevel {
@@ -293,6 +301,10 @@ export interface Character {
   deathSaves: { successes: number; failures: number };
   /** condizioni attive (es. 'avvelenato', 'invisibile') */
   conditions: string[];
+  /** livello di esaurimento 0-6 (6 = morte) */
+  exhaustion: number;
+  /** incantesimi preparati divisi per classe (multiclasse): classId -> spellId[] */
+  spellsPreparedByClass: Record<string, string[]>;
   notes: string;
   createdAt: string;
   updatedAt: string;

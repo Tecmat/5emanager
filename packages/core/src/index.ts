@@ -10,4 +10,6 @@ export * from './rules/inventory.js';
 export * from './rules/mechanics.js';
 export * from './rules/dice.js';
 export * from './rules/conditions.js';
+export * from './rules/exhaustion.js';
+export * from './rules/effects.js';
 export * from './rules/combat.js';

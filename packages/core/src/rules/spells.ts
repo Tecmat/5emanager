@@ -2,6 +2,7 @@ import type { Character, SpellDef } from '../types.js';
 import type { Registry } from '../registry.js';
 import { casterLevel, cantripsKnown } from './levelup.js';
 import { abilityModifier, maxHp } from './derived.js';
+import { updateItem } from './inventory.js';
 
 export interface CasterSummary {
   classId: string;
@@ -83,18 +84,91 @@ export function forgetSpell(char: Character, spellId: string): { character: Char
   return { character: next };
 }
 
-export function prepareSpell(char: Character, spellId: string, reg: Registry): { character: Character; error?: string } {
+// --- preparazione per classe (multiclasse) ---
+
+function syncPreparedUnion(char: Character, byClass: Record<string, string[]>): Character {
+  const union = [...new Set(Object.values(byClass).flat())];
+  return { ...char, spellsPreparedByClass: byClass, spellsPrepared: union };
+}
+
+/** prima classe del PG che prepara incantesimi */
+export function firstPreparingClass(char: Character, reg: Registry): string | null {
+  for (const cl of char.classLevels) {
+    const sc = reg.classes.get(cl.classId)?.spellcasting;
+    if (sc?.prepare && cl.level > 0) return cl.classId;
+  }
+  return null;
+}
+
+export function preparedSpellsOfClass(char: Character, classId: string): string[] {
+  return char.spellsPreparedByClass?.[classId] ?? char.spellsPrepared ?? [];
+}
+
+export function prepareSpellForClass(char: Character, spellId: string, classId: string, reg: Registry): { character: Character; error?: string } {
   const spell = reg.spells.get(spellId);
   if (!spell) return { character: char, error: 'Incantesimo non trovato: ' + spellId };
   if (!char.spellsKnown.includes(spellId)) return { character: char, error: 'Devi prima conoscere l\'incantesimo' };
-  if (char.spellsPrepared.includes(spellId)) return { character: char, error: 'Incantesimo già preparato' };
-  const next = { ...char, spellsPrepared: [...char.spellsPrepared, spellId], updatedAt: new Date().toISOString() };
-  return { character: next };
+  const cls = reg.classes.get(classId);
+  const sc = cls?.spellcasting;
+  if (!sc?.prepare) return { character: char, error: `${cls?.name ?? classId} non prepara incantesimi` };
+  const list = preparedSpellsOfClass(char, classId);
+  if (list.includes(spellId)) return { character: char, error: 'Incantesimo già preparato per questa classe' };
+  const byClass = { ...(char.spellsPreparedByClass ?? {}) };
+  // un incantesimo può essere preparato da una sola classe alla volta
+  for (const k of Object.keys(byClass)) byClass[k] = byClass[k].filter((s) => s !== spellId);
+  byClass[classId] = [...list, spellId];
+  return { character: syncPreparedUnion(char, byClass) };
+}
+
+export function unprepareSpellForClass(char: Character, spellId: string, classId: string): Character {
+  const byClass = { ...(char.spellsPreparedByClass ?? {}) };
+  if (byClass[classId]) byClass[classId] = byClass[classId].filter((s) => s !== spellId);
+  return syncPreparedUnion(char, byClass);
+}
+
+/** compatibilità: prepara con la prima classe che prepara */
+export function prepareSpell(char: Character, spellId: string, reg: Registry): { character: Character; error?: string } {
+  const cls = firstPreparingClass(char, reg);
+  if (!cls) return { character: char, error: 'Nessuna classe prepara incantesimi' };
+  return prepareSpellForClass(char, spellId, cls, reg);
 }
 
 export interface CastResult {
   character: Character;
   error?: string;
+  ritual?: boolean;
+  warning?: string;
+}
+
+/** testo del componente materiale (dopo "M (") oppure null */
+export function materialText(spell: SpellDef): string | null {
+  const m = spell.components.match(/M\s*\(([^)]*)\)/i);
+  return m ? m[1].trim() : null;
+}
+
+/** il componente materiale viene consumato? default true se c'è M, a meno che la descrizione non dica il contrario */
+export function isMaterialConsumed(spell: SpellDef): boolean {
+  if (spell.materialConsumed !== undefined) return spell.materialConsumed;
+  if (!materialText(spell)) return false;
+  return !/non viene consumato|not consumed|non consumato/i.test(spell.description);
+}
+
+/** consuma il componente materiale dall'inventario (cariche se l'oggetto le ha, altrimenti quantità) */
+export function consumeMaterialComponent(char: Character, spell: SpellDef): { character: Character; consumed?: string; warning?: string } {
+  const mat = materialText(spell);
+  if (!mat || !isMaterialConsumed(spell)) return { character: char };
+  const matLower = mat.toLowerCase();
+  const item = char.inventory.find((i) => {
+    const n = i.name.toLowerCase();
+    return (n.length >= 4 && matLower.includes(n)) || (matLower.length >= 4 && n.includes(matLower));
+  });
+  if (!item) return { character: char, warning: `Componente materiale non trovato nell'inventario: ${mat}` };
+  if (item.charges) {
+    if (item.charges.current <= 0) return { character: char, warning: `${item.name} ha 0 cariche` };
+    return { character: updateItem(char, item.id, { charges: { ...item.charges, current: item.charges.current - 1 } }), consumed: item.name };
+  }
+  if (item.quantity <= 1) return { character: char, warning: `Serve: ${mat} (ne hai solo ${item.quantity})` };
+  return { character: updateItem(char, item.id, { quantity: item.quantity - 1 }), consumed: item.name };
 }
 
 /** lancia un incantesimo consumando uno slot di livello >= al livello dell'incantesimo (upcast) */
@@ -108,13 +182,31 @@ export function castSpell(char: Character, spellId: string, slotLevel: number, r
   if (!slot || slot.total <= 0) return { character: char, error: `Nessuno slot di livello ${slotLevel} disponibile` };
   if (slot.used >= slot.total) return { character: char, error: `Slot di livello ${slotLevel} esauriti (${slot.used}/${slot.total})` };
 
-  const next: Character = {
+  let next: Character = {
     ...char,
     spellSlots: { ...char.spellSlots, [slotLevel]: { total: slot.total, used: slot.used + 1 } },
     concentrationSpellId: spell.concentration ? spellId : char.concentrationSpellId,
     updatedAt: new Date().toISOString(),
   };
-  return { character: next };
+  const mat = consumeMaterialComponent(next, spell);
+  next = mat.character;
+  return { character: next, warning: mat.warning };
+}
+
+/** lancio come rituale: nessuno slot consumato (richiede spell.ritual), +10 minuti */
+export function castSpellRitual(char: Character, spellId: string, reg: Registry): CastResult {
+  const spell = reg.spells.get(spellId);
+  if (!spell) return { character: char, error: 'Incantesimo non trovato: ' + spellId };
+  if (!spell.ritual) return { character: char, error: 'Questo incantesimo non è un rituale' };
+  if (!char.spellsKnown.includes(spellId)) return { character: char, error: 'Incantesimo non conosciuto' };
+  let next: Character = {
+    ...char,
+    concentrationSpellId: spell.concentration ? spellId : char.concentrationSpellId,
+    updatedAt: new Date().toISOString(),
+  };
+  const mat = consumeMaterialComponent(next, spell);
+  next = mat.character;
+  return { character: next, ritual: true, warning: mat.warning };
 }
 
 /** riposo lungo: recupera slot, HP e concentration */

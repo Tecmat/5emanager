@@ -5,7 +5,10 @@ import {
   attack,
   currentCombatant,
   damage,
+  damageBonusDice,
   damageCombatant,
+  exhaustionEffects,
+  hasAdvantage,
   heal,
   healCombatant,
   maxHp,
@@ -17,6 +20,7 @@ import {
   startPartyCombat,
   useBonus,
   useReaction,
+  type AttackMods,
   type Character,
   type Registry,
 } from '@dnd5e/core';
@@ -78,7 +82,16 @@ export function applyAction(c: Campaign, playerId: string, reg: Registry, action
       if (!isMaster && !isTurn) return [c, 'Non è il tuo turno'];
       const attackerId = isMaster && cur ? cur.id : c.characters[playerId]?.id;
       if (!attackerId) return [c, 'Personaggio non trovato'];
-      c.combat = attack(c.combat, attackerId, action.targetId, action.attackIndex ?? 0);
+      // mod da esaurimento + effetti DSL del PG attaccante
+      const mods: AttackMods = {};
+      const atkChar = c.characters[playerId] ?? Object.values(c.characters).find((ch) => ch.id === attackerId);
+      if (atkChar) {
+        if (exhaustionEffects(atkChar).disadvantageAttacksAndSaves) mods.disadvantage = true;
+        if (hasAdvantage(atkChar, reg, 'attack')) mods.advantage = true;
+        const dice = damageBonusDice(atkChar, reg).map((d) => d.dice);
+        if (dice.length > 0) mods.extraDamageDice = dice;
+      }
+      c.combat = attack(c.combat, attackerId, action.targetId, action.attackIndex ?? 0, mods);
       saveCampaign(c);
       return [c];
     }

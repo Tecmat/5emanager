@@ -15,8 +15,65 @@ export function addCurrency(char: Character, amount: Partial<Currency>): Charact
   return { ...next, updatedAt: new Date().toISOString() };
 }
 
+/** peso di un oggetto incluso il contenuto dei contenitori (ricorsivo, protetto da cicli) */
+export function itemTreeWeight(char: Character, itemId: string, seen = new Set<string>()): number {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item || seen.has(itemId)) return 0;
+  seen.add(itemId);
+  let w = item.weight * item.quantity;
+  for (const child of char.inventory) {
+    if (child.containerId === itemId) w += itemTreeWeight(char, child.id, seen);
+  }
+  return w;
+}
+
+/** peso totale: somma ricorsiva degli oggetti "radice" (senza contenitore valido) */
 export function totalWeight(char: Character): number {
-  return char.inventory.reduce((sum, i) => sum + i.weight * i.quantity, 0);
+  const ids = new Set(char.inventory.map((i) => i.id));
+  return char.inventory
+    .filter((i) => !i.containerId || !ids.has(i.containerId))
+    .reduce((sum, i) => sum + itemTreeWeight(char, i.id), 0);
+}
+
+/** sposta un oggetto in un contenitore (null = radice); blocca i cicli */
+export function moveItemToContainer(char: Character, itemId: string, containerId: string | null): { character: Character; error?: string } {
+  if (containerId) {
+    if (containerId === itemId) return { character: char, error: 'Un oggetto non può contenere se stesso' };
+    // niente cicli: il contenitore non deve essere (transitivamente) dentro l'oggetto
+    let cur: string | undefined = containerId;
+    const seen = new Set<string>();
+    while (cur && !seen.has(cur)) {
+      if (cur === itemId) return { character: char, error: 'Ciclo non valido: il contenitore è dentro l\'oggetto' };
+      seen.add(cur);
+      cur = char.inventory.find((i) => i.id === cur)?.containerId;
+    }
+  }
+  return { character: updateItem(char, itemId, { containerId: containerId ?? undefined }) };
+}
+
+/** spende una carica dell'oggetto (pozioni, bacchette...) */
+export function useCharge(char: Character, itemId: string): { character: Character; error?: string } {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return { character: char, error: 'Oggetto non trovato' };
+  if (!item.charges) return { character: char, error: 'Questo oggetto non ha cariche' };
+  if (item.charges.current <= 0) return { character: char, error: `${item.name}: 0 cariche rimaste` };
+  return { character: updateItem(char, itemId, { charges: { ...item.charges, current: item.charges.current - 1 } }) };
+}
+
+/** ricarica un oggetto (tutte le cariche, o +amount) */
+export function rechargeItem(char: Character, itemId: string, amount?: number): { character: Character; error?: string } {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return { character: char, error: 'Oggetto non trovato' };
+  if (!item.charges) return { character: char, error: 'Questo oggetto non ha cariche' };
+  const current = amount === undefined ? item.charges.max : Math.min(item.charges.max, item.charges.current + amount);
+  return { character: updateItem(char, itemId, { charges: { ...item.charges, current } }) };
+}
+
+/** imposta le cariche dell'oggetto (max e current) */
+export function setCharges(char: Character, itemId: string, max: number): { character: Character; error?: string } {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return { character: char, error: 'Oggetto non trovato' };
+  return { character: updateItem(char, itemId, { charges: { current: max, max } }) };
 }
 
 export const MAX_ATTUNEMENT = 3;
