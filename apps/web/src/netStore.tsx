@@ -83,6 +83,9 @@ interface NetCtx {
   savedCampaigns: SavedCampaign[];
   send: (m: unknown) => void;
   act: (action: unknown) => void;
+  setConn: React.Dispatch<React.SetStateAction<ConnState>>;
+  handleNetMessage: (m: any) => void;
+  setP2PTransport: (fn: ((m: unknown) => void) | null) => void;
   connect: (opts: ConnectOpts) => Promise<void>;
   disconnect: () => void;
   checkConnection: () => Promise<void>;
@@ -141,29 +144,33 @@ export function NetProvider({ children }: { children: ReactNode }) {
     });
   };
 
+  const p2pRef = useRef<((m: unknown) => void) | null>(null);
+
+  const handleMsg = (m: any, serverUrl?: string) => {
+    if (m.t === 'welcome') {
+      setConn({ phase: 'online', campaign: m.campaign, you: m.you });
+      rememberJoined({ server: serverUrl ?? urlRef.current, id: m.campaign.id, name: m.campaign.name });
+    } else if (m.t === 'state') {
+      setConn((c) => (c.phase === 'online' ? { ...c, campaign: m.campaign } : c));
+    } else if (m.t === 'campaigns') {
+      setCampaignList(m.list);
+    } else if (m.t === 'auth') {
+      setAuth({ token: m.token, username: m.username, characters: m.characters });
+      setLastUsername(m.username);
+    } else if (m.t === 'campaignDeleted') {
+      setConn({ phase: 'offline' });
+      setError('La campagna è stata eliminata (dal master o dall\'admin).');
+    } else if (m.t === 'notice') {
+      setNotice(m.message);
+    } else if (m.t === 'error') {
+      setError(m.message);
+    } else if (m.t === 'closed') {
+      setConn({ phase: 'offline' });
+    }
+  };
+
   const attachHandlers = (net: NetClient, serverUrl: string) => {
-    net.onMessage((m) => {
-      if (m.t === 'welcome') {
-        setConn({ phase: 'online', campaign: m.campaign, you: m.you });
-        rememberJoined({ server: serverUrl, id: m.campaign.id, name: m.campaign.name });
-      } else if (m.t === 'state') {
-        setConn((c) => (c.phase === 'online' ? { ...c, campaign: m.campaign } : c));
-      } else if (m.t === 'campaigns') {
-        setCampaignList(m.list);
-      } else if (m.t === 'auth') {
-        setAuth({ token: m.token, username: m.username, characters: m.characters });
-        setLastUsername(m.username);
-      } else if (m.t === 'campaignDeleted') {
-        setConn({ phase: 'offline' });
-        setError('La campagna è stata eliminata (dal master o dall\'admin).');
-      } else if (m.t === 'notice') {
-        setNotice(m.message);
-      } else if (m.t === 'error') {
-        setError(m.message);
-      } else if (m.t === 'closed') {
-        setConn({ phase: 'offline' });
-      }
-    });
+    net.onMessage((m) => handleMsg(m, serverUrl));
   };
 
   const ensureNet = async (): Promise<NetClient> => {
@@ -178,11 +185,22 @@ export function NetProvider({ children }: { children: ReactNode }) {
     return net;
   };
 
-  const send = (m: unknown) => netRef.current?.send(m);
+  const send = (m: unknown) => {
+    if (p2pRef.current) p2pRef.current(m);
+    else netRef.current?.send(m);
+  };
   const act = (action: unknown) => send({ t: 'action', action });
+  const setP2PTransport = (fn: ((m: unknown) => void) | null) => {
+    p2pRef.current = fn;
+  };
 
   const checkConnection = async () => {
     setPingState({ status: 'checking' });
+    if (p2pRef.current) {
+      // in modalità P2P l'host è locale: ping "locale"
+      setPingState({ status: 'ok', rtt: 0 });
+      return;
+    }
     try {
       const net = await ensureNet();
       const res = await net.ping();
@@ -257,7 +275,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const value: NetCtx = {
     conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
-    send, act, connect, disconnect, checkConnection, refreshCampaignList,
+    send, act, setConn, handleNetMessage: (m: any) => handleMsg(m), setP2PTransport,
+    connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

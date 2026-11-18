@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ABILITIES,
   CONDITIONS,
@@ -16,6 +16,7 @@ import {
 } from '@dnd5e/core';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
+import { P2PClient, P2PHost } from './p2p.js';
 
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
 function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
@@ -75,9 +76,68 @@ export default function CampaignTab() {
     conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     act, connect, disconnect, checkConnection, refreshCampaignList,
-    doRegister, doLogin, logout,
+    doRegister, doLogin, logout, setConn, handleNetMessage, setP2PTransport,
   } = useNet();
   const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
+  const [p2pSub, setP2pSub] = useState<'host' | 'join'>('host');
+  const [offerBlob, setOfferBlob] = useState('');
+  const [answerBlob, setAnswerBlob] = useState('');
+  const [peerOffer, setPeerOffer] = useState('');
+  const [peerAnswer, setPeerAnswer] = useState('');
+  const hostRef = useRef<P2PHost | null>(null);
+  const p2pClientRef = useRef<P2PClient | null>(null);
+
+  const startP2PHost = () => {
+    setError('');
+    const host = new P2PHost({
+      campaignName, password, masterName: name || 'Master', reg,
+      cb: {
+        onMessage: () => {},
+        onState: (c) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
+        onPeerJoined: () => {},
+        onPeerLeft: () => {},
+      },
+    });
+    hostRef.current = host;
+    setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+    setP2PTransport((m: any) => {
+      if (m?.t === 'action') host.applyAction(host.masterId, m.action);
+    });
+  };
+
+  const genP2POffer = async () => {
+    setError('');
+    const client = new P2PClient();
+    client.onMessage = (m) => handleNetMessage(m);
+    client.onOpen = () => client.send({ t: 'join', name: name || 'Giocatore', password });
+    p2pClientRef.current = client;
+    setP2PTransport((m) => client.send(m as never));
+    try {
+      setOfferBlob(await client.createOffer());
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const connectP2PJoin = async () => {
+    setError('');
+    const client = p2pClientRef.current;
+    if (!client) { setError('Prima genera il codice invito (passo 1)'); return; }
+    try {
+      await client.acceptAnswer(answerBlob);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const exitP2P = () => {
+    hostRef.current = null;
+    p2pClientRef.current?.close();
+    p2pClientRef.current = null;
+    setP2PTransport(null);
+    disconnect();
+  };
   const [password, setPassword] = useState('');
   const [campaignName, setCampaignName] = useState('');
   const [joinId, setJoinId] = useState('');
@@ -103,10 +163,71 @@ export default function CampaignTab() {
   }, [conn, viewChar, viewLabel, setViewChar]);
 
   if (conn.phase !== 'online') {
+    if (netMode === 'p2p') {
+      return (
+        <div className="grid" style={{ maxWidth: 560 }}>
+          <div className="card">
+            <h3>📡 Campagna P2P — senza server</h3>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button onClick={() => setNetMode('server')}>🌐 Server remoto</button>
+              <button className="primary">📡 P2P (host sul mio dispositivo)</button>
+            </div>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button className={p2pSub === 'host' ? 'primary' : ''} onClick={() => setP2pSub('host')}>Faccio da host</button>
+              <button className={p2pSub === 'join' ? 'primary' : ''} onClick={() => setP2pSub('join')}>Mi unisco a un host</button>
+            </div>
+            {p2pSub === 'host' && (
+              <>
+                <label>Nome campagna</label>
+                <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="La tomba perduta" />
+                <label>Password campagna</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(startP2PHost)} />
+                <label>Il tuo nome (master)</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="Master" />
+                <div style={{ marginTop: 10 }}>
+                  <button className="primary" onClick={startP2PHost}>Avvia host P2P</button>
+                </div>
+                <div className="muted" style={{ marginTop: 8 }}>
+                  Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Gli amici, sulla tua stessa rete,
+                  si uniscono incollando un codice — dopo l'avvio li aggiungi dal pannello con "Aggiungi giocatori".
+                </div>
+              </>
+            )}
+            {p2pSub === 'join' && (
+              <>
+                <label>Il tuo nome</label>
+                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Eroe" />
+                <label>Password campagna</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
+                <div style={{ marginTop: 10 }}>
+                  <button onClick={genP2POffer}>1️⃣ Genera codice invito</button>
+                </div>
+                {offerBlob && (
+                  <>
+                    <label>Copia questo codice e mandalo all'host (WhatsApp/Telegram…)</label>
+                    <textarea readOnly rows={3} value={offerBlob} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
+                  </>
+                )}
+                <label>2️⃣ Incolla qui la risposta dell'host</label>
+                <textarea rows={3} value={answerBlob} onChange={(e) => setAnswerBlob(e.target.value)} style={{ width: '100%' }} />
+                <div style={{ marginTop: 10 }}>
+                  <button className="primary" onClick={connectP2PJoin} disabled={!answerBlob.trim()}>Connetti</button>
+                </div>
+              </>
+            )}
+            {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}
+          </div>
+        </div>
+      );
+    }
     return (
       <div className="grid" style={{ maxWidth: 560 }}>
         <div className="card">
           <h3>🌐 Server</h3>
+          <div className="row" style={{ marginBottom: 8 }}>
+            <span className="tag custom">server remoto</span>
+            <button onClick={() => setNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (WebRTC), senza server">📡 oppure P2P</button>
+          </div>
           <label>Server WebSocket</label>
           <div className="row">
             <input
@@ -269,10 +390,43 @@ export default function CampaignTab() {
               🗑 Elimina campagna
             </button>
           )}
-          <button onClick={disconnect}>Esci</button>
+          <button onClick={exitP2P}>Esci</button>
         </div>
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
       </div>
+
+      {hostRef.current && isMaster && (
+        <div className="card">
+          <h3>📨 Aggiungi giocatori (P2P)</h3>
+          <label>Incolla qui il codice (offer) del giocatore</label>
+          <textarea rows={3} value={peerOffer} onChange={(e) => setPeerOffer(e.target.value)} style={{ width: '100%' }} />
+          <div style={{ marginTop: 6 }}>
+            <button
+              disabled={!peerOffer.trim()}
+              onClick={async () => {
+                try {
+                  const ans = await hostRef.current!.handleOffer(peerOffer);
+                  setPeerAnswer(ans);
+                  setPeerOffer('');
+                } catch (e) {
+                  setError((e as Error).message);
+                }
+              }}
+            >
+              Genera risposta per il giocatore
+            </button>
+          </div>
+          {peerAnswer && (
+            <>
+              <label style={{ marginTop: 8 }}>Risposta da copiare e mandare al giocatore</label>
+              <textarea readOnly rows={3} value={peerAnswer} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
+            </>
+          )}
+          <div className="muted" style={{ marginTop: 6 }}>
+            Giocatori connessi: {campaign.players.map((p) => p.name).join(', ') || 'solo te'}
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <h3>📤 Scegli la scheda da usare in campagna</h3>
