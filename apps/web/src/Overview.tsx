@@ -6,16 +6,23 @@ import {
   canLevelUp,
   carryingCapacity,
   damage,
+  EXHAUSTION_MAX,
+  exhaustionEffects,
   heal,
   initiativeBonus,
+  isDead,
   levelForXp,
   longRest,
   maxHp,
   migrateCharacter,
   passivePerception,
   proficiencyBonus,
+  recordDeathSave,
   savingThrowBonus,
+  setExhaustion,
   skillBonus,
+  spellcastingInfoAll,
+  speedOf,
   totalLevel,
   xpForLevel,
   XP_TABLE,
@@ -24,7 +31,7 @@ import {
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
 import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
-import { useStore } from './store.js';
+import { CUSTOM_KEY, persistCustom, useStore } from './store.js';
 import LevelUpDialog from './LevelUpDialog.js';
 import DiceRoller from './DiceRoller.js';
 
@@ -38,12 +45,22 @@ const RULE_LABELS: [keyof HouseRules, string][] = [
 
 const ABILITY_IT: Record<Ability, string> = { str: 'Forza', dex: 'Destrezza', con: 'Costituzione', int: 'Intelligenza', wis: 'Saggezza', cha: 'Carisma' };
 
+const EXH_LABELS = [
+  'nessuno',
+  'svantaggio alle prove di caratteristica',
+  'velocità dimezzata',
+  'svantaggio a attacchi e tiri salvezza',
+  'PF massimi dimezzati',
+  'velocità 0',
+  'MORTE',
+];
+
 function fmt(n: number): string {
   return n >= 0 ? `+${n}` : `${n}`;
 }
 
 export default function Overview() {
-  const { reg, char, setChar, createSheet, resetChar } = useStore();
+  const { reg, char, setChar, createSheet, importSheets, sheets, resetChar } = useStore();
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [dmg, setDmg] = useState(0);
   const [healAmt, setHealAmt] = useState(0);
@@ -132,6 +149,46 @@ export default function Overview() {
     });
   };
 
+  const exportLibrary = () => {
+    let custom: unknown = {};
+    try { custom = JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '{}'); } catch { /* vuoto */ }
+    const data = {
+      app: '5emanager', version: 1, exportedAt: new Date().toISOString(),
+      sheets, custom,
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '5emanager-libreria.json';
+    a.click();
+  };
+
+  const importLibrary = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    file.text().then((t) => {
+      try {
+        const d = JSON.parse(t) as { sheets?: Character[]; custom?: Record<string, unknown[]> };
+        if (!d || !Array.isArray(d.sheets)) throw new Error('formato non riconosciuto');
+        importSheets(d.sheets);
+        if (d.custom) {
+          // merge dei contenuti custom per id
+          const cur = JSON.parse(localStorage.getItem(CUSTOM_KEY) ?? '{}') as Record<string, any[]>;
+          for (const [k, arr] of Object.entries(d.custom as Record<string, any[]>)) {
+            if (!Array.isArray(arr)) continue;
+            const map = new Map<string, any>((cur[k] ?? []).map((x: any) => [x.id as string, x]));
+            for (const x of arr) if (x && typeof x.id === 'string') map.set(x.id, x);
+            cur[k] = [...map.values()];
+          }
+          persistCustom(cur as never);
+        }
+        alert(`Libreria importata: ${d.sheets.length} schede${d.custom ? ' + contenuti custom' : ''}.`);
+      } catch (err) {
+        alert('File non valido: ' + (err as Error).message);
+      }
+    });
+  };
+
   return (
     <div className="grid">
       <div className="grid cols3">
@@ -173,6 +230,35 @@ export default function Overview() {
             </button>
           </div>
           <div className="muted" style={{ marginTop: 6 }} title={breakdown.join('\n')}>CA: {breakdown.join(' · ')}</div>
+          {spellcastingInfoAll(char, reg).length > 0 && (
+            <div className="row" style={{ marginTop: 6 }}>
+              {spellcastingInfoAll(char, reg).map((si) => (
+                <span key={si.classId} className="tag" title={`Incantesimi di ${reg.classes.get(si.classId)?.name} (caratteristica ${si.ability.toUpperCase()})`}>
+                  🔮 {reg.classes.get(si.classId)?.name}: attacco {fmt(si.attackBonus)} · CD {si.saveDC}
+                </span>
+              ))}
+            </div>
+          )}
+          <div className="row" style={{ marginTop: 6 }}>
+            <label style={{ margin: 0 }}>Esaurimento</label>
+            <select value={char.exhaustion ?? 0} onChange={(e) => setChar(setExhaustion(char, Number(e.target.value)))} style={{ width: 'auto' }}>
+              {Array.from({ length: EXHAUSTION_MAX + 1 }).map((_, l) => <option key={l} value={l}>{l === 0 ? '—' : `liv ${l}`}</option>)}
+            </select>
+            <span className="muted">{EXH_LABELS[Math.min(EXHAUSTION_MAX, char.exhaustion ?? 0)]}</span>
+            <span className="tag">Velocità {speedOf(char, reg)}</span>
+          </div>
+          {char.hp.current <= 0 && (
+            <div className="row" style={{ marginTop: 8 }}>
+              <b>Tiri della morte</b>
+              {[0, 1, 2].map((i) => (
+                <button key={'s' + i} className={i < (char.deathSaves?.successes ?? 0) ? 'primary' : ''} onClick={() => setChar(recordDeathSave(char, true))} title="Successo">✓</button>
+              ))}
+              {[0, 1, 2].map((i) => (
+                <button key={'f' + i} className="danger" style={{ opacity: i < (char.deathSaves?.failures ?? 0) ? 1 : 0.45 }} onClick={() => setChar(recordDeathSave(char, false))} title="Fallimento">✗</button>
+              ))}
+              {isDead(char) ? <span className="error">💀 morto</span> : <span className="muted">3 ✓ = risveglio a 1 PF · 3 ✗ = morto</span>}
+            </div>
+          )}
           <div className="row" style={{ marginTop: 10 }}>
             <input type="number" style={{ width: 70 }} value={dmg} onChange={(e) => setDmg(Number(e.target.value))} />
             <button onClick={() => setChar(damage(char, dmg))}>Danni</button>
@@ -330,6 +416,12 @@ export default function Overview() {
               <input type="file" accept="application/json" onChange={importChar} style={{ width: 'auto' }} /> Importa
             </label>
             <button className="danger" onClick={() => { if (confirm('Eliminare questa scheda?')) resetChar(); }}>Elimina scheda</button>
+          </div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button onClick={exportLibrary} title="Tutte le schede + i contenuti custom in un file">📦 Esporta libreria ({sheets.length} schede)</button>
+            <label style={{ margin: 0, width: 'auto' }} className="row">
+              <input type="file" accept="application/json" onChange={importLibrary} style={{ width: 'auto' }} /> Importa libreria
+            </label>
           </div>
         </div>
       </div>

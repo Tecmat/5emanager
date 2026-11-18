@@ -3,11 +3,16 @@ import {
   addSpellKnown,
   castersOf,
   castSpell,
+  castSpellRitual,
   forgetSpell,
+  isMaterialConsumed,
   knownSpellCount,
   learnableSpells,
+  materialText,
   maxSpellsKnown,
-  prepareSpell,
+  prepareSpellForClass,
+  preparedSpellsOfClass,
+  unprepareSpellForClass,
   type SpellDef,
 } from '@dnd5e/core';
 import { useStore } from './store.js';
@@ -15,18 +20,25 @@ import { useStore } from './store.js';
 function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: ReturnType<typeof useStore>['char']; reg: ReturnType<typeof useStore>['reg']; onChange: (c: NonNullable<ReturnType<typeof useStore>['char']>) => void }) {
   if (!char) return null;
   const known = char.spellsKnown.includes(spell.id);
-  const prepared = char.spellsPrepared.includes(spell.id);
+  const preparers = castersOf(char, reg).filter((c) => c.prepare).map((c) => c.classId);
+  const prepClass = preparers.find((cl) => preparedSpellsOfClass(char, cl).includes(spell.id));
+  const prepared = !!prepClass;
   const [slotLevel, setSlotLevel] = useState(Math.max(1, spell.level));
+  const [prepClassSel, setPrepClassSel] = useState(preparers[0] ?? '');
   const castable = known;
   const slot = char.spellSlots[slotLevel];
   const maxKnown = maxSpellsKnown(char, reg);
   const atLimit = spell.level > 0 && maxKnown !== Infinity && !(char.houseRules?.bypassSpellLimit ?? false) && knownSpellCount(char, reg) >= maxKnown;
+  const mat = materialText(spell);
 
   return (
     <tr>
       <td>{spell.name} {spell.source === 'custom' && <span className="tag custom">custom</span>}</td>
       <td>{spell.level === 0 ? 'trucchetto' : `${spell.level}°`}</td>
-      <td className="muted">{spell.school}{spell.concentration ? ' · conc.' : ''}{spell.ritual ? ' · rituale' : ''}</td>
+      <td className="muted">
+        {spell.school}{spell.concentration ? ' · conc.' : ''}{spell.ritual ? ' · rituale' : ''}
+        {mat && <div title={isMaterialConsumed(spell) ? 'componente consumato' : 'componente non consumato'}>M: {mat}</div>}
+      </td>
       <td>
         {!known && (
           <button
@@ -44,8 +56,26 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
         {known && spell.level > 0 && (
           <button className="danger" style={{ marginLeft: 4 }} onClick={() => onChange(forgetSpell(char, spell.id).character)}>Dimentica</button>
         )}
-        {known && castersOf(char, reg).some((c) => c.prepare) && (
-          <button onClick={() => onChange(prepareSpell(char, spell.id, reg).character)}>{prepared ? '✓ preparato' : 'prepara'}</button>
+        {known && preparers.length > 0 && (
+          <span className="row" style={{ display: 'inline-flex', marginLeft: 4 }}>
+            {preparers.length > 1 && (
+              <select value={prepClassSel} onChange={(e) => setPrepClassSel(e.target.value)} style={{ width: 110 }}>
+                {preparers.map((cl) => <option key={cl} value={cl}>{reg.classes.get(cl)?.name ?? cl}</option>)}
+              </select>
+            )}
+            <button
+              onClick={() => {
+                if (prepared) onChange(unprepareSpellForClass(char, spell.id, prepClass!));
+                else {
+                  const r = prepareSpellForClass(char, spell.id, preparers.length > 1 ? prepClassSel : preparers[0], reg);
+                  if (r.error) alert(r.error);
+                  else onChange(r.character);
+                }
+              }}
+            >
+              {prepared ? `✓ prep. (${reg.classes.get(prepClass!)?.name ?? prepClass})` : 'prepara'}
+            </button>
+          </span>
         )}
         {castable && spell.level > 0 && (
           <span className="row" style={{ display: 'inline-flex', marginLeft: 6 }}>
@@ -59,11 +89,23 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
               onClick={() => {
                 const r = castSpell(char, spell.id, slotLevel, reg);
                 if (r.error) alert(r.error);
-                else onChange(r.character);
+                else { if (r.warning) alert(r.warning); onChange(r.character); }
               }}
             >
               Lancia
             </button>
+            {spell.ritual && (
+              <button
+                title="Lancio rituale: +10 minuti, nessuno slot consumato"
+                onClick={() => {
+                  const r = castSpellRitual(char, spell.id, reg);
+                  if (r.error) alert(r.error);
+                  else { if (r.warning) alert(r.warning); onChange(r.character); }
+                }}
+              >
+                🕯 rituale
+              </button>
+            )}
           </span>
         )}
         {castable && spell.level === 0 && <span className="muted" style={{ marginLeft: 6 }}>trucchetto (sempre lanciabile)</span>}
@@ -100,6 +142,15 @@ export default function SpellsTab() {
             {reg.classes.get(c.classId)?.name}: caratteristica {c.ability.toUpperCase()}, trucchetti conosciuti: {c.cantripsKnown}
           </div>
         ))}
+        {casters.filter((c) => c.prepare).map((c) => {
+          const prep = preparedSpellsOfClass(char, c.classId);
+          if (prep.length === 0) return null;
+          return (
+            <div key={'prep-' + c.classId} className="muted" style={{ marginBottom: 4 }}>
+              <b style={{ color: 'var(--text)' }}>{reg.classes.get(c.classId)?.name}</b> prepara: {prep.map((id) => reg.spells.get(id)?.name ?? id).join(', ')}
+            </div>
+          );
+        })}
         {slots.length === 0 && casters.length > 0 && <div className="muted">Nessuno slot disponibile a questo livello.</div>}
         <div>
           {slots.map((s) => (

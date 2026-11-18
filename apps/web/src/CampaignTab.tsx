@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ABILITIES, CONDITIONS, armorClass, maxHp, totalLevel } from '@dnd5e/core';
+import { ABILITIES, CONDITIONS, armorClass, maxHp, passiveInsight, passivePerception, totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
 
@@ -222,6 +222,35 @@ export default function CampaignTab() {
         )}
         {!auth && <div className="muted" style={{ marginTop: 6 }}>La connessione resta attiva anche cambiando tab. Esci e fai login dall'account per salvare le schede sul server e riutilizzarle in altre campagne.</div>}
       </div>
+
+      {isMaster && (
+        <div className="card">
+          <h3>🖥 Schermo del master</h3>
+          <table>
+            <thead>
+              <tr><th>Giocatore</th><th>PG</th><th>Liv</th><th>PF</th><th>CA</th><th>Percez. passiva</th><th>Intuizione passiva</th><th>Condizioni</th></tr>
+            </thead>
+            <tbody>
+              {campaign.players.map((p) => {
+                const ch = campaign.characters[p.id];
+                if (!ch) return <tr key={p.id}><td>{p.name}</td><td className="muted" colSpan={7}>senza scheda</td></tr>;
+                return (
+                  <tr key={p.id}>
+                    <td>{p.name}{p.role === 'master' ? ' 👑' : ''}</td>
+                    <td>{ch.name}</td>
+                    <td>{totalLevel(ch)}</td>
+                    <td>{ch.hp.current}/{maxHp(ch, reg)}</td>
+                    <td>{armorClass(ch, reg).ac}</td>
+                    <td>{passivePerception(ch)}</td>
+                    <td>{passiveInsight(ch)}</td>
+                    <td>{ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}{ch.exhaustion > 0 && <span className="tag custom">esaurimento {ch.exhaustion}</span>}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {isMaster && (
         <div className="card">
