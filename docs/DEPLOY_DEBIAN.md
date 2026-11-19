@@ -54,6 +54,21 @@ journalctl -u 5emanager -f     # log; all'avvio vedi gli IP LAN
 
 Test: `http://<ip-server>:3001/` (la web app) e `ws://<ip-server>:3001`.
 
+### Check-update con repo GitHub privato
+
+Se il repo `Tecmat/5emanager` resta **privato**, l'API pubblica di GitHub risponde 404 senza token.
+Il server espone allora `/api/update` (ultima release) e `/api/update/asset?name=...` (proxy del
+download): la web app li usa automaticamente sulla stessa origin e l'APK Android scarica l'APK
+tramite il proxy del server. Basta impostare nel servizio systemd:
+
+```ini
+Environment=GITHUB_TOKEN=github_pat_...   # PAT fine-grained con lettura sul repo
+```
+
+Crea il token su GitHub → Settings → Developer settings → Fine-grained tokens (Repository access:
+`Tecmat/5emanager`, permission: Contents read-only). Poi `sudo systemctl restart 5emanager`.
+Verifica: `curl http://localhost:3001/api/update`. Dettagli in [UPDATE.md](UPDATE.md).
+
 ## 4. (Opzionale) Dominio + HTTPS con nginx + certbot
 
 Solo se vuoi esporlo fuori dalla LAN — **mai esporre la porta 3001 direttamente su Internet senza TLS**.

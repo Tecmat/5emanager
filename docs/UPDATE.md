@@ -29,6 +29,28 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
   della release: al termine del download basta toccare il file per installare (come per qualsiasi
   sideload APK).
 
+## Repo GitHub privato
+
+Se `Tecmat/5emanager` è **privato**, `api.github.com` e le pagine HTML di github.com rispondono
+404 senza autenticazione. Tre modi, in ordine di preferenza:
+
+1. **Server self-hosted con token** (consigliato per web + Android): imposta `GITHUB_TOKEN`
+   (PAT fine-grained, Contents: read-only sul repo) nel servizio systemd (vedi
+   `deploy/5emanager.service` e `docs/DEPLOY_DEBIAN.md`). Il server espone:
+   - `GET /api/update` → ultima release `{ tag, pageUrl, assets }` (cache 5 min)
+   - `GET /api/update/asset?name=<file>` → proxy del download dell'asset (streaming, con token)
+
+   La web app servita dal server chiama `/api/update` sulla stessa origin; l'APK Android usa
+   l'URL del server salvato nelle impostazioni (ws://… → http://…) e scarica l'APK via
+   `/api/update/asset?name=app-debug.apk`. **Nessun token finisce nel client.**
+2. **Desktop**: token locale, cercato in quest'ordine: env `GITHUB_TOKEN` →
+   `~/.config/emanager/github-token` → `gh auth token` (basta aver fatto `gh auth login`).
+   Viene inviato come `Authorization: Bearer` sia alla API sia al download dell'asset.
+3. Se il repo diventa pubblico, funzionano anche API/HTML senza token (fallback automatici).
+
+In caso di errore il pannello 🔄 mostra il dettaglio (es. `HTTP 404`) e, se rileva un repo
+privato, il suggerimento per configurare il token.
+
 ## Note
 
 - Le release sono create automaticamente dal workflow `.github/workflows/release.yml` sui tag `v*`
