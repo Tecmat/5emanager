@@ -72,7 +72,7 @@ describe('registry SRD', () => {
     expect(reg.spells.size).toBeGreaterThan(90);
     expect(reg.weapons.size).toBeGreaterThan(30);
     expect(reg.armors.size).toBe(13);
-    expect(reg.subclasses.size).toBe(13);
+    expect(reg.subclasses.size).toBe(42);
   });
   it('i full caster hanno la tabella slot compilata', () => {
     const wiz = reg.classes.get('wizard')!;

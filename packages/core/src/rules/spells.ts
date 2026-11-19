@@ -1,8 +1,9 @@
 import type { Character, SpellDef } from '../types.js';
 import type { Registry } from '../registry.js';
 import { casterLevel, cantripsKnown } from './levelup.js';
-import { abilityModifier, maxHp } from './derived.js';
+import { abilityModifier, maxHp, modifierOf, totalLevel } from './derived.js';
 import { updateItem, useCharge } from './inventory.js';
+import { rollDice } from './dice.js';
 import { logJournal } from '../character.js';
 
 export interface CasterSummary {
@@ -275,4 +276,36 @@ export function longRest(char: Character, reg: Registry): Character {
     concentrationSpellId: undefined,
     updatedAt: new Date().toISOString(),
   };
+}
+
+/**
+ * riposo breve: spende fino a `dice` dadi vita (max = livello totale), cura il tiro + mod Cos per dado.
+ * Il dado vita usato è quello della classe con più livelli. Curare da 0 PF risveglia e resetta i tiri della morte.
+ */
+export function shortRest(char: Character, reg: Registry, dice = 1): { character: Character; healed: number; rolls: string[] } {
+  const conMod = modifierOf(char, 'con');
+  const max = maxHp(char, reg);
+  const n = Math.max(0, Math.min(dice, totalLevel(char)));
+  const main = [...char.classLevels].sort((a, b) => b.level - a.level)[0];
+  const die = reg.classes.get(main?.classId ?? '')?.hitDie ?? 8;
+  const rolls: string[] = [];
+  let cur = char;
+  let healed = 0;
+  for (let i = 0; i < n; i++) {
+    const r = rollDice(`1d${die}`);
+    const rolled = r?.total ?? Math.floor(die / 2) + 1;
+    const amount = Math.max(0, rolled + conMod);
+    rolls.push(`1d${die}=${rolled}${conMod >= 0 ? '+' : ''}${conMod}`);
+    const wasDown = cur.hp.current <= 0;
+    const newCur = Math.min(max, cur.hp.current + amount);
+    healed += Math.max(0, newCur - cur.hp.current);
+    cur = {
+      ...cur,
+      hp: { current: wasDown && newCur > 0 ? Math.max(1, newCur) : newCur, temp: cur.hp.temp },
+      deathSaves: wasDown && newCur > 0 ? { successes: 0, failures: 0 } : cur.deathSaves,
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  const next = logJournal(cur, n > 0 ? `Riposo breve: ${n} dado/i vita (${rolls.join(', ')}) → +${healed} PF` : 'Riposo breve (nessun dado vita speso)');
+  return { character: next, healed, rolls };
 }

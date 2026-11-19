@@ -70,6 +70,8 @@ export interface CreateCharacterInput {
   classId: string;
   abilityScores: AbilityScores;
   skillChoices?: string[];
+  /** stile di combattimento al 1° livello (richiesto se la classe lo prevede, es. guerriero) */
+  fightingStyleId?: string;
   background?: string;
   alignment?: string;
 }
@@ -87,6 +89,21 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
   }
   for (const [ab, v] of Object.entries(input.abilityScores)) {
     if (typeof v !== 'number' || v < 1 || v > 20) errors.push(`Punteggio ${ab} non valido (1-20): ${v}`);
+  }
+  // stile di combattimento al 1° livello (se la classe lo prevede)
+  const styleEffect = (cls?.features[1] ?? [])
+    .flatMap((f) => f.effects)
+    .find((e) => e.type === 'fightingStyle') as { options: string[] } | undefined;
+  let fightingStyles: string[] = [];
+  if (styleEffect) {
+    const chosen = input.fightingStyleId ?? styleEffect.options[0];
+    if (!styleEffect.options.includes(chosen)) {
+      errors.push(`Stile di combattimento non valido per ${cls?.name}: ${chosen} (valide: ${styleEffect.options.join(', ')})`);
+    } else {
+      fightingStyles = [chosen];
+    }
+  } else if (input.fightingStyleId) {
+    errors.push(`${cls?.name} non offre stili di combattimento al 1° livello`);
   }
   if (errors.length > 0) return { errors };
 
@@ -118,7 +135,7 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
       tools: [...cls!.toolProficiencies],
       languages: [],
     },
-    fightingStyles: [],
+    fightingStyles,
     feats: [],
     features: (cls!.features[1] ?? []).map((f) => f.id),
     spellsKnown: [],

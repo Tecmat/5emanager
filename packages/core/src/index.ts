@@ -15,3 +15,4 @@ export * from './rules/exhaustion.js';
 export * from './rules/effects.js';
 export * from './rules/combat.js';
 export * from './rules/random.js';
+export * from './rules/simulate.js';

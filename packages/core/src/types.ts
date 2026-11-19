@@ -215,6 +215,9 @@ export type ItemKind = 'weapon' | 'armor' | 'shield' | 'gear' | 'treasure' | 'cu
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'veryRare' | 'legendary';
 
+/** slot di equipaggiamento standard: un solo oggetto equipaggiato per slot (le mani possono avere arma/scudo) */
+export type EquipSlot = 'head' | 'amulet' | 'cloak' | 'armor' | 'gloves' | 'belt' | 'boots' | 'ring1' | 'ring2' | 'shield' | 'hand1' | 'hand2';
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -222,6 +225,8 @@ export interface InventoryItem {
   quantity: number;
   weight: number;
   equipped: boolean;
+  /** slot occupato quando equipaggiato (auto: armatura->armor, scudo->shield, arma->mano libera) */
+  slot?: EquipSlot;
   /** riferimento a WeaponDef / ArmorDef / SpellDef ecc. */
   refId?: string;
   magic: boolean;

@@ -1,4 +1,4 @@
-import type { Character, Currency, InventoryItem } from '../types.js';
+import type { Character, Currency, EquipSlot, InventoryItem } from '../types.js';
 import type { Registry } from '../registry.js';
 
 export const COPPER_VALUE: Record<keyof Currency, number> = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 };
@@ -88,15 +88,86 @@ export function addItem(char: Character, item: Omit<InventoryItem, 'id'> & { id?
   return { character: next };
 }
 
-export function setEquipped(char: Character, itemId: string, equipped: boolean): Character {
+/** slot di equipaggiamento standard */
+export const EQUIP_SLOTS: { id: EquipSlot; name: string }[] = [
+  { id: 'head', name: 'Testa' },
+  { id: 'amulet', name: 'Amuleto' },
+  { id: 'cloak', name: 'Mantello' },
+  { id: 'armor', name: 'Armatura' },
+  { id: 'gloves', name: 'Guanti' },
+  { id: 'belt', name: 'Cintura' },
+  { id: 'boots', name: 'Stivali' },
+  { id: 'ring1', name: 'Anello 1' },
+  { id: 'ring2', name: 'Anello 2' },
+  { id: 'shield', name: 'Scudo' },
+  { id: 'hand1', name: 'Mano 1' },
+  { id: 'hand2', name: 'Mano 2' },
+];
+
+/** slot occupato da un oggetto (esplicito o derivato dal tipo) */
+export function slotOfItem(item: InventoryItem): EquipSlot | null {
+  if (item.slot) return item.slot;
+  if (item.kind === 'armor') return 'armor';
+  if (item.kind === 'shield') return 'shield';
+  return null;
+}
+
+/** assegna lo slot a un oggetto; se lo slot è occupato da un altro oggetto equipaggiato, quello viene disequipaggiato */
+export function setItemSlot(char: Character, itemId: string, slot: EquipSlot | null): Character {
   return {
     ...char,
     inventory: char.inventory.map((i) => {
-      if (i.id !== itemId) return i;
-      return { ...i, equipped };
+      if (i.id === itemId) return { ...i, slot: slot ?? undefined };
+      if (slot && i.equipped && i.id !== itemId && slotOfItem(i) === slot) return { ...i, equipped: false };
+      return i;
     }),
     updatedAt: new Date().toISOString(),
   };
+}
+
+function freeHandSlot(items: InventoryItem[], exceptId: string): 'hand1' | 'hand2' | null {
+  const used = new Set(
+    items.filter((i) => i.equipped && i.id !== exceptId).map((i) => slotOfItem(i)).filter((s): s is EquipSlot => !!s),
+  );
+  if (!used.has('hand1')) return 'hand1';
+  if (!used.has('hand2')) return 'hand2';
+  return null;
+}
+
+export function setEquipped(char: Character, itemId: string, equipped: boolean): Character {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return char;
+  if (!equipped) {
+    return {
+      ...char,
+      inventory: char.inventory.map((i) => (i.id === itemId ? { ...i, equipped: false } : i)),
+      updatedAt: new Date().toISOString(),
+    };
+  }
+  // equipaggia: determina lo slot (le armi vanno nella prima mano libera) e libera lo slot dagli altri oggetti
+  let slot = slotOfItem(item);
+  if (item.kind === 'weapon' && !item.slot) slot = freeHandSlot(char.inventory, itemId);
+  return {
+    ...char,
+    inventory: char.inventory.map((i) => {
+      if (i.id === itemId) return { ...i, equipped: true, ...(slot ? { slot } : {}) };
+      if (slot && i.equipped && slotOfItem(i) === slot) return { ...i, equipped: false };
+      return i;
+    }),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** conflitti di equipaggiamento: più oggetti equipaggiati nello stesso slot */
+export function equipConflicts(char: Character): { slot: EquipSlot; itemIds: string[] }[] {
+  const bySlot = new Map<EquipSlot, string[]>();
+  for (const i of char.inventory) {
+    if (!i.equipped) continue;
+    const s = slotOfItem(i);
+    if (!s) continue;
+    bySlot.set(s, [...(bySlot.get(s) ?? []), i.id]);
+  }
+  return [...bySlot.entries()].filter(([, ids]) => ids.length > 1).map(([slot, itemIds]) => ({ slot, itemIds }));
 }
 
 export function setAttuned(char: Character, itemId: string, attuned: boolean, reg?: Registry): { character: Character; error?: string } {
