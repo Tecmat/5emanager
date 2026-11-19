@@ -6,18 +6,35 @@ niente server, niente dominio, niente porte da aprire.
 
 ## Come si usa
 
-1. L'**host** apre la tab 🌐 Campagna → toggle **📡 P2P** → "Faccio da host": mette nome campagna,
-   password e il suo nome, poi **Avvia host P2P**.
-2. Ogni **giocatore** (stessa rete WiFi/LAN/hotspot dell'host) apre la stessa tab → 📡 P2P →
-   "Mi unisco a un host" → mette nome e password → **1️⃣ Genera codice invito**, copia il codice
-   e lo manda all'host (WhatsApp/Telegram/…), poi incolla la **risposta dell'host** → **Connetti**.
-3. L'host, dal pannello online, incolla il codice del giocatore in **📨 Aggiungi giocatori**,
-   genera la risposta e la manda al giocatore.
+### 🔍 Modo automatico (consigliato, stessa rete)
+
+1. L'**host** apre la tab 🌐 Campagna → **📡 P2P** → "Faccio da host", mette nome campagna,
+   password e nome, spunta **📡 Annunciati su un server LAN** (inserendo il `ws://…` di un
+   server 5emanager raggiungibile, es. quello di casa) e preme **Avvia host P2P**.
+2. Ogni **giocatore** (stessa rete) apre 📡 P2P → "Mi unisco a un host", mette nome e password,
+   inserisce lo stesso indirizzo del server LAN e preme **🔍 Cerca host**: vede l'host nella
+   lista e preme **▶** — la connessione si apre da sola (il server fa solo da relay dei
+   codici di segnalazione, il traffico di gioco resta P2P diretto tra i dispositivi).
+
+### ✍️ Modo manuale (senza alcun server, solo WhatsApp/QR)
+
+1. L'host avvia l'host P2P e, dal pannello online, preme **➕ Nuovo codice invito**: il codice
+   appare come **testo + QR**, con i bottoni **📋 Copia** e **📤 Condividi** (usa la condivisione
+   nativa dello smartphone).
+2. Il giocatore apre 📡 P2P → "Mi unisco a un host" → **✍️ incolla il codice** (o lo **📷 scansiona
+   dal QR**) → **1️⃣ Genera risposta** → copia/condivide la **risposta**.
+3. L'host incolla la risposta in **Incolla qui la risposta del giocatore** → **✅ Collega giocatore**.
 
 ## Dettagli tecnici
 
 - `apps/web/src/p2p.ts`: `P2PHost`/`P2PClient` su `RTCPeerConnection` + DataChannel.
-  Signaling manuale via codice base64 (`5EP2P1:…`): offer del joiner → answer dell'host.
+  Signaling via codice base64 (`5EP2P1:…`): **offer dell'host → answer del giocatore**
+  (il codice invito è l'offer; la risposta del giocatore è l'answer).
+- QR generato in-app senza dipendenze (`apps/web/src/qr.ts`, `qrEncode`/`qrSvg`); scansione
+  con `BarcodeDetector` quando il browser la supporta (Chrome Android), altrimenti incolla.
+- Discovery: `P2PDiscovery` si collega a un server 5emanager (`p2pAnnounce`/`p2pList`/
+  `p2pJoin`/`p2pOffer`/`p2pAnswer` in `packages/server`): gli host si annunciano (TTL 90 s,
+  ri-annuncio ogni 30 s) e i giocatori li vedono e si uniscono con un click.
 - I messaggi sono gli stessi del server WS (`join`/`welcome`/`state`/`action`/`error`/`pong`/`campaignDeleted`),
   e la logica di campagna è la stessa: `applyCampaignAction` in `packages/core/src/campaign.ts`
   (pura, usata sia dal server Node sia dall'host nel browser).

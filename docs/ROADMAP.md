@@ -22,14 +22,10 @@
 
 ## 💡 Idee nuove (P3 — proposte, da valutare insieme)
 
-- Riposo breve con dadi vita per classe (spesa/ripristino PF)
-- Slot equipaggiamento standard (testa, amuleto, 2 anelli, armatura, scudo, 2 mani) con validazione equip
-- "Simula il PG fino al 20" (validazione custom class: level-up automatico senza errori)
 - Log dei tiri del combattimento persistente per round (estendere `combat.log` con storico separato)
 - Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
-- Timer di turno + beep opzionale al cambio turno
+- Beep/avviso sonoro opzionale al cambio turno (il timer c'è già)
 - Crafting/ricette e compravendita con calcolo del resto
-- Tema automatico chiaro/scuro dal sistema operativo (`prefers-color-scheme`)
 - Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
 - PWA offline completa (service worker che cachea anche i dati SRD)
 - Notifiche push promemoria sessione (Android/desktop)
@@ -39,6 +35,18 @@
 - Schede "pronte" (pregen) da sfogliare e clonare
 - Esportazione campagna intera (log + schede + tesoreria) in un file
 - Statistiche di campagna (danni totali, incantesimi lanciati, round) dal log
+
+## ✅ P3 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
+
+- **P2P semplificato**: codice invito come testo + **QR** + copia/condivisione nativa; flusso host→giocatore→host in 2 passi
+- **Discovery P2P**: gli host si annunciano su un server LAN (`p2pAnnounce`, TTL 90 s) e i giocatori vedono la **lista degli host sulla rete** e si uniscono con un click (il server relay-a solo i codici SDP)
+- Riposo breve con **dadi vita** (`shortRest` in core: PF = tiro + mod Cos per dado, risveglio da 0 PF, cap a PF max) + bottone in Panoramica
+- **Slot equipaggiamento standard** (testa, amuleto, mantello, armatura, guanti, cintura, stivali, 2 anelli, scudo, 2 mani) con validazione: equipaggiare un oggetto libera lo slot (`setEquipped`/`setItemSlot`), warning conflitti (`equipConflicts`), armi in mano libera automatica
+- **Simula il PG fino al 20** (`simulateTo20` in core: ASI automatico, archetipo/stile auto) + test su tutte le classi SRD + bottone 🧪 in tab Custom per validare anche le classi custom
+- **Timer di turno** nel pannello combattimento (avvia/pausa/reset, reset automatico al cambio turno, secondi configurabili)
+- **Tema automatico** dal sistema (`prefers-color-scheme`) se non c'è una scelta salvata
+- Creazione PG migliorata: **stile di combattimento al liv 1** (guerriero) direttamente in creazione
+- **42 archetipi** (3-4 per classe, 8 scuole del mago) in `subclasses-c.json`, selezionabili dal registro
 
 ## ✅ P0 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
 
