@@ -33,6 +33,11 @@ self.addEventListener('message', (e) => {
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== self.location.origin) return;
+  // sw.js sempre dalla rete: se no il service worker non si aggiornerebbe mai
+  if (url.pathname === '/sw.js') {
+    e.respondWith(fetch(e.request, { cache: 'no-store' }).catch(() => caches.match(e.request)));
+    return;
+  }
   if (url.pathname.endsWith('.js') || url.pathname.endsWith('.css') || url.pathname.endsWith('.webmanifest') || url.pathname.startsWith('/icon')) {
     e.respondWith(
       caches.match(e.request).then((hit) => hit || fetch(e.request).then((res) => {

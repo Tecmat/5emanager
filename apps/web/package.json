@@ -13,6 +13,7 @@
   },
   "dependencies": {
     "@capacitor/browser": "^7",
+    "@capacitor/camera": "^7",
     "@dnd5e/core": "*",
     "@dnd5e/data-srd": "*",
     "@tauri-apps/api": "^2",
