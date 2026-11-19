@@ -17,6 +17,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
   const [scores, setScores] = useState<AbilityScores>(DEFAULT_SCORES);
   const [mode, setMode] = useState<StatGenMode>('standard');
   const [skills, setSkills] = useState<string[]>([]);
+  const [fightingStyleId, setFightingStyleId] = useState('');
   const [errors, setErrors] = useState<string[]>([]);
 
   const switchMode = (m: StatGenMode) => {
@@ -48,6 +49,9 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
   const race = reg.races.get(raceId);
   const cls = reg.classes.get(classId);
   const choose = cls?.skillChoices.choose ?? 0;
+  // stile di combattimento al 1° livello, se la classe lo prevede (es. guerriero)
+  const styleOptions = (cls?.features[1] ?? []).flatMap((f) => f.effects).flatMap((e) => (e.type === 'fightingStyle' ? e.options : []));
+  const styleChoice = styleOptions.length ? (fightingStyleId || styleOptions[0]) : '';
 
   const toggleSkill = (id: string) => {
     setSkills((s) => {
@@ -63,7 +67,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
       return;
     }
     const res = createCharacter(
-      { name: name.trim() || 'Senza nome', raceId, subraceId: subraceId || undefined, classId, abilityScores: scores, skillChoices: skills },
+      { name: name.trim() || 'Senza nome', raceId, subraceId: subraceId || undefined, classId, abilityScores: scores, skillChoices: skills, fightingStyleId: styleOptions.length ? styleChoice : undefined },
       reg,
     );
     if (res.errors.length > 0 || !res.character) {
@@ -106,12 +110,22 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
           </div>
           <div>
             <label>{t('cf.class', 'Classe')}</label>
-            <select value={classId} onChange={(e) => setClassId(e.target.value)}>
+            <select value={classId} onChange={(e) => { setClassId(e.target.value); setFightingStyleId(''); }}>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} (d{c.hitDie})</option>
               ))}
             </select>
           </div>
+          {styleOptions.length > 0 && (
+            <div>
+              <label>{t('cf.fightingStyle', 'Stile di combattimento')} (liv 1)</label>
+              <select value={styleChoice} onChange={(e) => setFightingStyleId(e.target.value)}>
+                {styleOptions.map((o) => (
+                  <option key={o} value={o}>{reg.fightingStyles.get(o)?.name ?? o}</option>
+                ))}
+              </select>
+            </div>
+          )}
         </div>
         <label>{t('cf.method', 'Metodo statistiche')}</label>
         <div className="segmented">

@@ -9,8 +9,11 @@ import {
   addCustomSpell,
   addCustomSubclass,
   addCustomWeapon,
+  createCharacter,
   exportCustomContent,
   loadData,
+  simulateTo20,
+  totalLevel,
   type Ability,
   type AttackDef,
   type School,
@@ -28,6 +31,36 @@ export default function CustomTab() {
   const { reg, reloadCustom, t, tf } = useStore();
   const [kind, setKind] = useState<Kind>('spell');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [simResults, setSimResults] = useState<{ classId: string; name: string; ok: boolean; detail: string }[] | null>(null);
+  const [simRunning, setSimRunning] = useState(false);
+
+  /** valida tutte le classi del registro simulando un PG fino al livello 20 */
+  const runSimulation = () => {
+    setSimRunning(true);
+    setSimResults(null);
+    try {
+      const scores = { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 };
+      const out: { classId: string; name: string; ok: boolean; detail: string }[] = [];
+      for (const cls of reg.classes.values()) {
+        const created = createCharacter({ name: 'Sim', raceId: 'human', classId: cls.id, abilityScores: { ...scores } }, reg);
+        if (!created.character) {
+          out.push({ classId: cls.id, name: cls.name, ok: false, detail: created.errors.join('; ') });
+          continue;
+        }
+        const sim = simulateTo20(created.character, reg);
+        const lvl = totalLevel(sim.character);
+        out.push({
+          classId: cls.id,
+          name: cls.name,
+          ok: sim.errors.length === 0 && lvl === 20,
+          detail: sim.errors.length ? sim.errors.join(' | ') : `liv ${lvl} OK`,
+        });
+      }
+      setSimResults(out);
+    } finally {
+      setSimRunning(false);
+    }
+  };
 
   const [spell, setSpell] = useState({ id: '', name: '', level: 0, school: 'evocation' as School, castingTime: '1 azione', range: '9 m', components: 'V, S', duration: 'Istantanea', description: '', damage: '', classes: 'wizard', ritual: false, concentration: false });
   const [weapon, setWeapon] = useState({ id: '', name: '', category: 'martial' as 'simple' | 'martial', type: 'melee' as 'melee' | 'ranged', damage: '1d8', damageType: 'taglio', properties: '', weight: 3, costGp: 15, bonus: 0 });
@@ -362,6 +395,28 @@ export default function CustomTab() {
 
         {msg && <div className={msg.ok ? 'ok' : 'error'} style={{ marginTop: 8, whiteSpace: 'pre-line' }}>{msg.text}</div>}
         <div style={{ marginTop: 10 }}><button className="primary" onClick={submit}>{t('cu.save', 'Salva')}</button></div>
+      </div>
+
+      <div className="card">
+        <h3>{t('cu.simTitle', '🧪 Validazione: simula ogni classe fino al 20')}</h3>
+        <div className="muted" style={{ marginBottom: 8 }}>
+          {t('cu.simHint', 'Crea un PG di prova per ogni classe (incluse quelle custom) e prova a salire automaticamente fino al livello 20: segnala classi con regole rotte (archetipi mancanti, ASI impossibili, XP insufficienti…).')}
+        </div>
+        <button className="primary" onClick={runSimulation} disabled={simRunning}>
+          {simRunning ? t('cu.simRunning', 'Simulo…') : t('cu.simRun', '▶ Avvia simulazione (12+ classi)')}
+        </button>
+        {simResults && (
+          <div style={{ marginTop: 8, fontSize: 12 }}>
+            <div className={simResults.every((r) => r.ok) ? 'ok' : 'error'} style={{ marginBottom: 4 }}>
+              {simResults.filter((r) => r.ok).length}/{simResults.length} {t('cu.simOk', 'classi OK')}
+            </div>
+            {simResults.map((r) => (
+              <div key={r.classId} className={r.ok ? 'ok' : 'error'} style={{ marginTop: 2 }}>
+                {r.ok ? '✅' : '❌'} <b>{r.name}</b> — {r.detail}
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">

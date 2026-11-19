@@ -16,7 +16,11 @@ import {
   totalWeight,
   useCharge,
   castItemSpell,
+  EQUIP_SLOTS,
+  equipConflicts,
   MAX_ATTUNEMENT,
+  setItemSlot,
+  type EquipSlot,
   type ItemKind,
   type ItemRarity,
 } from '@dnd5e/core';
@@ -53,6 +57,7 @@ export default function InventoryTab() {
   if (!char) return null;
   const curWeight = totalWeight(char);
   const cap = carryingCapacity(char);
+  const conflicts = equipConflicts(char);
 
   const add = () => {
     if (!name.trim()) return;
@@ -198,9 +203,14 @@ export default function InventoryTab() {
           </select>
         </div>
         {items.length === 0 && <div className="muted">{t('inv.noMatch', 'Nessun oggetto corrisponde.')}</div>}
+        {conflicts.length > 0 && (
+          <div className="error" style={{ marginBottom: 6 }}>
+            {t('inv.conflict', 'Conflitto di equipaggiamento: più oggetti nello stesso slot')} ({conflicts.map((c) => t('inv.slot.' + c.slot, c.slot)).join(', ')})
+          </div>
+        )}
         <table>
           <thead>
-            <tr><th>{t('inv.thItem', 'Oggetto')}</th><th>{t('inv.thKind', 'Tipo')}</th><th>{t('inv.thQty', 'Qtà')}</th><th>{t('inv.thWeight', 'Peso')}</th><th>{t('inv.thRarity', 'Rarità')}</th><th>{t('inv.thValue', 'Valore')}</th><th>{t('inv.thCharges', 'Cariche')}</th><th>{t('inv.thContainer', 'Contenitore')}</th><th>{t('inv.thEquip', 'Equip.')}</th><th>{t('inv.thMagic', 'Magico')}</th><th>{t('inv.thAtt', 'Sint.')}</th><th></th></tr>
+            <tr><th>{t('inv.thItem', 'Oggetto')}</th><th>{t('inv.thKind', 'Tipo')}</th><th>{t('inv.thQty', 'Qtà')}</th><th>{t('inv.thWeight', 'Peso')}</th><th>{t('inv.thRarity', 'Rarità')}</th><th>{t('inv.thValue', 'Valore')}</th><th>{t('inv.thCharges', 'Cariche')}</th><th>{t('inv.thContainer', 'Contenitore')}</th><th>{t('inv.thEquip', 'Equip.')}</th><th>{t('inv.thSlot', 'Slot')}</th><th>{t('inv.thMagic', 'Magico')}</th><th>{t('inv.thAtt', 'Sint.')}</th><th></th></tr>
           </thead>
           <tbody>
             {items.map((it) => (
@@ -240,6 +250,17 @@ export default function InventoryTab() {
                   {(it.kind === 'weapon' || it.kind === 'armor' || it.kind === 'shield') && (
                     <input type="checkbox" checked={it.equipped} onChange={(e) => setChar(setEquipped(char, it.id, e.target.checked))} style={{ width: 'auto' }} />
                   )}
+                </td>
+                <td>
+                  <select
+                    value={it.slot ?? ''}
+                    onChange={(e) => setChar(setItemSlot(char, it.id, (e.target.value || null) as EquipSlot | null))}
+                    style={{ width: 96 }}
+                    title={t('inv.slotTitle', 'Slot di equipaggiamento occupato (un solo oggetto per slot)')}
+                  >
+                    <option value="">{t('inv.noSlot', '— auto —')}</option>
+                    {EQUIP_SLOTS.map((s) => <option key={s.id} value={s.id}>{t('inv.slot.' + s.id, s.name)}</option>)}
+                  </select>
                 </td>
                 <td>{it.magic ? '✓' : ''}</td>
                 <td>

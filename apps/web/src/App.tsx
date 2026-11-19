@@ -35,7 +35,7 @@ export default function App() {
   const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo } = useStore();
   const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
-  const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
+  const [theme, setTheme] = useState(() => (document.documentElement.dataset.theme === 'light' ? 'light' : localStorage.getItem('dnd5e-theme') ?? 'dark'));
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [lock, setLock] = useState<LockRec>(loadLock);

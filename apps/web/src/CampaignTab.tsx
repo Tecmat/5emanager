@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ABILITIES,
   CONDITIONS,
@@ -24,8 +24,40 @@ import {
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
-import { P2PClient, P2PHost } from './p2p.js';
+import { P2PClient, P2PDiscovery, P2PHost, type P2PHostInfo } from './p2p.js';
+import { qrEncode, qrSvg, scanQr } from './qr.js';
 import TemplateView from './TemplateView.js';
+
+/** QR del testo (per condividere il codice invito) */
+function QrBox({ text }: { text: string }) {
+  const res = useMemo(() => qrEncode(text), [text]);
+  if (!res) return <div className="error" style={{ fontSize: 11 }}>QR non generabile (codice troppo lungo)</div>;
+  const scale = Math.max(1, Math.floor(160 / (res.size + 8)));
+  return (
+    <span
+      style={{ display: 'inline-block', lineHeight: 0, background: '#fff', borderRadius: 6, padding: 4 }}
+      dangerouslySetInnerHTML={{ __html: qrSvg(res, scale) }}
+    />
+  );
+}
+
+async function copyText(s: string): Promise<void> {
+  try { await navigator.clipboard.writeText(s); return; } catch { /* fallback sotto */ }
+  const ta = document.createElement('textarea');
+  ta.value = s;
+  document.body.appendChild(ta);
+  ta.select();
+  try { document.execCommand('copy'); } catch { /* ignora */ }
+  ta.remove();
+}
+
+async function shareText(s: string): Promise<boolean> {
+  const nav = navigator as Navigator & { share?: (d: { text: string }) => Promise<void> };
+  if (nav.share) {
+    try { await nav.share({ text: s }); return true; } catch { return false; }
+  }
+  return false;
+}
 
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
 function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
@@ -91,12 +123,66 @@ export default function CampaignTab() {
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
   const [p2pSub, setP2pSub] = useState<'host' | 'join'>('host');
-  const [offerBlob, setOfferBlob] = useState('');
-  const [answerBlob, setAnswerBlob] = useState('');
-  const [peerOffer, setPeerOffer] = useState('');
-  const [peerAnswer, setPeerAnswer] = useState('');
+  const [invite, setInvite] = useState<{ key: string; code: string } | null>(null);
+  const [joinerAnswer, setJoinerAnswer] = useState('');
+  const [inviteInput, setInviteInput] = useState('');
+  const [myAnswer, setMyAnswer] = useState('');
+  const [hosts, setHosts] = useState<P2PHostInfo[]>([]);
+  const [discState, setDiscState] = useState<'off' | 'on'>('off');
+  const [discBusy, setDiscBusy] = useState(false);
+  const [discMsg, setDiscMsg] = useState('');
+  const [hostNotice, setHostNotice] = useState('');
+  const [announce, setAnnounce] = useState(false);
   const hostRef = useRef<P2PHost | null>(null);
   const p2pClientRef = useRef<P2PClient | null>(null);
+  const discRef = useRef<P2PDiscovery | null>(null);
+  const discHostIdRef = useRef('');
+  const announceTimerRef = useRef<number | undefined>(undefined);
+
+  const stopDiscovery = () => {
+    window.clearInterval(announceTimerRef.current);
+    announceTimerRef.current = undefined;
+    discRef.current?.close();
+    discRef.current = null;
+    setDiscState('off');
+    setHosts([]);
+  };
+
+  /** host: annunciati su un server LAN così i giocatori ti trovano nella lista */
+  const startAnnounce = async () => {
+    setError('');
+    stopDiscovery();
+    try {
+      const disc = new P2PDiscovery();
+      discRef.current = disc;
+      disc.onJoinRequest = (from) => {
+        void (async () => {
+          try {
+            const inv = await hostRef.current!.createInvite();
+            disc.offer(from, inv.code);
+            setHostNotice(t('cg.p2pInviteSent', '📨 Codice invito inviato al giocatore — in attesa della risposta…'));
+          } catch (e) { setError((e as Error).message); }
+        })();
+      };
+      disc.onAnswer = (_from, code) => {
+        void (async () => {
+          try {
+            await hostRef.current!.acceptAnswer(code);
+            setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
+          } catch (e) { setError((e as Error).message); }
+        })();
+      };
+      await disc.connect(url);
+      const nm = campaignName || name || 'Campagna P2P';
+      disc.announce(nm);
+      setDiscState('on');
+      // ri-annuncia ogni 30 s (il server tiene l'annuncio per 90 s)
+      window.clearInterval(announceTimerRef.current);
+      announceTimerRef.current = window.setInterval(() => { if (disc.connected) disc.announce(nm); }, 30_000);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
 
   const startP2PHost = () => {
     setError('');
@@ -114,38 +200,107 @@ export default function CampaignTab() {
     setP2PTransport((m: any) => {
       if (m?.t === 'action') host.applyAction(host.masterId, m.action);
     });
+    if (announce && url.trim()) void startAnnounce();
   };
 
-  const genP2POffer = async () => {
+  /** host: genera un nuovo codice invito da dare al giocatore */
+  const newInvite = async () => {
     setError('');
+    setHostNotice('');
+    try {
+      setInvite(await hostRef.current!.createInvite());
+    } catch (e) { setError((e as Error).message); }
+  };
+
+  /** host: applica la risposta incollata dal giocatore */
+  const acceptJoiner = async () => {
+    setError('');
+    try {
+      await hostRef.current!.acceptAnswer(joinerAnswer, invite?.key);
+      setJoinerAnswer('');
+      setInvite(null);
+      setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
+    } catch (e) { setError((e as Error).message); }
+  };
+
+  const makeP2PClient = () => {
     const client = new P2PClient();
     client.onMessage = (m) => handleNetMessage(m);
     client.onOpen = () => client.send({ t: 'join', name: name || 'Giocatore', password });
     p2pClientRef.current = client;
     setP2PTransport((m) => client.send(m as never));
+    return client;
+  };
+
+  /** giocatore: cerca gli host annunciati su un server LAN */
+  const searchHosts = async () => {
+    setError('');
+    setDiscBusy(true);
+    setDiscMsg('');
+    setHosts([]);
+    stopDiscovery();
     try {
-      setOfferBlob(await client.createOffer());
+      const disc = new P2PDiscovery();
+      discRef.current = disc;
+      disc.onHosts = (h) => setHosts(h);
+      await disc.connect(url);
+      setDiscState('on');
+      setDiscMsg(tf('cg.p2pDiscOn', 'Connesso a {url} — premi ↻ per aggiornare la lista degli host', { url }));
+      disc.list();
     } catch (e) {
       setError((e as Error).message);
+    } finally {
+      setDiscBusy(false);
     }
   };
 
-  const connectP2PJoin = async () => {
+  /** giocatore: unisciti con un click a un host trovato via discovery (il server fa solo da relay dei codici) */
+  const joinDiscoveredHost = (hostId: string, hostName: string) => {
     setError('');
-    const client = p2pClientRef.current;
-    if (!client) { setError('Prima genera il codice invito (passo 1)'); return; }
+    setDiscMsg(tf('cg.p2pJoining', 'Richiesta inviata a "{name}"…', { name: hostName }));
+    discHostIdRef.current = hostId;
+    const client = makeP2PClient();
+    const disc = discRef.current;
+    if (!disc) return;
+    disc.onOffer = (from, _n, code) => {
+      void (async () => {
+        try {
+          const answer = await client.acceptInvite(code);
+          disc.answer(from, answer);
+          setDiscMsg(t('cg.p2pAnswerSent', 'Risposta inviata — apertura del canale in corso…'));
+        } catch (e) { setError((e as Error).message); }
+      })();
+    };
+    disc.join(hostId);
+  };
+
+  /** giocatore: incolla/scansiona il codice invito e genera la risposta */
+  const manualAnswer = async () => {
+    setError('');
     try {
-      await client.acceptAnswer(answerBlob);
-    } catch (e) {
-      setError((e as Error).message);
-    }
+      const client = makeP2PClient();
+      const answer = await client.acceptInvite(inviteInput);
+      setMyAnswer(answer);
+      if (discRef.current?.connected && discHostIdRef.current) discRef.current.answer(discHostIdRef.current, answer);
+    } catch (e) { setError((e as Error).message); }
+  };
+
+  const scanInvite = async () => {
+    try { setInviteInput(await scanQr()); } catch (e) { setError((e as Error).message); }
   };
 
   const exitP2P = () => {
+    stopDiscovery();
     hostRef.current = null;
     p2pClientRef.current?.close();
     p2pClientRef.current = null;
     setP2PTransport(null);
+    setInvite(null);
+    setJoinerAnswer('');
+    setInviteInput('');
+    setMyAnswer('');
+    setHostNotice('');
+    setDiscMsg('');
     disconnect();
   };
   const [password, setPassword] = useState('');
@@ -173,6 +328,9 @@ export default function CampaignTab() {
   const [gGp, setGGp] = useState(0);
   const [genResult, setGenResult] = useState<{ kind: 'name' | 'enc' | 'tre'; text: string; enemies?: { enemyId: string; count: number }[]; xp?: number; currency?: Partial<Currency>; items?: { name: string; quantity?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean }[] } | null>(null);
   const [noteText, setNoteText] = useState('');
+  const [timerSec, setTimerSec] = useState(60);
+  const [timerLeft, setTimerLeft] = useState(60);
+  const [timerOn, setTimerOn] = useState(false);
 
   const onEnter = (fn: () => void) => (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') { e.preventDefault(); fn(); }
@@ -185,6 +343,22 @@ export default function CampaignTab() {
       if (ch && ch !== viewChar) setViewChar(ch, viewLabel);
     }
   }, [conn, viewChar, viewLabel, setViewChar]);
+
+  // timer di turno (locale, per dispositivo): riparte a ogni cambio turno
+  const combatTurnKey = conn.phase === 'online' ? conn.campaign.combat?.turnIndex ?? -1 : -1;
+  useEffect(() => {
+    if (conn.phase === 'online' && conn.campaign.combat) {
+      setTimerLeft(timerSec);
+      setTimerOn(true);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [combatTurnKey]);
+  useEffect(() => {
+    if (!timerOn) return;
+    const iv = window.setInterval(() => setTimerLeft((v) => Math.max(0, v - 1)), 1000);
+    return () => window.clearInterval(iv);
+  }, [timerOn]);
+  useEffect(() => { if (timerLeft === 0 && timerOn) setTimerOn(false); }, [timerLeft, timerOn]);
 
   if (conn.phase !== 'online') {
     if (netMode === 'p2p') {
@@ -208,33 +382,82 @@ export default function CampaignTab() {
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(startP2PHost)} />
                 <label>{t('cg.yourName', 'Il tuo nome')} (master)</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="Master" />
+                <label className="row" style={{ marginTop: 8 }}>
+                  <input type="checkbox" checked={announce} onChange={(e) => setAnnounce(e.target.checked)} style={{ width: 'auto' }} />
+                  <span>{t('cg.p2pAnnounce', '📡 Annunciati su un server LAN: chi è sulla stessa rete ti vede nella lista host e si unisce con un click')}</span>
+                </label>
+                {announce && (
+                  <div className="row" style={{ marginTop: 4 }}>
+                    <input value={url} onChange={(e) => setUrl(e.target.value)} list="saved-servers-p2p" placeholder="ws://192.168.1.10:3001" style={{ flex: 1 }} />
+                    <datalist id="saved-servers-p2p">
+                      {servers.map((s) => <option key={s} value={s} />)}
+                    </datalist>
+                  </div>
+                )}
                 <div style={{ marginTop: 10 }}>
                   <button className="primary" onClick={startP2PHost}>{t('cg.startHost', 'Avvia host P2P')}</button>
                 </div>
                 <div className="muted" style={{ marginTop: 8 }}>
-                  {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Gli amici, sulla tua stessa rete, si uniscono incollando un codice — dopo l'avvio li aggiungi dal pannello con \"Aggiungi giocatori\".")}
+                  {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Dopo l'avvio generi un codice invito (testo o QR) da dare ai giocatori — oppure li lasci trovare dalla lista se annunci l'host.")}
                 </div>
               </>
             )}
             {p2pSub === 'join' && (
               <>
                 <label>{t('cg.yourName', 'Il tuo nome')}</label>
-                <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Eroe" />
+                <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(searchHosts)} placeholder="Eroe" />
                 <label>{t('cg.password', 'Password campagna')}</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} />
-                <div style={{ marginTop: 10 }}>
-                  <button onClick={genP2POffer}>{t('cg.genOffer', '1️⃣ Genera codice invito')}</button>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(searchHosts)} />
+
+                <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
+                  <b>{t('cg.p2pFindHosts', '🔍 Trova host sulla stessa rete')}</b>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('cg.p2pFindHostsHint', "Se nella rete c'è qualcuno che hosta (con l'annuncio attivo), appare qui: un click e sei dentro.")}</div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <input value={url} onChange={(e) => setUrl(e.target.value)} list="saved-servers-p2p" placeholder="ws://192.168.1.10:3001 (server LAN, opzionale)" style={{ flex: 1 }} />
+                    <datalist id="saved-servers-p2p">
+                      {servers.map((s) => <option key={s} value={s} />)}
+                    </datalist>
+                    <button onClick={searchHosts} disabled={discBusy || !url.trim()}>
+                      {discBusy ? t('cg.p2pSearching', 'Cerco…') : t('cg.p2pSearchHosts', '🔍 Cerca host')}
+                    </button>
+                    {discState === 'on' && <button title={t('cg.p2pRefreshHosts', 'Aggiorna lista host')} onClick={() => discRef.current?.list()}>↻</button>}
+                  </div>
+                  {discMsg && <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>{discMsg}</div>}
+                  {hosts.length > 0 && (
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <span className="muted">{tf('cg.p2pHostsFound', '{n} host trovato/i:', { n: hosts.length })}</span>
+                      {hosts.map((h) => (
+                        <button key={h.id} className="tag custom" style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }} onClick={() => joinDiscoveredHost(h.id, h.name)}>
+                          ▶ {h.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {discState === 'on' && !discBusy && hosts.length === 0 && (
+                    <div className="muted" style={{ marginTop: 6 }}>{t('cg.p2pNoHosts', "Nessun host trovato ora: l'host deve aver spuntato l'annuncio (o usa il codice manuale qui sotto).")}</div>
+                  )}
                 </div>
-                {offerBlob && (
-                  <>
-                    <label>{t('cg.copyToHost', 'Copia questo codice e mandalo all\'host (WhatsApp/Telegram…)')}</label>
-                    <textarea readOnly rows={3} value={offerBlob} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
-                  </>
-                )}
-                <label>{t('cg.pasteAnswer', '2️⃣ Incolla qui la risposta dell\'host')})</label>
-                <textarea rows={3} value={answerBlob} onChange={(e) => setAnswerBlob(e.target.value)} style={{ width: '100%' }} />
-                <div style={{ marginTop: 10 }}>
-                  <button className="primary" onClick={connectP2PJoin} disabled={!answerBlob.trim()}>{t('cg.connect', 'Connetti')}</button>
+
+                <div style={{ marginTop: 12 }}>
+                  <b>{t('cg.p2pManual', "✍️ Oppure incolla il codice invito dell'host")}</b>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <textarea rows={3} value={inviteInput} onChange={(e) => setInviteInput(e.target.value)} placeholder="5EP2P1:…" style={{ flex: 1 }} />
+                    <button onClick={scanInvite} title={t('cg.p2pScanTitle', 'Scansiona il QR mostrato dall\'host')}>{t('cg.p2pScan', '📷 QR')}</button>
+                  </div>
+                  <div style={{ marginTop: 6 }}>
+                    <button className="primary" disabled={!inviteInput.trim()} onClick={manualAnswer}>{t('cg.p2pGenAnswer', '1️⃣ Genera risposta')}</button>
+                  </div>
+                  {myAnswer && (
+                    <>
+                      <label style={{ marginTop: 8 }}>{t('cg.p2pAnswerToHost', "2️⃣ Dai questa risposta all'host (copia o condividi):")}</label>
+                      <textarea readOnly rows={3} value={myAnswer} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
+                      <div className="row" style={{ marginTop: 6 }}>
+                        <button onClick={() => copyText(myAnswer)}>{t('cg.p2pCopy', '📋 Copia')}</button>
+                        <button onClick={async () => { if (!(await shareText(myAnswer))) void copyText(myAnswer); }}>{t('cg.p2pShare', '📤 Condividi')}</button>
+                      </div>
+                      <div className="muted" style={{ marginTop: 4 }}>{t('cg.p2pWaitingHost', "Quando l'host incolla la tua risposta, il canale si apre da solo.")}</div>
+                    </>
+                  )}
                 </div>
               </>
             )}
@@ -429,30 +652,40 @@ export default function CampaignTab() {
       {hostRef.current && isMaster && (
         <div className="card">
           <h3>{t('cg.addPlayers', '📨 Aggiungi giocatori (P2P)')}</h3>
-          <label>{t('cg.pasteOffer', 'Incolla qui il codice (offer) del giocatore')}</label>
-          <textarea rows={3} value={peerOffer} onChange={(e) => setPeerOffer(e.target.value)} style={{ width: '100%' }} />
-          <div style={{ marginTop: 6 }}>
-            <button
-              disabled={!peerOffer.trim()}
-              onClick={async () => {
-                try {
-                  const ans = await hostRef.current!.handleOffer(peerOffer);
-                  setPeerAnswer(ans);
-                  setPeerOffer('');
-                } catch (e) {
-                  setError((e as Error).message);
-                }
-              }}
-            >
-              {t('cg.genAnswer', 'Genera risposta per il giocatore')}
-            </button>
-          </div>
-          {peerAnswer && (
-            <>
-              <label style={{ marginTop: 8 }}>{t('cg.answerToCopy', 'Risposta da copiare e mandare al giocatore')}</label>
-              <textarea readOnly rows={3} value={peerAnswer} onFocus={(e) => e.target.select()} style={{ width: '100%' }} />
-            </>
+          {discState === 'on' && (
+            <div className="ok" style={{ marginBottom: 8 }}>
+              {tf('cg.p2pAnnounced', '📡 Annunciato su {url} come "{name}": chi cerca host su questa rete ti vede e si unisce con un click.', { url, name: campaignName || name || campaign.name })}
+            </div>
           )}
+          {hostNotice && <div className="ok" style={{ marginBottom: 8 }}>{hostNotice}</div>}
+          <div className="row">
+            <button className="primary" onClick={newInvite}>{t('cg.p2pNewInvite', '➕ Nuovo codice invito')}</button>
+            {discState !== 'on' && (
+              <button onClick={startAnnounce} disabled={!url.trim()} title={t('cg.p2pAnnounceTitle', 'Annuncia questo host su un server LAN (relay solo dei codici, il gioco resta P2P diretto)')}>
+                {t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}
+              </button>
+            )}
+          </div>
+          {invite && (
+            <div style={{ marginTop: 10 }}>
+              <label>{t('cg.p2pInviteCode', 'Codice invito da dare al giocatore (copia, condividi o mostra il QR):')}</label>
+              <div className="row" style={{ marginTop: 4, alignItems: 'flex-start' }}>
+                <textarea readOnly rows={3} value={invite.code} onFocus={(e) => e.target.select()} style={{ flex: 1 }} />
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}>
+                  <QrBox text={invite.code} />
+                  <div className="row">
+                    <button onClick={() => copyText(invite.code)}>{t('cg.p2pCopy', '📋 Copia')}</button>
+                    <button onClick={async () => { if (!(await shareText(invite.code))) void copyText(invite.code); }}>{t('cg.p2pShare', '📤 Condividi')}</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <label style={{ marginTop: 10 }}>{t('cg.p2pPasteAnswer', 'Incolla qui la risposta del giocatore:')}</label>
+          <textarea rows={3} value={joinerAnswer} onChange={(e) => setJoinerAnswer(e.target.value)} style={{ width: '100%' }} />
+          <div style={{ marginTop: 6 }}>
+            <button className="primary" disabled={!joinerAnswer.trim()} onClick={acceptJoiner}>{t('cg.p2pConnectPlayer', '✅ Collega giocatore')}</button>
+          </div>
           <div className="muted" style={{ marginTop: 6 }}>
             {tf('cg.peersConnected', 'Giocatori connessi: {list}', { list: campaign.players.map((p) => p.name).join(', ') || t('cg.onlyYou', 'solo te') })}
           </div>
@@ -742,6 +975,18 @@ export default function CampaignTab() {
             >
               {t('cg.exportLog', '💾 Esporta log')}
             </button>
+            <span className="tag" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }} title={t('cg.timerTitle', 'Timer del turno (locale)')}>
+              ⏱ {Math.floor(timerLeft / 60)}:{String(timerLeft % 60).padStart(2, '0')}
+            </span>
+            <input
+              type="number" min={5} step={5} value={timerSec}
+              onChange={(e) => { const v = Math.max(5, Number(e.target.value)); setTimerSec(v); setTimerLeft(v); }}
+              style={{ width: 56 }}
+              title={t('cg.timerSec', 'Secondi per turno')}
+            />
+            <button onClick={() => setTimerOn(true)} disabled={timerOn} title={t('cg.timerStart', 'Avvia timer')}>▶</button>
+            <button onClick={() => setTimerOn(false)} disabled={!timerOn} title={t('cg.timerPause', 'Pausa')}>⏸</button>
+            <button onClick={() => { setTimerOn(false); setTimerLeft(timerSec); }} title={t('cg.timerReset', 'Reset timer')}>↺</button>
           </div>
           {showTpl && (isMaster || isMyTurn) && (
             <div className="row" style={{ marginBottom: 8 }}>

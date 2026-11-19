@@ -10,19 +10,37 @@ import {
 /**
  * Modalità P2P: un dispositivo (anche smartphone con hotspot) fa da HOST della campagna
  * direttamente dall'app, via WebRTC DataChannel — niente server, niente dominio.
- * Signaling manuale: il joiner genera un "offer" (codice), l'host risponde con un "answer".
- * I messaggi sono gli stessi del server WS (join/welcome/state/action/error/pong/campaignDeleted).
+ *
+ * Flusso semplificato (v2):
+ *  1. l'HOST genera un "codice invito" (offer WebRTC) — lo mostra come testo/QR e lo condivide;
+ *  2. il giocatore incolla/scansiona l'invito e genera la "risposta" (answer);
+ *  3. l'host incolla/scansiona la risposta → il canale si apre.
+ * Se un server 5emanager è raggiungibile sulla rete, gli host si annunciano lì (P2PDiscovery)
+ * e i giocatori vedono la lista delle campagne e si uniscono con un click (il server fa solo
+ * da relay dei codici SDP, il traffico di gioco resta P2P diretto).
+ *
+ * I messaggi di gioco sono gli stessi del server WS (join/welcome/state/action/error/pong/campaignDeleted).
  */
 
 const PREFIX = '5EP2P1:';
 
+function b64urlEncode(s: string): string {
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function b64urlDecode(s: string): string {
+  const b64 = s.replace(/-/g, '+').replace(/_/g, '/');
+  return atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4));
+}
+
 export function encodeBlob(sdp: RTCSessionDescriptionInit): string {
-  return PREFIX + btoa(JSON.stringify(sdp));
+  return PREFIX + b64urlEncode(JSON.stringify(sdp));
 }
 
 export function decodeBlob(blob: string): RTCSessionDescriptionInit {
-  if (!blob.trim().startsWith(PREFIX)) throw new Error('Codice non valido (manca il prefisso ' + PREFIX + ')');
-  return JSON.parse(atob(blob.trim().slice(PREFIX.length))) as RTCSessionDescriptionInit;
+  const t = blob.trim();
+  if (!t.startsWith(PREFIX)) throw new Error('Codice non valido (manca il prefisso ' + PREFIX + ')');
+  return JSON.parse(b64urlDecode(t.slice(PREFIX.length))) as RTCSessionDescriptionInit;
 }
 
 function waitIce(pc: RTCPeerConnection, timeoutMs = 3000): Promise<void> {
@@ -48,9 +66,9 @@ export class P2PHost {
   campaign: Campaign;
   reg: Registry;
   private peers = new Map<string, RTCDataChannel>(); // playerId -> channel
-  private pending = new Map<RTCDataChannel, string>(); // channel -> peer key prima del join
+  private pending = new Map<string, RTCPeerConnection>(); // inviteKey -> pc in attesa di answer
   private cb: HostCallbacks;
-  private nextPeer = 0;
+  private nextInvite = 0;
 
   constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks }) {
     this.reg = opts.reg;
@@ -76,20 +94,39 @@ export class P2PHost {
 
   masterId: string;
 
-  /** l'host riceve l'offer del joiner e produce l'answer da ridargli */
-  async handleOffer(offerBlob: string): Promise<string> {
+  /**
+   * l'host crea un nuovo invito: ritorna { key, code }.
+   * `code` è l'offer da dare al giocatore (testo o QR).
+   */
+  async createInvite(): Promise<{ key: string; code: string }> {
+    const key = 'inv-' + this.nextInvite++;
     const pc = new RTCPeerConnection();
-    const key = 'peer-' + this.nextPeer++;
-    pc.ondatachannel = (ev) => this.attachChannel(key, ev.channel);
-    await pc.setRemoteDescription(decodeBlob(offerBlob));
-    const answer = await pc.createAnswer();
-    await pc.setLocalDescription(answer);
+    const ch = pc.createDataChannel('game');
+    this.attachChannel(key, ch);
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
     await waitIce(pc);
-    return encodeBlob(pc.localDescription!.toJSON());
+    this.pending.set(key, pc);
+    return { key, code: encodeBlob(pc.localDescription!.toJSON()) };
+  }
+
+  /** l'host applica la risposta del giocatore. Se key manca, usa l'invito più vecchio in attesa. */
+  async acceptAnswer(answerBlob: string, key?: string): Promise<void> {
+    let k = key;
+    if (!k || !this.pending.has(k)) {
+      k = this.pending.keys().next().value;
+    }
+    const pc = k ? this.pending.get(k) : undefined;
+    if (!pc) throw new Error('Nessun invito in attesa: genera prima un codice invito');
+    await pc.setRemoteDescription(decodeBlob(answerBlob));
+    this.pending.delete(k!);
+  }
+
+  pendingInvites(): number {
+    return this.pending.size;
   }
 
   private attachChannel(key: string, ch: RTCDataChannel) {
-    this.pending.set(ch, key);
     ch.onmessage = (ev) => {
       let msg: AnyMsg;
       try { msg = JSON.parse(ev.data); } catch { return; }
@@ -104,8 +141,8 @@ export class P2PHost {
         this.cb.onPeerLeft(playerId);
         this.broadcastState();
       }
-      this.pending.delete(ch);
     };
+    void key;
   }
 
   private handlePeerMessage(ch: RTCDataChannel, playerId: string | undefined, msg: AnyMsg) {
@@ -121,7 +158,6 @@ export class P2PHost {
       const player: PlayerInfo = { id: 'p2p-' + Math.random().toString(36).slice(2, 8), name: String(msg.name || 'Giocatore'), role: 'player' };
       this.campaign.players.push(player);
       this.peers.set(player.id, ch);
-      this.pending.delete(ch);
       ch.send(JSON.stringify({ t: 'welcome', you: player, campaign: this.campaign }));
       this.cb.onPeerJoined(player);
       this.broadcastState();
@@ -179,24 +215,24 @@ export class P2PClient {
   onMessage: (m: any) => void = () => {};
   onOpen: () => void = () => {};
 
-  /** il joiner crea l'offer (codice da dare all'host) */
-  async createOffer(): Promise<string> {
+  /**
+   * il giocatore incolla/scansiona il codice invito dell'host:
+   * applica l'offer e ritorna la risposta (answer) da ridare all'host.
+   */
+  async acceptInvite(inviteBlob: string): Promise<string> {
     this.pc = new RTCPeerConnection();
-    this.dc = this.pc.createDataChannel('game');
-    this.dc.onmessage = (ev) => {
-      try { this.onMessage(JSON.parse(ev.data)); } catch { /* ignora */ }
+    this.pc.ondatachannel = (ev) => {
+      this.dc = ev.channel;
+      this.dc.onmessage = (e) => {
+        try { this.onMessage(JSON.parse(e.data)); } catch { /* ignora */ }
+      };
+      this.dc.onopen = () => this.onOpen();
     };
-    this.dc.onopen = () => this.onOpen();
-    const offer = await this.pc.createOffer();
-    await this.pc.setLocalDescription(offer);
+    await this.pc.setRemoteDescription(decodeBlob(inviteBlob));
+    const answer = await this.pc.createAnswer();
+    await this.pc.setLocalDescription(answer);
     await waitIce(this.pc);
     return encodeBlob(this.pc.localDescription!.toJSON());
-  }
-
-  /** il joiner incolla l'answer dell'host e apre il canale */
-  async acceptAnswer(answerBlob: string): Promise<void> {
-    if (!this.pc) throw new Error('Prima genera il codice invito (offer)');
-    await this.pc.setRemoteDescription(decodeBlob(answerBlob));
   }
 
   send(m: AnyMsg): void {
@@ -212,5 +248,66 @@ export class P2PClient {
     this.pc?.close();
     this.dc = null;
     this.pc = null;
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Discovery: annunciarsi su un server 5emanager raggiungibile (solo relay dei
+// codici SDP — il traffico di gioco resta P2P diretto tra i dispositivi).
+// ---------------------------------------------------------------------------
+
+export interface P2PHostInfo {
+  id: string;
+  name: string;
+}
+
+export class P2PDiscovery {
+  private ws: WebSocket | null = null;
+  onHosts: (hosts: P2PHostInfo[]) => void = () => {};
+  /** l'host riceve una richiesta di join da `from` */
+  onJoinRequest: (from: string) => void = () => {};
+  /** il joiner riceve l'invito (offer) dall'host `from` */
+  onOffer: (from: string, name: string, code: string) => void = () => {};
+  /** l'host riceve la risposta (answer) dal joiner `from` */
+  onAnswer: (from: string, code: string) => void = () => {};
+  onStatus: (connected: boolean) => void = () => {};
+
+  get connected(): boolean {
+    return !!this.ws && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  connect(url: string): Promise<void> {
+    this.close();
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(url);
+      this.ws = ws;
+      const to = setTimeout(() => reject(new Error('Timeout connessione a ' + url)), 5000);
+      ws.onopen = () => { clearTimeout(to); this.onStatus(true); resolve(); };
+      ws.onerror = () => { clearTimeout(to); this.onStatus(false); reject(new Error('Impossibile raggiungere ' + url)); };
+      ws.onclose = () => { this.onStatus(false); this.ws = null; };
+      ws.onmessage = (ev) => {
+        let m: AnyMsg;
+        try { m = JSON.parse(ev.data); } catch { return; }
+        if (m.t === 'p2pHosts') this.onHosts(m.hosts as P2PHostInfo[]);
+        else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from));
+        else if (m.t === 'p2pOffer') this.onOffer(String(m.from), String(m.name ?? ''), String(m.code));
+        else if (m.t === 'p2pAnswer') this.onAnswer(String(m.from), String(m.code));
+      };
+    });
+  }
+
+  private send(m: AnyMsg): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m));
+  }
+
+  announce(name: string): void { this.send({ t: 'p2pAnnounce', name }); }
+  list(): void { this.send({ t: 'p2pList' }); }
+  join(hostId: string): void { this.send({ t: 'p2pJoin', hostId }); }
+  offer(to: string, code: string): void { this.send({ t: 'p2pOffer', to, code }); }
+  answer(to: string, code: string): void { this.send({ t: 'p2pAnswer', to, code }); }
+
+  close(): void {
+    try { this.ws?.close(); } catch { /* ignora */ }
+    this.ws = null;
   }
 }

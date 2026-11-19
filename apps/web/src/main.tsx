@@ -6,7 +6,12 @@ import { NetProvider } from './netStore.js';
 import './styles.css';
 
 const savedTheme = localStorage.getItem('dnd5e-theme');
-if (savedTheme) document.documentElement.dataset.theme = savedTheme;
+if (savedTheme) {
+  document.documentElement.dataset.theme = savedTheme;
+} else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+  // nessun tema salvato: segui il tema di sistema del dispositivo
+  document.documentElement.dataset.theme = 'light';
+}
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -34,7 +34,12 @@ export default function LevelUpDialog({ onClose }: { onClose: () => void }) {
   const needsFightingStyle = feats.some((f) => f.effects.some((e) => e.type === 'fightingStyle'));
   const styleOptions = feats.flatMap((f) => f.effects.flatMap((e) => (e.type === "fightingStyle" ? e.options : [])));
   const needsSubclass = feats.some((f) => f.effects.some((e) => e.type === 'subclass'));
-  const subclassOptions = feats.flatMap((f) => f.effects.flatMap((e) => (e.type === "subclass" ? e.options : [])));
+  // tutti gli archetipi disponibili per la classe (dal registro), non solo quelli listed nell'effetto
+  const subclassOptions = (() => {
+    const fromReg = [...reg.subclasses.values()].filter((s) => s.classId === classId).map((s) => s.id);
+    if (fromReg.length) return fromReg;
+    return feats.flatMap((f) => f.effects.flatMap((e) => (e.type === "subclass" ? e.options : [])));
+  })();
   const hasAsi = feats.some((f) => f.effects.some((e) => e.type === 'asi'));
   const expertiseChoose = feats.reduce((n, f) => n + f.effects.filter((e) => e.type === 'expertise').reduce((a, e) => a + (e.type === 'expertise' ? e.choose : 0), 0), 0);
   const expertiseFrom = feats.flatMap((f) => f.effects.flatMap((e) => (e.type === "expertise" ? e.from : [])));

@@ -21,6 +21,7 @@ import {
   recordDeathSave,
   savingThrowBonus,
   setExhaustion,
+  shortRest,
   skillBonus,
   spellcastingInfoAll,
   speedOf,
@@ -117,6 +118,7 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
   const [showLevelUp, setShowLevelUp] = useState(false);
   const [dmg, setDmg] = useState(0);
   const [healAmt, setHealAmt] = useState(0);
+  const [restDice, setRestDice] = useState(1);
   const [xpAmt, setXpAmt] = useState(300);
   const portraitRef = useRef<HTMLInputElement>(null);
   const [journalText, setJournalText] = useState('');
@@ -354,6 +356,16 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
             <input type="number" style={{ width: 70 }} value={healAmt} onChange={(e) => setHealAmt(Number(e.target.value))} />
             <button onClick={() => setChar(heal(char, healAmt, hpMax))}>{t('ov.heal', 'Cura')}</button>
             <button onClick={() => setChar(longRest(char, reg))}>{t('ov.longRest', 'Riposo lungo')}</button>
+          </div>
+          <div className="row" style={{ marginTop: 6 }}>
+            <input type="number" min={0} max={Math.max(1, level)} title={t('ov.restDiceTitle', 'Dadi vita da spendere (max = livello)')} style={{ width: 60 }} value={restDice} onChange={(e) => setRestDice(Number(e.target.value))} />
+            <button
+              title={t('ov.shortRestTitle', 'Riposo breve: spendi dadi vita e curati del tiro + mod Cos per dado')}
+              onClick={() => setChar(shortRest(char, reg, restDice).character)}
+            >
+              {t('ov.shortRest', 'Riposo breve')}
+            </button>
+            <span className="muted" style={{ fontSize: 12 }}>{tf('ov.hitDice', 'dadi vita: {n} disponibili', { n: Math.max(0, level - 0) })}</span>
           </div>
         </div>
 
