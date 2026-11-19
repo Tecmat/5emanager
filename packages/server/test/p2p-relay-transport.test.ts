@@ -42,7 +42,7 @@ describe('P2P relay transport (senza WebRTC)', () => {
     let hostState: Campaign | null = null;
     const host = new P2PRelayHost({
       campaignName: 'Relay Test', password: 'pw', masterName: 'Master', reg, disc: hostDisc,
-      cb: { onMessage: () => {}, onState: (c: Campaign) => { hostState = c; }, onPeerJoined: () => {}, onPeerLeft: () => {} },
+      cb: { onMessage: () => {}, onState: (c: Campaign) => { hostState = c; }, onPeerJoined: () => {}, onPeerLeft: () => {} }, requireAccept: false,
     });
     hostDisc.announce('Relay Test');
 
@@ -80,6 +80,38 @@ describe('P2P relay transport (senza WebRTC)', () => {
     jDisc.close();
   });
 
+  it('flusso accept del master: pending → acceptJoin → welcome', async () => {
+    const { P2PDiscovery, P2PRelayHost, P2PRelayClient } = await import('../../../apps/web/src/p2p.js');
+    const reg = createSrdRegistry();
+    const wsUrl = `ws://127.0.0.1:${port}`;
+    const hostDisc = new P2PDiscovery();
+    await hostDisc.connect(wsUrl);
+    let pending: { from: string; name: string } | null = null;
+    const host = new P2PRelayHost({
+      campaignName: 'Relay Accept', password: 'pw', masterName: 'M', reg, disc: hostDisc, requireAccept: true,
+      cb: { onMessage: () => {}, onState: () => {}, onPeerJoined: () => {}, onPeerLeft: () => {}, onJoinPending: (r) => { pending = r; } },
+    });
+    hostDisc.announce('Relay Accept');
+    const jDisc = new P2PDiscovery();
+    await jDisc.connect(wsUrl);
+    let hosts: { id: string; name: string }[] = [];
+    jDisc.onHosts = (h) => { hosts = h; };
+    jDisc.list();
+    await waitFor(() => hosts.some((h) => h.name === 'Relay Accept'));
+    const client = new P2PRelayClient(jDisc, hosts.find((h) => h.name === 'Relay Accept')!.id);
+    let welcomed: any = null;
+    client.onMessage = (m: any) => { if (m.t === 'welcome') welcomed = m; };
+    client.join('Eroe', 'pw');
+    await waitFor(() => !!pending);
+    expect(pending!.name).toBe('Eroe');
+    expect(welcomed).toBeNull(); // non entra finché il master non accetta
+    host.acceptJoin(pending!.from);
+    await waitFor(() => !!welcomed);
+    expect(welcomed.you.name).toBe('Eroe');
+    hostDisc.close();
+    jDisc.close();
+  });
+
   it('password sbagliata → error, niente welcome', async () => {
     const { P2PDiscovery, P2PRelayHost, P2PRelayClient } = await import('../../../apps/web/src/p2p.js');
     const reg = createSrdRegistry();
@@ -88,7 +120,7 @@ describe('P2P relay transport (senza WebRTC)', () => {
     await hostDisc.connect(wsUrl);
     new P2PRelayHost({
       campaignName: 'Relay PW', password: 'giusta', masterName: 'M', reg, disc: hostDisc,
-      cb: { onMessage: () => {}, onState: () => {}, onPeerJoined: () => {}, onPeerLeft: () => {} },
+      cb: { onMessage: () => {}, onState: () => {}, onPeerJoined: () => {}, onPeerLeft: () => {} }, requireAccept: false,
     });
     hostDisc.announce('Relay PW');
     const jDisc = new P2PDiscovery();

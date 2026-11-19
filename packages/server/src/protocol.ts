@@ -47,7 +47,7 @@ export type ServerMessage =
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
   | { t: 'notice'; message: string }
   | { t: 'campaignDeleted'; id: string }
-  | { t: 'p2pHosts'; hosts: { id: string; name: string }[] }
+  | { t: 'p2pHosts'; hosts: { id: string; name: string; ip?: string }[] }
   | { t: 'p2pJoinRequest'; from: string; name?: string; password?: string }
   | { t: 'p2pOffer'; from: string; name: string; code: string }
   | { t: 'p2pAnswer'; from: string; code: string }

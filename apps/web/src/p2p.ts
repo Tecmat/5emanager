@@ -65,6 +65,8 @@ interface HostCallbacks {
   onState: (campaign: Campaign) => void;
   onPeerJoined: (p: PlayerInfo) => void;
   onPeerLeft: (playerId: string) => void;
+  /** relay: una richiesta di join è in attesa di essere accettata dal master */
+  onJoinPending?: (req: { from: string; name: string }) => void;
 }
 
 type AnyMsg = Record<string, any>;
@@ -268,6 +270,8 @@ export class P2PClient {
 export interface P2PHostInfo {
   id: string;
   name: string;
+  /** IP LAN dell'host (dal socket del server), utile per mostrarlo nella lista */
+  ip?: string;
 }
 
 export class P2PDiscovery {
@@ -340,11 +344,15 @@ export class P2PRelayHost {
   masterId: string;
   private disc: P2PDiscovery;
   private cb: HostCallbacks;
+  /** se true, il master deve accettare ogni richiesta (pulsanti ✅/✖), default true */
+  requireAccept: boolean;
+  private pending = new Map<string, string>(); // connId -> name
 
-  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks }) {
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks; requireAccept?: boolean }) {
     this.reg = opts.reg;
     this.disc = opts.disc;
     this.cb = opts.cb;
+    this.requireAccept = opts.requireAccept ?? true;
     const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
     this.campaign = {
       id: Math.random().toString(36).slice(2, 10),
@@ -362,11 +370,39 @@ export class P2PRelayHost {
       updatedAt: new Date().toISOString(),
     };
     this.masterId = master.id;
-    this.disc.onJoinRequest = (from, name, password) => this.handleJoin(from, name ?? 'Giocatore', password ?? '');
+    this.disc.onJoinRequest = (from, name, password) => {
+      if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
+        this.pending.set(from, name ?? 'Giocatore');
+        this.pendingPw.set(from, password ?? '');
+        this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
+        return;
+      }
+      this.handleJoin(from, name ?? 'Giocatore', password ?? '');
+    };
     this.disc.onData = (from, msg) => this.handleData(from, msg);
   }
 
+  /** il master accetta la richiesta in attesa: il giocatore entra e riceve il welcome */
+  acceptJoin(from: string): void {
+    const name = this.pending.get(from) ?? 'Giocatore';
+    this.pending.delete(from);
+    this.handleJoin(from, name, this._lastPassword(from));
+  }
+
+  /** il master rifiuta la richiesta */
+  rejectJoin(from: string): void {
+    this.pending.delete(from);
+    this.sendTo(from, { t: 'error', message: 'Richiesta rifiutata dal master' });
+  }
+
+  /** password delle join in attesa (serve per acceptJoin dopo il click) */
+  private pendingPw = new Map<string, string>();
+  private _lastPassword(from: string): string {
+    return this.pendingPw.get(from) ?? this.campaign.passwordHash;
+  }
+
   private handleJoin(from: string, name: string, password: string): void {
+    this.pendingPw.set(from, password);
     if (password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;

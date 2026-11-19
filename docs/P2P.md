@@ -6,19 +6,18 @@ niente server, niente dominio, niente porte da aprire.
 
 ## Come si usa
 
-### 🔍 Modo automatico (consigliato, stessa rete) — un solo tasto
+### 🔍 Modo automatico (consigliato, stessa rete) — un solo tasto, niente IP da scrivere
 
 1. L'**host** apre la tab 🌐 Campagna → **📡 P2P** → "Faccio da host", mette nome campagna,
    password e nome, spunta **📡 Annunciati su un server LAN** e preme **Avvia host P2P**.
-   Il server LAN viene individuato da solo (origin della pagina se la web app è servita dal
-   server, oppure l'ultimo `ws://…` salvato); in alternativa si può indicare a mano.
 2. Ogni **giocatore** (stessa rete) apre 📡 P2P → "Mi unisco a un host", mette nome e password
-   e preme un solo tasto **🔍 Cerca host sulla rete**: la lista si aggiorna da sola ogni 8 s,
-   vede l'host e preme **▶** — la connessione si apre da sola (il server fa solo da relay
-   dei codici di segnalazione, il traffico di gioco resta P2P diretto tra i dispositivi).
-   - Su **Android/AppImage** il server LAN è l'ultimo `ws://…` impostato (campo "Server
-     WebSocket" in alto); se è `localhost` va sostituito con l'IP del server (es.
-     `ws://192.168.1.10:3001`).
+   e preme **🔍 Scansiona rete e cerca host**: l'app trova da sola il proprio IP LAN (via ICE
+   WebRTC), scansiona la sottorete /24 sondando `/api/info` sui server 5emanager, mostra i
+   **server trovati (nome host + IP)** e poi la **lista degli host con nome e IP LAN** —
+   un tap su ▶ e si entra. La lista si aggiorna da sola ogni 8 s.
+3. In modalità relay (senza WebRTC, es. AppImage) il **master vede le richieste in attesa**
+   e le accetta/rifiuta con **✅ Accetta / ✖ Rifiuta** — nessun codice da incollare.
+   Con WebRTC (browser) resta il codice invito/QR come via senza server.
 
 ### ✍️ Modo manuale (senza alcun server, solo WhatsApp/QR)
 
@@ -50,8 +49,12 @@ che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codi
 - QR generato in-app senza dipendenze (`apps/web/src/qr.ts`, `qrEncode`/`qrSvg`); scansione
   con `BarcodeDetector` quando il browser la supporta (Chrome Android), altrimenti incolla.
 - Discovery: `P2PDiscovery` si collega a un server 5emanager (`p2pAnnounce`/`p2pList`/
-  `p2pJoin`/`p2pOffer`/`p2pAnswer` in `packages/server`): gli host si annunciano (TTL 90 s,
-  ri-annuncio ogni 30 s) e i giocatori li vedono e si uniscono con un click.
+  `p2pJoin`/`p2pOffer`/`p2pAnswer`/`p2pData` in `packages/server`): gli host si annunciano
+  (TTL 90 s, ri-annuncio ogni 30 s) con **nome e IP LAN** (dal socket), e i giocatori li
+  vedono e si uniscono con un click.
+- Scansione LAN automatica: `apps/web/src/lan.ts` (`scanLan`) + `packages/core/src/net.ts`
+  (`hostsInSubnet`, `localIpViaWebRTC`); il server espone `GET /api/info`
+  (`{app:'5emanager', name, version, lan}`) per essere riconosciuto durante la scansione.
 - I messaggi sono gli stessi del server WS (`join`/`welcome`/`state`/`action`/`error`/`pong`/`campaignDeleted`),
   e la logica di campagna è la stessa: `applyCampaignAction` in `packages/core/src/campaign.ts`
   (pura, usata sia dal server Node sia dall'host nel browser).

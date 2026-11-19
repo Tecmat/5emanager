@@ -17,3 +17,4 @@ export * from './rules/combat.js';
 export * from './rules/random.js';
 export * from './rules/simulate.js';
 export * from './version.js';
+export * from './net.js';

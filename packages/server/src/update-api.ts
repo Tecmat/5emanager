@@ -3,6 +3,7 @@ import { Readable } from 'node:stream';
 import { inflateRawSync } from 'node:zlib';
 import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
+import { hostname } from 'node:os';
 
 /**
  * Endpoint di check-update lato server (utile quando il repo GitHub è PRIVATO):
@@ -171,6 +172,28 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
   } catch (e) {
     return void json(502, { error: (e as Error).message });
   }
+}
+
+/**
+ * GET /api/info — identità del server (usata dalla scansione LAN automatica:
+ * le app sondano la sottorete e riconoscono i server 5emanager da qui)
+ */
+export function handleInfoApi(port: number, lan: string[]): (req: IncomingMessage, res: ServerResponse) => boolean {
+  return (req, res) => {
+    if (new URL(req.url ?? '/', 'http://localhost').pathname !== '/api/info') return false;
+    if (req.method !== 'GET') return false;
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(
+      JSON.stringify({
+        app: '5emanager',
+        name: hostname(),
+        version: readFileSync(join(process.cwd(), 'package.json'), 'utf8') ? JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).version : '',
+        port,
+        lan,
+      }),
+    );
+    return true;
+  };
 }
 
 /**

@@ -25,6 +25,20 @@ import java.net.URL;
 @CapacitorPlugin(name = "UpdateInstaller")
 public class UpdateInstallerPlugin extends Plugin {
 
+    /** apre le impostazioni di sistema dell'app (per concedere fotocamera/installazione) */
+    @PluginMethod
+    public void openAppSettings(PluginCall call) {
+        try {
+            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getContext().getPackageName()));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(intent);
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("impossibile aprire le impostazioni: " + e.getMessage());
+        }
+    }
+
     @PluginMethod
     public void downloadAndInstall(PluginCall call) {
         String url = call.getString("url");

@@ -54,7 +54,16 @@ function connect(): Promise<{ ws: WebSocket; msgs: any[]; send: (m: unknown) => 
   });
 }
 
-describe('relay discovery P2P', () => {
+describe('relay discovery P2P + /api/info', () => {
+  it('GET /api/info risponde con app=5emanager, nome host e lan', async () => {
+    const r = await fetch(`http://127.0.0.1:${port}/api/info`);
+    expect(r.status).toBe(200);
+    const j = await r.json();
+    expect(j.app).toBe('5emanager');
+    expect(typeof j.name).toBe('string');
+    expect(Array.isArray(j.lan)).toBe(true);
+  });
+
   it('announce → list → join → offer → answer', async () => {
     const host = await connect();
     host.send({ t: 'p2pAnnounce', name: 'Campagna Test' });
@@ -63,6 +72,7 @@ describe('relay discovery P2P', () => {
     joiner.send({ t: 'p2pList' });
     const hosts = await joiner.waitFor((m) => m.t === 'p2pHosts' && m.hosts.length > 0);
     expect(hosts.hosts[0].name).toBe('Campagna Test');
+    expect(hosts.hosts[0].ip).toBe('127.0.0.1'); // IP del client dal socket
     const hostId = hosts.hosts[0].id;
 
     joiner.send({ t: 'p2pJoin', hostId });

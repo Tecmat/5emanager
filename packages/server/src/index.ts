@@ -39,7 +39,7 @@ import {
   sessionUsername,
 } from './accounts.js';
 import { applyAction } from './combat-ops.js';
-import { handleUpdateApi } from './update-api.js';
+import { handleInfoApi, handleUpdateApi } from './update-api.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -125,14 +125,20 @@ interface Conn {
 const conns = new Set<Conn>();
 const campaigns = new Map<string, Campaign>();
 
-/** host P2P annunciati su questa rete: connId -> { name, at } (in memoria, TTL 90s) */
-const p2pHosts = new Map<string, { name: string; at: number }>();
+/** host P2P annunciati su questa rete: connId -> { name, at, ip } (in memoria, TTL 90s) */
+const p2pHosts = new Map<string, { name: string; at: number; ip?: string }>();
 const P2P_HOST_TTL_MS = 90_000;
 
-function p2pHostList(): { id: string; name: string }[] {
+/** IP LAN del client dal socket del WebSocket (sans prefisso ::ffff:) */
+function connIp(conn: Conn): string | undefined {
+  const remote = (conn.ws as unknown as { _socket?: { remoteAddress?: string } })._socket?.remoteAddress;
+  return remote?.replace(/^::ffff:/, '');
+}
+
+function p2pHostList(): { id: string; name: string; ip?: string }[] {
   const now = Date.now();
   for (const [id, h] of p2pHosts) if (now - h.at > P2P_HOST_TTL_MS) p2pHosts.delete(id);
-  return [...p2pHosts.entries()].map(([id, h]) => ({ id, name: h.name }));
+  return [...p2pHosts.entries()].map(([id, h]) => ({ id, name: h.name, ip: h.ip }));
 }
 
 function broadcastP2PHosts(): void {
@@ -203,7 +209,7 @@ function handleMessage(conn: Conn, raw: string): void {
 
   // ---- discovery P2P: relay di annunci e codici SDP (il gioco resta P2P diretto) ----
   if (msg.t === 'p2pAnnounce') {
-    p2pHosts.set(conn.id, { name: String(msg.name || 'Host P2P'), at: Date.now() });
+    p2pHosts.set(conn.id, { name: String(msg.name || 'Host P2P'), at: Date.now(), ip: connIp(conn) });
     broadcastP2PHosts();
     return;
   }
@@ -419,7 +425,12 @@ function handleMessage(conn: Conn, raw: string): void {
 
 export function createDndServer(port = PORT, host = HOST) {
   ensureDataDir();
-  const http = createServer(serveStatic);
+  // /api/info serve alla scansione LAN automatica (le app sondano la rete e trovano i server 5emanager)
+  let infoHandler: (req: IncomingMessage, res: ServerResponse) => boolean = () => false;
+  const http = createServer((req, res) => {
+    if (infoHandler(req, res)) return;
+    serveStatic(req, res);
+  });
   const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 * 1024 });
 
   wss.on('connection', (ws) => {
@@ -450,6 +461,7 @@ export function createDndServer(port = PORT, host = HOST) {
     http.listen(port, host, () => {
       const address = http.address();
       const actualPort = typeof address === 'object' && address ? address.port : port;
+      infoHandler = handleInfoApi(actualPort, lanAddresses(actualPort));
       resolve({ http, wss, port: actualPort });
     });
   });

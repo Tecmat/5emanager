@@ -27,6 +27,7 @@ import { useNet } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { errMsg } from './update.js';
+import { scanLan, type LanServer } from './lan.js';
 import TemplateView from './TemplateView.js';
 
 /** QR del testo (per condividere il codice invito) */
@@ -141,6 +142,10 @@ export default function CampaignTab() {
   const [inviteInput, setInviteInput] = useState('');
   const [myAnswer, setMyAnswer] = useState('');
   const [hosts, setHosts] = useState<P2PHostInfo[]>([]);
+  const [lanServers, setLanServers] = useState<LanServer[]>([]);
+  const [scanning, setScanning] = useState(false);
+  const [scanProg, setScanProg] = useState<{ d: number; t: number } | null>(null);
+  const [pendingJoins, setPendingJoins] = useState<{ from: string; name: string }[]>([]);
   const [discState, setDiscState] = useState<'off' | 'on'>('off');
   const [discBusy, setDiscBusy] = useState(false);
   const [discMsg, setDiscMsg] = useState('');
@@ -216,6 +221,7 @@ export default function CampaignTab() {
     onState: (c: any) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
     onPeerJoined: () => {},
     onPeerLeft: () => {},
+    onJoinPending: (req: { from: string; name: string }) => setPendingJoins((p) => (p.some((x) => x.from === req.from) ? p : [...p, req])),
   };
 
   const startP2PHost = async () => {
@@ -290,6 +296,22 @@ export default function CampaignTab() {
     p2pClientRef.current = client;
     setP2PTransport((m) => client.send(m as never));
     return client;
+  };
+
+  /** un tasto: scansiona la rete locale (trova i server 5emanager), poi cerca gli host */
+  const scanAndSearch = async () => {
+    setScanning(true);
+    setScanProg(null);
+    setLanServers([]);
+    try {
+      const found = await scanLan(3001, (d, t2) => setScanProg({ d, t: t2 }));
+      setLanServers(found);
+      if (found.length > 0) setUrl(`ws://${found[0].ip}:${found[0].port}`);
+    } catch { /* no WebRTC: si può sempre inserire l'IP a mano */ }
+    finally {
+      setScanning(false);
+    }
+    await searchHosts();
   };
 
   /** giocatore: un tasto solo — trova il server LAN da solo e lista gli host (auto-refresh 8 s) */
@@ -503,15 +525,35 @@ export default function CampaignTab() {
 
                 <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
                   <b>{t('cg.p2pFindHosts', '🔍 Trova host sulla stessa rete')}</b>
-                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('cg.p2pFindHostsHint', "Se nella rete c'è qualcuno che hosta (con l'annuncio attivo), appare qui: un click e sei dentro.")}</div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('cg.p2pFindHostsHint', "Un tasto: scansiona la rete locale, trova i server 5emanager e gli host che annunciano la campagna — niente IP da scrivere.")}</div>
                   <div className="row" style={{ marginTop: 6 }}>
-                    <button className="primary" onClick={searchHosts} disabled={discBusy}>
-                      {discBusy ? t('cg.p2pSearching', 'Cerco…') : t('cg.p2pSearchHosts', '🔍 Cerca host sulla rete')}
+                    <button className="primary" onClick={scanAndSearch} disabled={discBusy || scanning}>
+                      {scanning
+                        ? tf('cg.p2pScanning', 'Scansiono la rete… {d}/{t}', { d: scanProg?.d ?? 0, t: scanProg?.t ?? 0 })
+                        : discBusy
+                          ? t('cg.p2pSearching', 'Cerco…')
+                          : t('cg.p2pScanNet', '🔍 Scansiona rete e cerca host')}
                     </button>
                     {discState === 'on' && <button title={t('cg.p2pRefreshHosts', 'Aggiorna lista host')} onClick={() => discRef.current?.list()}>↻</button>}
                   </div>
+                  {lanServers.length > 0 && (
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <span className="muted">{t('cg.p2pServersFound', 'server 5emanager trovati:')}</span>
+                      {lanServers.map((s) => (
+                        <button
+                          key={s.ip + ':' + s.port}
+                          className={`tag ${url.includes(s.ip) ? 'custom' : ''}`}
+                          style={{ cursor: 'pointer' }}
+                          title={t('cg.p2pUseServer', 'Usa questo server per la lista host')}
+                          onClick={() => { setUrl(`ws://${s.ip}:${s.port}`); void searchHosts(); }}
+                        >
+                          🖥 {s.name ?? 'server'} ({s.ip})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                   <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                    {tf('cg.p2pDiscUsing', 'server: {url} (cambia a mano se serve)', { url: url || autoDiscWsUrl() || '—' })}
+                    {tf('cg.p2pDiscUsing', 'server: {url} (manuale se la scansione non trova nulla)', { url: url || autoDiscWsUrl() || '—' })}
                     {servers.length > 0 && (
                       <span> · <select value="" onChange={(e) => { if (e.target.value) setUrl(e.target.value); }} style={{ width: 'auto' }}>
                         <option value="">{t('cg.p2pOtherServer', 'altro server salvato…')}</option>
@@ -525,7 +567,7 @@ export default function CampaignTab() {
                       <span className="muted">{tf('cg.p2pHostsFound', '{n} host trovato/i:', { n: hosts.length })}</span>
                       {hosts.map((h) => (
                         <button key={h.id} className="tag custom" style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }} onClick={() => joinDiscoveredHost(h.id, h.name)}>
-                          ▶ {h.name}
+                          ▶ {h.name}{h.ip ? ` (${h.ip})` : ''}
                         </button>
                       ))}
                     </div>
@@ -764,6 +806,35 @@ export default function CampaignTab() {
             <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
           )}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
+          {pendingJoins.length > 0 && (
+            <div style={{ marginTop: 8 }}>
+              <b>{t('cg.p2pPending', 'Richieste di unione in attesa:')}</b>
+              {pendingJoins.map((pj) => (
+                <div key={pj.from} className="row" style={{ marginTop: 4 }}>
+                  <span className="tag custom">🙋 {pj.name}</span>
+                  <button
+                    className="primary"
+                    onClick={() => {
+                      (hostRef.current as P2PRelayHost).acceptJoin(pj.from);
+                      setPendingJoins((p) => p.filter((x) => x.from !== pj.from));
+                      setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
+                    }}
+                  >
+                    {t('cg.p2pAccept', '✅ Accetta')}
+                  </button>
+                  <button
+                    className="danger"
+                    onClick={() => {
+                      (hostRef.current as P2PRelayHost).rejectJoin(pj.from);
+                      setPendingJoins((p) => p.filter((x) => x.from !== pj.from));
+                    }}
+                  >
+                    {t('cg.p2pReject', '✖ Rifiuta')}
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <div className="muted" style={{ marginTop: 6 }}>
             {tf('cg.peersConnected', 'Giocatori connessi: {list}', { list: campaign.players.map((p) => p.name).join(', ') || t('cg.onlyYou', 'solo te') })}
           </div>

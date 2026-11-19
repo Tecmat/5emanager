@@ -321,7 +321,7 @@ function errText(e: unknown): string {
 
 /** su Android (Capacitor) chiede il permesso CAMERA a runtime: senza di esso getUserMedia fallisce senza prompt */
 async function ensureCameraPermission(): Promise<void> {
-  const { Capacitor } = await import('@capacitor/core');
+  const { Capacitor, registerPlugin } = await import('@capacitor/core');
   if (!Capacitor.isNativePlatform()) return;
   try {
     const { Camera } = await import('@capacitor/camera');
@@ -329,7 +329,12 @@ async function ensureCameraPermission(): Promise<void> {
     if (p.camera !== 'granted') {
       const r = await Camera.requestPermissions({ permissions: ['camera'] });
       if (r.camera !== 'granted') {
-        throw new Error('Permesso fotocamera negato: concedilo da Impostazioni → App → 5e Manager → Autorizzazioni → Fotocamera');
+        // negato (anche "non chiedere più"): apri le impostazioni dell'app e spiega
+        try {
+          const installer = registerPlugin<{ openAppSettings(): Promise<void> }>('UpdateInstaller');
+          await installer.openAppSettings();
+        } catch { /* ignora */ }
+        throw new Error('Permesso fotocamera negato: è stato aperto Impostazioni → App → 5e Manager → Autorizzazioni → Fotocamera, concedilo e riprova');
       }
     }
   } catch (e) {

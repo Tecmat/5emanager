@@ -17,7 +17,14 @@ s = manifest.read_text()
 if "REQUEST_INSTALL_PACKAGES" not in s:
     s = re.sub(
         r"(<manifest[^>]*>)",
-        r'\1\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />',
+        r'\1\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.CAMERA" />',
+        s,
+        count=1,
+    )
+elif "android.permission.CAMERA" not in s:
+    s = re.sub(
+        r"(<manifest[^>]*>)",
+        r'\1\n    <uses-permission android:name="android.permission.CAMERA" />',
         s,
         count=1,
     )
@@ -73,4 +80,4 @@ if "UpdateInstallerPlugin" not in t:
         )
     ma.write_text(t)
 
-print("android patch ok: UpdateInstaller + FileProvider + REQUEST_INSTALL_PACKAGES")
+print("android patch ok: UpdateInstaller + FileProvider + REQUEST_INSTALL_PACKAGES + CAMERA")
