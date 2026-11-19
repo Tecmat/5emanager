@@ -216,7 +216,13 @@ function handleMessage(conn: Conn, raw: string): void {
       send(conn.ws, { t: 'error', message: 'Host non trovato (forse si è disconnesso)' });
       return;
     }
-    p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest' });
+    // relay della richiesta con nome/password: in modalità relay (senza WebRTC) l'host risponde direttamente via p2pData
+    p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    return;
+  }
+  if (msg.t === 'p2pData') {
+    // relay opaque del traffico di gioco P2P (usato quando WebRTC non è disponibile, es. AppImage WebKitGTK)
+    p2pRelay(conn, String(msg.to), { t: 'p2pData', data: String(msg.data ?? '') });
     return;
   }
   if (msg.t === 'p2pOffer') {

@@ -24,7 +24,7 @@ import {
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
-import { P2PClient, P2PDiscovery, P2PHost, type P2PHostInfo } from './p2p.js';
+import { P2PClient, P2PDiscovery, P2PHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { errMsg } from './update.js';
 import TemplateView from './TemplateView.js';
@@ -146,8 +146,9 @@ export default function CampaignTab() {
   const [discMsg, setDiscMsg] = useState('');
   const [hostNotice, setHostNotice] = useState('');
   const [announce, setAnnounce] = useState(false);
-  const hostRef = useRef<P2PHost | null>(null);
-  const p2pClientRef = useRef<P2PClient | null>(null);
+  const hostRef = useRef<P2PHost | P2PRelayHost | null>(null);
+  const [hostMode, setHostMode] = useState<'rtc' | 'relay'>('rtc');
+  const p2pClientRef = useRef<P2PClient | P2PRelayClient | null>(null);
   const discRef = useRef<P2PDiscovery | null>(null);
   const discHostIdRef = useRef('');
   const announceTimerRef = useRef<number | undefined>(undefined);
@@ -177,23 +178,26 @@ export default function CampaignTab() {
     try {
       const disc = new P2PDiscovery();
       discRef.current = disc;
-      disc.onJoinRequest = (from) => {
-        void (async () => {
-          try {
-            const inv = await hostRef.current!.createInvite();
-            disc.offer(from, inv.code);
-            setHostNotice(t('cg.p2pInviteSent', '📨 Codice invito inviato al giocatore — in attesa della risposta…'));
-          } catch (e) { setError((e as Error).message); }
-        })();
-      };
-      disc.onAnswer = (_from, code) => {
-        void (async () => {
-          try {
-            await hostRef.current!.acceptAnswer(code);
-            setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
-          } catch (e) { setError((e as Error).message); }
-        })();
-      };
+      // handshake SDP solo se WebRTC c'è; in modalità relay gli handler li mette P2PRelayHost
+      if (webrtcSupported() && hostMode === 'rtc') {
+        disc.onJoinRequest = (from) => {
+          void (async () => {
+            try {
+              const inv = await (hostRef.current as P2PHost).createInvite();
+              disc.offer(from, inv.code);
+              setHostNotice(t('cg.p2pInviteSent', '📨 Codice invito inviato al giocatore — in attesa della risposta…'));
+            } catch (e) { setError(errMsg(e)); }
+          })();
+        };
+        disc.onAnswer = (_from, code) => {
+          void (async () => {
+            try {
+              await (hostRef.current as P2PHost).acceptAnswer(code);
+              setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
+            } catch (e) { setError(errMsg(e)); }
+          })();
+        };
+      }
       await disc.connect(u);
       const nm = campaignName || name || 'Campagna P2P';
       disc.announce(nm);
@@ -207,18 +211,51 @@ export default function CampaignTab() {
     }
   };
 
-  const startP2PHost = () => {
+  const hostCb = {
+    onMessage: () => {},
+    onState: (c: any) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
+    onPeerJoined: () => {},
+    onPeerLeft: () => {},
+  };
+
+  const startP2PHost = async () => {
     setError('');
+    // senza WebRTC (es. AppImage WebKitGTK) si usa il trasporto relay sul server LAN
+    if (!webrtcSupported()) {
+      const u = url.trim() || autoDiscWsUrl();
+      if (!u) {
+        setError(t('cg.p2pNoServerNoWebrtc', 'WebRTC non disponibile su questo dispositivo e nessun server LAN individuato: imposta il ws:// del server (es. ws://192.168.1.10:3001) oppure usa 🌐 Server remoto'));
+        return;
+      }
+      setUrl(u);
+      try {
+        const disc = new P2PDiscovery();
+        discRef.current = disc;
+        await disc.connect(u);
+        const host = new P2PRelayHost({ campaignName, password, masterName: name || 'Master', reg, disc, cb: hostCb });
+        hostRef.current = host;
+        setHostMode('relay');
+        setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+        setP2PTransport((m: any) => {
+          if (m?.t === 'action') host.applyAction(host.masterId, m.action);
+        });
+        const nm = campaignName || name || 'Campagna P2P';
+        disc.announce(nm);
+        setDiscState('on');
+        setDiscMsg(tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url: u }));
+        window.clearInterval(announceTimerRef.current);
+        announceTimerRef.current = window.setInterval(() => { if (disc.connected) disc.announce(nm); }, 30_000);
+      } catch (e) {
+        setError(errMsg(e));
+      }
+      return;
+    }
     const host = new P2PHost({
       campaignName, password, masterName: name || 'Master', reg,
-      cb: {
-        onMessage: () => {},
-        onState: (c) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
-        onPeerJoined: () => {},
-        onPeerLeft: () => {},
-      },
+      cb: hostCb,
     });
     hostRef.current = host;
+    setHostMode('rtc');
     setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
     setP2PTransport((m: any) => {
       if (m?.t === 'action') host.applyAction(host.masterId, m.action);
@@ -231,19 +268,19 @@ export default function CampaignTab() {
     setError('');
     setHostNotice('');
     try {
-      setInvite(await hostRef.current!.createInvite());
-    } catch (e) { setError((e as Error).message); }
+      setInvite(await (hostRef.current as P2PHost).createInvite());
+    } catch (e) { setError(errMsg(e)); }
   };
 
   /** host: applica la risposta incollata dal giocatore */
   const acceptJoiner = async () => {
     setError('');
     try {
-      await hostRef.current!.acceptAnswer(joinerAnswer, invite?.key);
+      await (hostRef.current as P2PHost).acceptAnswer(joinerAnswer, invite?.key);
       setJoinerAnswer('');
       setInvite(null);
       setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
-    } catch (e) { setError((e as Error).message); }
+    } catch (e) { setError(errMsg(e)); }
   };
 
   const makeP2PClient = () => {
@@ -286,14 +323,23 @@ export default function CampaignTab() {
     }
   };
 
-  /** giocatore: unisciti con un click a un host trovato via discovery (il server fa solo da relay dei codici) */
+  /** giocatore: unisciti con un click a un host trovato via discovery (il server fa solo da relay) */
   const joinDiscoveredHost = (hostId: string, hostName: string) => {
     setError('');
     setDiscMsg(tf('cg.p2pJoining', 'Richiesta inviata a "{name}"…', { name: hostName }));
     discHostIdRef.current = hostId;
-    const client = makeP2PClient();
     const disc = discRef.current;
     if (!disc) return;
+    // senza WebRTC: niente SDP, si entra direttamente col join relayato
+    if (!webrtcSupported()) {
+      const client = new P2PRelayClient(disc, hostId);
+      client.onMessage = (m) => handleNetMessage(m);
+      p2pClientRef.current = client;
+      setP2PTransport((m) => client.send(m as never));
+      client.join(name || 'Giocatore', password);
+      return;
+    }
+    const client = makeP2PClient();
     disc.onOffer = (from, _n, code) => {
       void (async () => {
         try {
@@ -324,6 +370,7 @@ export default function CampaignTab() {
   const exitP2P = () => {
     stopDiscovery();
     hostRef.current = null;
+    setHostMode('rtc');
     p2pClientRef.current?.close();
     p2pClientRef.current = null;
     setP2PTransport(null);
@@ -398,6 +445,11 @@ export default function CampaignTab() {
         <div className="grid" style={{ maxWidth: 560 }}>
           <div className="card">
             <h3>{t('cg.p2pTitle', '📡 Campagna P2P — senza server')}</h3>
+            {!webrtcSupported() && (
+              <div className="error" style={{ marginBottom: 8 }}>
+                ⚠️ {t('cg.p2pNoWebrtc', 'WebRTC non supportato su questo dispositivo (es. AppImage su WebKitGTK): il P2P usa il trasporto relay sul server LAN — assicurati di aver impostato il ws:// del server.')}
+              </div>
+            )}
             <div className="row" style={{ marginBottom: 8 }}>
               <button onClick={() => setNetMode('server')}>{t('cg.remoteServer', '🌐 Server remoto')}</button>
               <button className="primary">{t('cg.p2pHost', '📡 P2P (host sul mio dispositivo)')}</button>
@@ -483,6 +535,7 @@ export default function CampaignTab() {
                   )}
                 </div>
 
+                {webrtcSupported() && (
                 <div style={{ marginTop: 12 }}>
                   <b>{t('cg.p2pManual', "✍️ Oppure incolla il codice invito dell'host")}</b>
                   <div className="row" style={{ marginTop: 6 }}>
@@ -504,6 +557,12 @@ export default function CampaignTab() {
                     </>
                   )}
                 </div>
+                )}
+                {!webrtcSupported() && (
+                  <div className="muted" style={{ marginTop: 12 }}>
+                    {t('cg.p2pRelayHint', 'Su questo dispositivo il P2P funziona solo via server LAN (relay): usa "🔍 Cerca host sulla rete" qui sopra. Il codice manuale serve solo con WebRTC (browser Chrome/Firefox).')}
+                  </div>
+                )}
               </>
             )}
             {error && <div className="error" style={{ marginTop: 8 }}>{error}</div>}
@@ -694,7 +753,24 @@ export default function CampaignTab() {
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
       </div>
 
-      {hostRef.current && isMaster && (
+      {hostRef.current && isMaster && hostMode === 'relay' && (
+        <div className="card">
+          <h3>{t('cg.addPlayers', '📨 Aggiungi giocatori (P2P relay)')}</h3>
+          {discState === 'on' ? (
+            <div className="ok" style={{ marginBottom: 8 }}>
+              📡 {tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url })} — {t('cg.p2pRelayPlayersHint', 'chi cerca host sulla rete ti vede e entra con un click (trasporto relay via server, perché WebRTC non è disponibile qui).')}
+            </div>
+          ) : (
+            <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
+          )}
+          {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
+          <div className="muted" style={{ marginTop: 6 }}>
+            {tf('cg.peersConnected', 'Giocatori connessi: {list}', { list: campaign.players.map((p) => p.name).join(', ') || t('cg.onlyYou', 'solo te') })}
+          </div>
+        </div>
+      )}
+
+      {hostRef.current && isMaster && hostMode === 'rtc' && (
         <div className="card">
           <h3>{t('cg.addPlayers', '📨 Aggiungi giocatori (P2P)')}</h3>
           {discState === 'on' && (

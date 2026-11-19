@@ -376,6 +376,10 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.p2pAnnouncedOn': 'Annunciato su {url}',
     'cg.p2pDiscUsing': 'server: {url} (cambia a mano se serve)',
     'cg.p2pOtherServer': 'altro server salvato…',
+    'cg.p2pNoWebrtc': 'WebRTC non supportato su questo dispositivo (es. AppImage su WebKitGTK): il P2P usa il trasporto relay sul server LAN — assicurati di aver impostato il ws:// del server.',
+    'cg.p2pNoServerNoWebrtc': 'WebRTC non disponibile su questo dispositivo e nessun server LAN individuato: imposta il ws:// del server (es. ws://192.168.1.10:3001) oppure usa 🌐 Server remoto',
+    'cg.p2pRelayHint': 'Su questo dispositivo il P2P funziona solo via server LAN (relay): usa "🔍 Cerca host sulla rete" qui sopra. Il codice manuale serve solo con WebRTC (browser Chrome/Firefox).',
+    'cg.p2pRelayPlayersHint': 'chi cerca host sulla rete ti vede e entra con un click (trasporto relay via server, perché WebRTC non è disponibile qui).',
     // ---- timer turno ----
     'cg.timerTitle': 'Timer del turno (locale)',
     'cg.timerSec': 'Secondi per turno',
@@ -975,6 +979,10 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.p2pAnnouncedOn': 'Announced on {url}',
     'cg.p2pDiscUsing': 'server: {url} (edit manually if needed)',
     'cg.p2pOtherServer': 'other saved server…',
+    'cg.p2pNoWebrtc': 'WebRTC not supported on this device (e.g. AppImage on WebKitGTK): P2P uses the relay transport over the LAN server — make sure the server ws:// URL is set.',
+    'cg.p2pNoServerNoWebrtc': 'WebRTC not available on this device and no LAN server found: set the server ws:// URL (e.g. ws://192.168.1.10:3001) or use 🌐 Remote server',
+    'cg.p2pRelayHint': 'On this device P2P only works via the LAN server (relay): use "🔍 Find hosts on the network" above. The manual code only works with WebRTC (Chrome/Firefox).',
+    'cg.p2pRelayPlayersHint': 'whoever searches hosts on the network sees you and joins with one click (relay transport via server, because WebRTC is unavailable here).',
     // ---- turn timer ----
     'cg.timerTitle': 'Turn timer (local)',
     'cg.timerSec': 'Seconds per turn',

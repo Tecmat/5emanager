@@ -22,12 +22,13 @@ export type ClientMessage =
   | { t: 'adminAccountDetail'; username: string }
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
   | { t: 'action'; action: ClientAction }
-  // discovery P2P: gli host P2P si annunciano qui (solo relay dei codici SDP, il gioco resta P2P diretto)
+  // discovery P2P: gli host P2P si annunciano qui (relay di codici SDP e, se WebRTC manca, di tutto il traffico)
   | { t: 'p2pAnnounce'; name: string }
   | { t: 'p2pList' }
-  | { t: 'p2pJoin'; hostId: string }
+  | { t: 'p2pJoin'; hostId: string; name?: string; password?: string }
   | { t: 'p2pOffer'; to: string; code: string }
-  | { t: 'p2pAnswer'; to: string; code: string };
+  | { t: 'p2pAnswer'; to: string; code: string }
+  | { t: 'p2pData'; to: string; data: string };
 
 
 export type ServerMessage =
@@ -47,7 +48,8 @@ export type ServerMessage =
   | { t: 'notice'; message: string }
   | { t: 'campaignDeleted'; id: string }
   | { t: 'p2pHosts'; hosts: { id: string; name: string }[] }
-  | { t: 'p2pJoinRequest'; from: string }
+  | { t: 'p2pJoinRequest'; from: string; name?: string; password?: string }
   | { t: 'p2pOffer'; from: string; name: string; code: string }
   | { t: 'p2pAnswer'; from: string; code: string }
+  | { t: 'p2pData'; from: string; data: string }
   | { t: 'error'; message: string };

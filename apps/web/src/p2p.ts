@@ -24,6 +24,13 @@ import {
 
 const PREFIX = '5EP2P1:';
 
+/** WebRTC disponibile? Su WebKitGTK (AppImage Linux) spesso RTCPeerConnection manca: il P2P diretto non funziona lì */
+export function webrtcSupported(): boolean {
+  return typeof RTCPeerConnection !== 'undefined';
+}
+
+const NO_WEBRTC = 'WebRTC non supportato in questo ambiente (RTCPeerConnection mancante — es. AppImage su WebKitGTK): usa la modalità 🌐 server remoto';
+
 function b64urlEncode(s: string): string {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -99,6 +106,7 @@ export class P2PHost {
    * `code` è l'offer da dare al giocatore (testo o QR).
    */
   async createInvite(): Promise<{ key: string; code: string }> {
+    if (!webrtcSupported()) throw new Error(NO_WEBRTC);
     const key = 'inv-' + this.nextInvite++;
     const pc = new RTCPeerConnection();
     const ch = pc.createDataChannel('game');
@@ -220,6 +228,7 @@ export class P2PClient {
    * applica l'offer e ritorna la risposta (answer) da ridare all'host.
    */
   async acceptInvite(inviteBlob: string): Promise<string> {
+    if (!webrtcSupported()) throw new Error(NO_WEBRTC);
     this.pc = new RTCPeerConnection();
     this.pc.ondatachannel = (ev) => {
       this.dc = ev.channel;
@@ -264,12 +273,14 @@ export interface P2PHostInfo {
 export class P2PDiscovery {
   private ws: WebSocket | null = null;
   onHosts: (hosts: P2PHostInfo[]) => void = () => {};
-  /** l'host riceve una richiesta di join da `from` */
-  onJoinRequest: (from: string) => void = () => {};
+  /** l'host riceve una richiesta di join da `from` (con name/password: in modalità relay il join avviene qui) */
+  onJoinRequest: (from: string, name?: string, password?: string) => void = () => {};
   /** il joiner riceve l'invito (offer) dall'host `from` */
   onOffer: (from: string, name: string, code: string) => void = () => {};
   /** l'host riceve la risposta (answer) dal joiner `from` */
   onAnswer: (from: string, code: string) => void = () => {};
+  /** relay opaque del traffico di gioco (usato quando WebRTC non è disponibile) */
+  onData: (from: string, msg: any) => void = () => {};
   onStatus: (connected: boolean) => void = () => {};
 
   get connected(): boolean {
@@ -289,9 +300,12 @@ export class P2PDiscovery {
         let m: AnyMsg;
         try { m = JSON.parse(ev.data); } catch { return; }
         if (m.t === 'p2pHosts') this.onHosts(m.hosts as P2PHostInfo[]);
-        else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from));
+        else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from), m.name, m.password);
         else if (m.t === 'p2pOffer') this.onOffer(String(m.from), String(m.name ?? ''), String(m.code));
         else if (m.t === 'p2pAnswer') this.onAnswer(String(m.from), String(m.code));
+        else if (m.t === 'p2pData') {
+          try { this.onData(String(m.from), JSON.parse(String(m.data))); } catch { /* ignora */ }
+        }
       };
     });
   }
@@ -302,12 +316,136 @@ export class P2PDiscovery {
 
   announce(name: string): void { this.send({ t: 'p2pAnnounce', name }); }
   list(): void { this.send({ t: 'p2pList' }); }
-  join(hostId: string): void { this.send({ t: 'p2pJoin', hostId }); }
+  join(hostId: string, name?: string, password?: string): void { this.send({ t: 'p2pJoin', hostId, name, password }); }
   offer(to: string, code: string): void { this.send({ t: 'p2pOffer', to, code }); }
   answer(to: string, code: string): void { this.send({ t: 'p2pAnswer', to, code }); }
+  /** relay di un messaggio di gioco verso `to` (trasporto P2P quando WebRTC manca) */
+  sendData(to: string, msg: unknown): void { this.send({ t: 'p2pData', to, data: JSON.stringify(msg) }); }
 
   close(): void {
     try { this.ws?.close(); } catch { /* ignora */ }
     this.ws = null;
   }
+}
+
+// ---------------------------------------------------------------------------
+// Trasporto RELAY: quando WebRTC manca (es. AppImage su WebKitGTK), la campagna
+// P2P viaggia tutta sul WebSocket del server LAN (che fa solo da relay opaco).
+// Stessi messaggi di P2PHost/P2PClient, incapsulati in p2pData.
+// ---------------------------------------------------------------------------
+
+export class P2PRelayHost {
+  campaign: Campaign;
+  reg: Registry;
+  masterId: string;
+  private disc: P2PDiscovery;
+  private cb: HostCallbacks;
+
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks }) {
+    this.reg = opts.reg;
+    this.disc = opts.disc;
+    this.cb = opts.cb;
+    const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
+    this.campaign = {
+      id: Math.random().toString(36).slice(2, 10),
+      name: opts.campaignName || 'Campagna P2P',
+      passwordHash: opts.password, // in memoria, confrontata in chiaro (campagna effimera)
+      houseRules: { ...DEFAULT_HOUSE_RULES },
+      custom: {},
+      players: [master],
+      characters: {},
+      combat: null,
+      groupInventory: [],
+      groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+      notes: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    this.masterId = master.id;
+    this.disc.onJoinRequest = (from, name, password) => this.handleJoin(from, name ?? 'Giocatore', password ?? '');
+    this.disc.onData = (from, msg) => this.handleData(from, msg);
+  }
+
+  private handleJoin(from: string, name: string, password: string): void {
+    if (password !== this.campaign.passwordHash) {
+      this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
+      return;
+    }
+    if (this.campaign.players.some((p) => p.id !== this.masterId && p.name.toLowerCase() === name.toLowerCase())) {
+      this.sendTo(from, { t: 'error', message: 'Nome già in uso in questa campagna' });
+      return;
+    }
+    const player: PlayerInfo = { id: from, name, role: 'player' };
+    this.campaign.players.push(player);
+    this.sendTo(from, { t: 'welcome', you: player, campaign: this.campaign });
+    this.cb.onPeerJoined(player);
+    this.broadcastState();
+  }
+
+  private handleData(from: string, msg: AnyMsg): void {
+    if (msg.t === 'ping') {
+      this.sendTo(from, { t: 'pong', id: msg.id, serverTime: Date.now() });
+      return;
+    }
+    if (msg.t === 'action') this.applyAction(from, msg.action as ClientAction);
+  }
+
+  applyAction(playerId: string, action: ClientAction): void {
+    if (action.kind === 'deleteCampaign') {
+      this.broadcast({ t: 'campaignDeleted', id: this.campaign.id });
+      return;
+    }
+    const [next, err] = applyCampaignAction(this.campaign, playerId, this.reg, action);
+    if (err) {
+      this.sendTo(playerId, { t: 'error', message: err });
+      return;
+    }
+    this.campaign = next;
+    this.campaign.updatedAt = new Date().toISOString();
+    this.broadcastState();
+  }
+
+  sendTo(playerId: string, m: AnyMsg): void {
+    this.disc.sendData(playerId, m);
+  }
+
+  broadcast(m: AnyMsg): void {
+    for (const p of this.campaign.players) if (p.id !== this.masterId) this.sendTo(p.id, m);
+  }
+
+  broadcastState(): void {
+    this.broadcast({ t: 'state', campaign: this.campaign });
+    this.cb.onState(this.campaign);
+  }
+
+  peerList(): PlayerInfo[] {
+    return this.campaign.players;
+  }
+}
+
+export class P2PRelayClient {
+  onMessage: (m: any) => void = () => {};
+  private disc: P2PDiscovery;
+  private hostId: string;
+
+  constructor(disc: P2PDiscovery, hostId: string) {
+    this.disc = disc;
+    this.hostId = hostId;
+    this.disc.onData = (_from, msg) => this.onMessage(msg);
+  }
+
+  /** entra direttamente: in modalità relay non servono offer/answer SDP */
+  join(name: string, password: string): void {
+    this.disc.join(this.hostId, name, password);
+  }
+
+  send(m: AnyMsg): void {
+    this.disc.sendData(this.hostId, m);
+  }
+
+  get open(): boolean {
+    return this.disc.connected;
+  }
+
+  close(): void { /* non chiude la connessione discovery (condivisa) */ }
 }
