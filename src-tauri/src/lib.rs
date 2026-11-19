@@ -254,23 +254,48 @@ async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, S
     Ok(dest.to_string_lossy().to_string())
 }
 
+fn chmod755(p: &std::path::Path) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(p, std::fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
+    }
+    let _ = p;
+    Ok(())
+}
+
+fn launch_and_exit(p: &std::path::Path) -> ! {
+    if let Err(e) = std::process::Command::new(p).spawn() {
+        eprintln!("[update] avvio di {p:?} fallito: {e}");
+    }
+    std::process::exit(0);
+}
+
 /// sostituisce l'AppImage in esecuzione con quello scaricato e riavvia (questa funzione non ritorna)
 #[tauri::command]
-fn apply_update() -> Result<(), String> {
+fn apply_update(app: tauri::AppHandle) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
     let tmp = update_tmp_path()?;
     if !tmp.exists() {
         return Err("Nessun aggiornamento scaricato (usa prima Scarica e installa)".into());
     }
-    // rename sul posto: su Linux si può sostituire un binario in esecuzione (l'inode vecchio resta montato)
-    std::fs::rename(&tmp, &exe).map_err(|e| format!("impossibile sostituire {exe:?}: {e} (l'AppImage è in una cartella scrivibile?)"))?;
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&exe, std::fs::Permissions::from_mode(0o755)).map_err(|e| e.to_string())?;
+    // 1) rename sul posto: su Linux si può sostituire un binario in esecuzione (l'inode vecchio resta montato)
+    if std::fs::rename(&tmp, &exe).is_ok() {
+        chmod755(&exe)?;
+        launch_and_exit(&exe);
     }
-    std::process::Command::new(&exe).spawn().map_err(|e| e.to_string())?;
-    std::process::exit(0);
+    // 2) fallback: la cartella dell'AppImage non è scrivibile → copia in cache e avvia quella
+    let dir = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("5emanager");
+    std::fs::create_dir_all(&dir).map_err(|e| e.to_string())?;
+    let new_path = dir.join("5e.Manager-new.AppImage");
+    std::fs::copy(&tmp, &new_path).map_err(|e| format!("impossibile copiare l'aggiornamento in {new_path:?}: {e}"))?;
+    let _ = std::fs::remove_file(&tmp);
+    chmod755(&new_path)?;
+    launch_and_exit(&new_path);
 }
 
 pub fn run() {
