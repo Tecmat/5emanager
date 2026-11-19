@@ -60,6 +60,7 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - run: rustup target add x86_64-pc-windows-msi
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       # exe nudo (le risorse web sono embedded nel binario) → zip portatile, niente installatore
@@ -115,6 +116,9 @@ jobs:
       - run: cd apps/web && npx cap add ios && npx cap sync
       # Info.plist: descrizione uso fotocamera (scansione QR)
       - run: python3 apps/web/ios-overlay/patch_ios.py apps/web/ios
+      # il progetto iOS usa CocoaPods: senza pod install il modulo Capacitor non si risolve
+      - run: sudo gem install cocoapods --no-document
+      - run: cd apps/web/ios/App && pod install
       # IPA unsigned (per sideload con AltStore/Sideloadly, che firmano on-device)
       - shell: bash
         run: |
