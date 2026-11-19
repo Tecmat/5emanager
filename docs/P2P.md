@@ -29,6 +29,19 @@ niente server, niente dominio, niente porte da aprire.
    dal QR**) → **1️⃣ Genera risposta** → copia/condivide la **risposta**.
 3. L'host incolla la risposta in **Incolla qui la risposta del giocatore** → **✅ Collega giocatore**.
 
+## Fallback senza WebRTC (AppImage/WebKitGTK, browser datati)
+
+Su alcuni ambienti `RTCPeerConnection` **non esiste** (tipicamente la WebKitGTK dell'AppImage
+su Linux). In quel caso il P2P passa automaticamente sul **trasporto relay**: la campagna resta
+sull'host, ma il traffico di gioco viaggia incapsulato (`p2pData`) sul WebSocket del server LAN,
+che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codici da copiare.
+- Lato client: `P2PRelayHost`/`P2PRelayClient` in `apps/web/src/p2p.ts` (selezionati
+  automaticamente quando `webrtcSupported()` è falso).
+- Lato server: relay `p2pJoin` (con name/password) e `p2pData` in `packages/server/src/index.ts`.
+- Nota Bluetooth: `navigator.bluetooth` (Web Bluetooth) esiste solo su Chrome/Android WebView,
+  non su WebKitGTK, e il Bluetooth classico non è esposto alle web app: non coprirebbe il caso
+  AppImage. Il relay WebSocket copre invece tutte le piattaforme.
+
 ## Dettagli tecnici
 
 - `apps/web/src/p2p.ts`: `P2PHost`/`P2PClient` su `RTCPeerConnection` + DataChannel.
