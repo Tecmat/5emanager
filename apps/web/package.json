@@ -1,19 +1,21 @@
 {
   "name": "@dnd5e/web",
-  "version": "0.1.13",
+  "version": "0.1.14",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "node scripts/write-version.mjs && vite build",
     "preview": "vite preview",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "build:android": "vite build && cap sync",
     "android:open": "cap open android"
   },
   "dependencies": {
+    "@capacitor/browser": "^7",
     "@dnd5e/core": "*",
     "@dnd5e/data-srd": "*",
+    "@tauri-apps/api": "^2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

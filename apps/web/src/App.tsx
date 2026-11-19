@@ -3,6 +3,7 @@ import { totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
 import CreateForm from './CreateForm.js';
+import UpdateButton from './UpdateButton.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
 const Overview = lazy(() => import('./Overview.js'));
@@ -168,6 +169,7 @@ export default function App() {
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
           <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN">🌐 {lang.toUpperCase()}</button>
           <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? '🌙' : '☀️'}</button>
+          <UpdateButton />
         </span>
       </header>
       <main>
