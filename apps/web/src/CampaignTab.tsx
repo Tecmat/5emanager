@@ -26,6 +26,7 @@ import { useStore } from './store.js';
 import { useNet } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
+import { errMsg } from './update.js';
 import TemplateView from './TemplateView.js';
 
 /** QR del testo (per condividere il codice invito) */
@@ -57,6 +58,18 @@ async function shareText(s: string): Promise<boolean> {
     try { await nav.share({ text: s }); return true; } catch { return false; }
   }
   return false;
+}
+
+/** trova da solo il ws:// del server LAN: URL salvato (se non localhost) oppure l'origin della pagina */
+function autoDiscWsUrl(): string {
+  try {
+    const saved = localStorage.getItem('dnd5e.net.url') ?? '';
+    if (/^wss?:\/\/.+/.test(saved) && !/127\.0\.0\.1|localhost/.test(saved)) return saved;
+    if (/^https?:$/.test(location.protocol) && location.host) return `ws://${location.host}`;
+    return saved;
+  } catch {
+    return '';
+  }
 }
 
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
@@ -138,10 +151,13 @@ export default function CampaignTab() {
   const discRef = useRef<P2PDiscovery | null>(null);
   const discHostIdRef = useRef('');
   const announceTimerRef = useRef<number | undefined>(undefined);
+  const discListTimerRef = useRef<number | undefined>(undefined);
 
   const stopDiscovery = () => {
     window.clearInterval(announceTimerRef.current);
     announceTimerRef.current = undefined;
+    window.clearInterval(discListTimerRef.current);
+    discListTimerRef.current = undefined;
     discRef.current?.close();
     discRef.current = null;
     setDiscState('off');
@@ -149,8 +165,14 @@ export default function CampaignTab() {
   };
 
   /** host: annunciati su un server LAN così i giocatori ti trovano nella lista */
-  const startAnnounce = async () => {
+  const startAnnounce = async (wsUrl?: string) => {
     setError('');
+    const u = (wsUrl ?? url).trim() || autoDiscWsUrl();
+    if (!u) {
+      setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://192.168.1.10:3001)'));
+      return;
+    }
+    setUrl(u);
     stopDiscovery();
     try {
       const disc = new P2PDiscovery();
@@ -172,15 +194,16 @@ export default function CampaignTab() {
           } catch (e) { setError((e as Error).message); }
         })();
       };
-      await disc.connect(url);
+      await disc.connect(u);
       const nm = campaignName || name || 'Campagna P2P';
       disc.announce(nm);
       setDiscState('on');
+      setDiscMsg(tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url: u }));
       // ri-annuncia ogni 30 s (il server tiene l'annuncio per 90 s)
       window.clearInterval(announceTimerRef.current);
       announceTimerRef.current = window.setInterval(() => { if (disc.connected) disc.announce(nm); }, 30_000);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errMsg(e));
     }
   };
 
@@ -200,7 +223,7 @@ export default function CampaignTab() {
     setP2PTransport((m: any) => {
       if (m?.t === 'action') host.applyAction(host.masterId, m.action);
     });
-    if (announce && url.trim()) void startAnnounce();
+    if (announce) void startAnnounce();
   };
 
   /** host: genera un nuovo codice invito da dare al giocatore */
@@ -232,23 +255,32 @@ export default function CampaignTab() {
     return client;
   };
 
-  /** giocatore: cerca gli host annunciati su un server LAN */
+  /** giocatore: un tasto solo — trova il server LAN da solo e lista gli host (auto-refresh 8 s) */
   const searchHosts = async () => {
     setError('');
     setDiscBusy(true);
     setDiscMsg('');
     setHosts([]);
+    const u = url.trim() || autoDiscWsUrl();
+    if (!u) {
+      setDiscBusy(false);
+      setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://192.168.1.10:3001)'));
+      return;
+    }
+    setUrl(u);
     stopDiscovery();
     try {
       const disc = new P2PDiscovery();
       discRef.current = disc;
       disc.onHosts = (h) => setHosts(h);
-      await disc.connect(url);
+      await disc.connect(u);
       setDiscState('on');
-      setDiscMsg(tf('cg.p2pDiscOn', 'Connesso a {url} — premi ↻ per aggiornare la lista degli host', { url }));
+      setDiscMsg(tf('cg.p2pDiscOn', 'Cerco host su {url}…', { url: u }));
       disc.list();
+      window.clearInterval(discListTimerRef.current);
+      discListTimerRef.current = window.setInterval(() => { if (disc.connected) disc.list(); }, 8000);
     } catch (e) {
-      setError((e as Error).message);
+      setError(errMsg(e));
     } finally {
       setDiscBusy(false);
     }
@@ -383,13 +415,21 @@ export default function CampaignTab() {
                 <label>{t('cg.yourName', 'Il tuo nome')} (master)</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="Master" />
                 <label className="row" style={{ marginTop: 8 }}>
-                  <input type="checkbox" checked={announce} onChange={(e) => setAnnounce(e.target.checked)} style={{ width: 'auto' }} />
+                  <input
+                    type="checkbox"
+                    checked={announce}
+                    onChange={(e) => {
+                      setAnnounce(e.target.checked);
+                      if (e.target.checked && (!url.trim() || /127\.0\.0\.1|localhost/.test(url))) setUrl(autoDiscWsUrl());
+                    }}
+                    style={{ width: 'auto' }}
+                  />
                   <span>{t('cg.p2pAnnounce', '📡 Annunciati su un server LAN: chi è sulla stessa rete ti vede nella lista host e si unisce con un click')}</span>
                 </label>
                 {announce && (
                   <div className="row" style={{ marginTop: 4 }}>
-                    <input value={url} onChange={(e) => setUrl(e.target.value)} list="saved-servers-p2p" placeholder="ws://192.168.1.10:3001" style={{ flex: 1 }} />
-                    <datalist id="saved-servers-p2p">
+                    <input value={url} onChange={(e) => setUrl(e.target.value)} list="saved-servers-p2p-host" placeholder="ws://192.168.1.10:3001 (auto se vuoto)" style={{ flex: 1 }} />
+                    <datalist id="saved-servers-p2p-host">
                       {servers.map((s) => <option key={s} value={s} />)}
                     </datalist>
                   </div>
@@ -413,14 +453,19 @@ export default function CampaignTab() {
                   <b>{t('cg.p2pFindHosts', '🔍 Trova host sulla stessa rete')}</b>
                   <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('cg.p2pFindHostsHint', "Se nella rete c'è qualcuno che hosta (con l'annuncio attivo), appare qui: un click e sei dentro.")}</div>
                   <div className="row" style={{ marginTop: 6 }}>
-                    <input value={url} onChange={(e) => setUrl(e.target.value)} list="saved-servers-p2p" placeholder="ws://192.168.1.10:3001 (server LAN, opzionale)" style={{ flex: 1 }} />
-                    <datalist id="saved-servers-p2p">
-                      {servers.map((s) => <option key={s} value={s} />)}
-                    </datalist>
-                    <button onClick={searchHosts} disabled={discBusy || !url.trim()}>
-                      {discBusy ? t('cg.p2pSearching', 'Cerco…') : t('cg.p2pSearchHosts', '🔍 Cerca host')}
+                    <button className="primary" onClick={searchHosts} disabled={discBusy}>
+                      {discBusy ? t('cg.p2pSearching', 'Cerco…') : t('cg.p2pSearchHosts', '🔍 Cerca host sulla rete')}
                     </button>
                     {discState === 'on' && <button title={t('cg.p2pRefreshHosts', 'Aggiorna lista host')} onClick={() => discRef.current?.list()}>↻</button>}
+                  </div>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                    {tf('cg.p2pDiscUsing', 'server: {url} (cambia a mano se serve)', { url: url || autoDiscWsUrl() || '—' })}
+                    {servers.length > 0 && (
+                      <span> · <select value="" onChange={(e) => { if (e.target.value) setUrl(e.target.value); }} style={{ width: 'auto' }}>
+                        <option value="">{t('cg.p2pOtherServer', 'altro server salvato…')}</option>
+                        {servers.map((s) => <option key={s} value={s}>{s}</option>)}
+                      </select></span>
+                    )}
                   </div>
                   {discMsg && <div className="muted" style={{ marginTop: 4, fontSize: 12 }}>{discMsg}</div>}
                   {hosts.length > 0 && (
@@ -661,7 +706,7 @@ export default function CampaignTab() {
           <div className="row">
             <button className="primary" onClick={newInvite}>{t('cg.p2pNewInvite', '➕ Nuovo codice invito')}</button>
             {discState !== 'on' && (
-              <button onClick={startAnnounce} disabled={!url.trim()} title={t('cg.p2pAnnounceTitle', 'Annuncia questo host su un server LAN (relay solo dei codici, il gioco resta P2P diretto)')}>
+              <button onClick={() => startAnnounce()} title={t('cg.p2pAnnounceTitle', 'Annuncia questo host su un server LAN (relay solo dei codici, il gioco resta P2P diretto)')}>
                 {t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}
               </button>
             )}

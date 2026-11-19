@@ -315,11 +315,40 @@ export function qrSvg(res: QrResult, scale = 4, margin = 4): string {
   return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${total} ${total}" width="${total}" height="${total}" shape-rendering="crispEdges"><rect width="${total}" height="${total}" fill="#fff"/><g fill="#000">${rects}</g></svg>`;
 }
 
+function errText(e: unknown): string {
+  return typeof e === 'string' ? e : (e as Error)?.message ?? String(e);
+}
+
+/** su Android (Capacitor) chiede il permesso CAMERA a runtime: senza di esso getUserMedia fallisce senza prompt */
+async function ensureCameraPermission(): Promise<void> {
+  const { Capacitor } = await import('@capacitor/core');
+  if (!Capacitor.isNativePlatform()) return;
+  try {
+    const { Camera } = await import('@capacitor/camera');
+    const p = await Camera.checkPermissions();
+    if (p.camera !== 'granted') {
+      const r = await Camera.requestPermissions({ permissions: ['camera'] });
+      if (r.camera !== 'granted') {
+        throw new Error('Permesso fotocamera negato: concedilo da Impostazioni → App → 5e Manager → Autorizzazioni → Fotocamera');
+      }
+    }
+  } catch (e) {
+    if (e instanceof Error && e.message.startsWith('Permesso fotocamera')) throw e;
+    // plugin non presente: prova comunque con getUserMedia
+  }
+}
+
 /** scansiona un QR con la fotocamera, se il browser lo supporta (BarcodeDetector, es. Chrome Android) */
 export async function scanQr(): Promise<string> {
   const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } });
   if (!BD.BarcodeDetector) throw new Error('Scansione QR non supportata da questo browser (usa incolla)');
-  const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  await ensureCameraPermission();
+  let stream: MediaStream;
+  try {
+    stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+  } catch (e) {
+    throw new Error('Fotocamera non disponibile o permesso negato (' + errText(e) + ') — usa "incolla il codice"');
+  }
   try {
     const video = document.createElement('video');
     video.srcObject = stream;

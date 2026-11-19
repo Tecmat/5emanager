@@ -23,6 +23,7 @@ export default function UpdateButton() {
   const { t, tf } = useStore();
   const [open, setOpen] = useState(false);
   const [info, setInfo] = useState<UpdateInfo | null>(null);
+  const [swAvail, setSwAvail] = useState(false);
   const [status, setStatus] = useState<'idle' | 'checking' | 'ready' | 'downloading' | 'error'>('idle');
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [downloaded, setDownloaded] = useState(false);
@@ -36,6 +37,7 @@ export default function UpdateButton() {
     setDownloaded(false);
     try {
       const [api, sw] = await Promise.all([checkUpdate(), platform === 'web' ? checkSwUpdate() : Promise.resolve(false)]);
+      setSwAvail(sw);
       setInfo({ ...api, available: api.available || sw });
       setStatus('ready');
     } catch (e) {
@@ -109,6 +111,7 @@ export default function UpdateButton() {
           className="card"
           style={{
             position: 'absolute', right: 0, top: '110%', zIndex: 50, width: 320,
+            maxHeight: '70vh', overflow: 'auto',
             boxShadow: '0 8px 30px rgba(0,0,0,.45)',
           }}
         >
@@ -130,6 +133,11 @@ export default function UpdateButton() {
                 ? tf('up.available', '🎉 Nuova versione v{ latest } disponibile!', { latest: info.latest })
                 : tf('up.upToDate', '✅ Sei aggiornato (v{ current })', { current: info.current })}
               {info.available && info.assetName && <div className="muted" style={{ fontSize: 12 }}>{info.assetName}</div>}
+              {platform === 'web' && info.available && !swAvail && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {t('up.webHint', 'La web app si aggiorna con il redeploy del server (git pull + npm run build). Subito puoi usare la nuova AppImage/APK dalla release.')}
+                </div>
+              )}
             </div>
           )}
           {status === 'downloading' && (
@@ -148,7 +156,8 @@ export default function UpdateButton() {
           )}
           {status === 'ready' && info?.available && (
             <div className="row" style={{ marginTop: 8 }}>
-              {platform === 'web' && <button className="primary" onClick={apply}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
+              {platform === 'web' && swAvail && <button className="primary" onClick={apply}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
+              {platform === 'web' && !swAvail && <button onClick={apply}>{t('up.reload', '🔄 Ricarica pagina')}</button>}
               {platform === 'android' && <button className="primary" onClick={apply} disabled={!info.assetUrl}>{t('up.downloadApk', '⬇️ Scarica APK')}</button>}
               {platform === 'desktop' && (
                 <>

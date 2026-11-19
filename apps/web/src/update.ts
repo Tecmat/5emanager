@@ -184,18 +184,20 @@ export async function checkSwUpdate(): Promise<boolean> {
   }
 }
 
-/** web/PWA: applica l'aggiornamento (nuovo SW + reload) */
+/** web/PWA: applica l'aggiornamento (forza il check del SW, skipWaiting, poi reload) */
 export async function applyWebUpdate(): Promise<void> {
-  try {
-    const reg = await navigator.serviceWorker.getRegistration();
-    reg?.waiting?.postMessage('SKIP_WAITING');
-    if (reg?.installing) {
-      reg.installing.addEventListener('statechange', () => {
-        if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
-      });
-    }
-  } catch { /* ignora */ }
-  setTimeout(() => window.location.reload(), 700);
+  if ('serviceWorker' in navigator) {
+    try {
+      const reg = await navigator.serviceWorker.getRegistration();
+      if (reg) {
+        await reg.update(); // scarica subito il nuovo sw.js
+        reg.waiting?.postMessage('SKIP_WAITING');
+        navigator.serviceWorker.addEventListener('controllerchange', () => window.location.reload(), { once: true });
+      }
+    } catch { /* ignora */ }
+  }
+  // fallback: reload dopo un attimo (se il nuovo SW è già attivo, carica la build nuova)
+  setTimeout(() => window.location.reload(), 1200);
 }
 
 /** android: apre il download dell'APK col browser di sistema (poi un tap installa) */
