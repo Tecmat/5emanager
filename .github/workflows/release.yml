@@ -66,7 +66,12 @@ jobs:
       - shell: pwsh
         run: |
           npm run tauri:build -- --target x86_64-pc-windows-msi --bundles app
+          if ($LASTEXITCODE -ne 0) { throw "tauri build fallito" }
           $bundle = Get-ChildItem -Recurse -Directory src-tauri/target | Where-Object { $_.Name -eq 'app' } | Select-Object -First 1
+          if (-not $bundle) {
+            $exe = Get-ChildItem -Recurse src-tauri/target -Filter '*.exe' | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1
+            if ($exe) { $bundle = $exe.Directory }
+          }
           if (-not $bundle) { throw "bundle app non trovato" }
           Compress-Archive -Path "$($bundle.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\5e.Manager-windows-portable.zip"
       - uses: actions/upload-artifact@v4

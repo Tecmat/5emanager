@@ -40,7 +40,7 @@ manifest.write_text(s)
 # 2) copia plugin Kotlin e file_paths.xml
 pkg_dir = root / "app/src/main/java/com/tecmat/emanager"
 pkg_dir.mkdir(parents=True, exist_ok=True)
-shutil.copy(overlay / "UpdateInstallerPlugin.kt", pkg_dir / "UpdateInstallerPlugin.kt")
+shutil.copy(overlay / "UpdateInstallerPlugin.java", pkg_dir / "UpdateInstallerPlugin.java")
 res_xml = root / "app/src/main/res/xml"
 res_xml.mkdir(parents=True, exist_ok=True)
 shutil.copy(overlay / "file_paths.xml", res_xml / "file_paths.xml")

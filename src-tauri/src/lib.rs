@@ -241,11 +241,6 @@ fn update_tmp_candidates(app: &tauri::AppHandle) -> Vec<std::path::PathBuf> {
 #[tauri::command]
 async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, String> {
     let client = http_client(find_token().as_deref())?;
-    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
-    if !resp.status().is_success() {
-        return Err(format!("download: HTTP {} (repo privato? serve un token GitHub)", resp.status()));
-    }
-    let total = resp.content_length().unwrap_or(0);
     let mut last_err = String::new();
     for dest in update_tmp_candidates(&app) {
         if let Some(dir) = dest.parent() {
@@ -253,17 +248,32 @@ async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, S
                 continue;
             }
         }
-        let file = tokio::fs::File::create(&dest).await;
-        let mut file = match file {
+        // crea prima il file: se la cartella è read-only (os error 30) passo al prossimo percorso
+        let mut file = match tokio::fs::File::create(&dest).await {
             Ok(f) => f,
             Err(e) => {
                 last_err = format!("{dest:?}: {e}");
-                continue; // es. read-only fs → prova il prossimo percorso
+                continue;
             }
         };
+        // una richiesta HTTP per tentativo (bytes_stream consuma la response)
+        let resp = match client.get(&url).send().await {
+            Ok(r) => r,
+            Err(e) => {
+                last_err = e.to_string();
+                let _ = std::fs::remove_file(&dest);
+                continue;
+            }
+        };
+        if !resp.status().is_success() {
+            last_err = format!("download: HTTP {} (repo privato? serve un token GitHub)", resp.status());
+            let _ = std::fs::remove_file(&dest);
+            continue;
+        }
+        let total = resp.content_length().unwrap_or(0);
         let mut received: u64 = 0;
-        let mut stream = resp.bytes_stream();
         let mut failed = false;
+        let mut stream = resp.bytes_stream();
         while let Some(chunk) = stream.next().await {
             match chunk {
                 Ok(chunk) => {
