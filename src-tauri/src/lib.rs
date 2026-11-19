@@ -20,10 +20,7 @@ struct UpdateInfo {
 
 fn parse_version(v: &str) -> Vec<u64> {
     let clean = v.trim().trim_start_matches(['v', 'V']).split(['-', '+']).next().unwrap_or("");
-    let mut parts: Vec<u64> = clean
-        .split('.')
-        .map(|p| p.parse::<u64>().unwrap_or(0))
-        .collect();
+    let mut parts: Vec<u64> = clean.split('.').map(|p| p.parse::<u64>().unwrap_or(0)).collect();
     while parts.len() < 3 {
         parts.push(0);
     }
@@ -42,24 +39,158 @@ fn compare_versions(a: &str, b: &str) -> i64 {
     0
 }
 
-fn http_client() -> Result<reqwest::Client, String> {
-    reqwest::Client::builder()
-        .user_agent(concat!("5emanager-updater/", env!("CARGO_PKG_VERSION")))
-        .build()
-        .map_err(|e| e.to_string())
+/// token GitHub per repo privati: env GITHUB_TOKEN → ~/.config/emanager/github-token → `gh auth token`
+fn find_token() -> Option<String> {
+    if let Ok(t) = std::env::var("GITHUB_TOKEN") {
+        let t = t.trim().to_string();
+        if !t.is_empty() {
+            return Some(t);
+        }
+    }
+    if let Ok(home) = std::env::var("HOME") {
+        let p = std::path::Path::new(&home).join(".config/emanager/github-token");
+        if let Ok(t) = std::fs::read_to_string(&p) {
+            let t = t.trim().to_string();
+            if !t.is_empty() {
+                return Some(t);
+            }
+        }
+    }
+    if let Ok(out) = std::process::Command::new("gh").args(["auth", "token"]).output() {
+        if out.status.success() {
+            let t = String::from_utf8_lossy(&out.stdout).trim().to_string();
+            if !t.is_empty() {
+                return Some(t);
+            }
+        }
+    }
+    None
 }
 
-async fn latest_release() -> Result<serde_json::Value, String> {
-    let resp = http_client()?
+fn http_client(token: Option<&str>) -> Result<reqwest::Client, String> {
+    let mut builder = reqwest::Client::builder().user_agent(concat!("5emanager-updater/", env!("CARGO_PKG_VERSION")));
+    if let Some(t) = token {
+        builder = builder.default_headers({
+            let mut h = reqwest::header::HeaderMap::new();
+            h.insert(
+                reqwest::header::AUTHORIZATION,
+                reqwest::header::HeaderValue::from_str(&format!("Bearer {t}")).map_err(|e| e.to_string())?,
+            );
+            h
+        });
+    }
+    builder.build().map_err(|e| e.to_string())
+}
+
+/// primo <title> della prima <entry> del feed atom delle release
+fn parse_atom_tag(xml: &str) -> Option<String> {
+    let entry = xml.find("<entry>")?;
+    let rest = &xml[entry..];
+    let t0 = rest.find("<title>")? + 7;
+    let t1 = rest[t0..].find("</title>")? + t0;
+    let tag = rest[t0..t1].trim();
+    if tag.starts_with('v') && tag[1..].chars().next().is_some_and(|c| c.is_ascii_digit()) || tag.chars().next().is_some_and(|c| c.is_ascii_digit()) {
+        Some(tag.to_string())
+    } else {
+        None
+    }
+}
+
+/// href degli asset dalla pagina expanded_assets
+fn parse_expanded_assets(html: &str) -> Vec<(String, String)> {
+    let mut out = Vec::new();
+    let needle = "/releases/download/";
+    let mut i = 0;
+    while let Some(h) = html[i..].find("href=\"").map(|p| p + i + 6) {
+        let Some(q1) = html[h..].find('"').map(|p| p + h) else { break };
+        let href = &html[h..q1];
+        i = q1 + 1;
+        let Some(dl) = href.find(needle) else { continue };
+        if href.ends_with('/') {
+            continue;
+        }
+        let url = if href.starts_with("http") {
+            href.to_string()
+        } else {
+            format!("https://github.com{href}")
+        };
+        let name = href[dl + needle.len()..].rsplit('/').next().unwrap_or("").to_string();
+        if !name.is_empty() && !out.iter().any(|(n, _)| n == &name) {
+            out.push((name, url));
+        }
+    }
+    out
+}
+
+type ReleaseTuple = (String, String, Vec<(String, String)>); // (tag, page_url, assets)
+
+/// ultima release: prima API (con token se presente), poi fallback HTML github.com (repo pubblico, no rate limit)
+async fn latest_release() -> Result<ReleaseTuple, String> {
+    let token = find_token();
+    let client = http_client(token.as_deref())?;
+    let api = client
         .get(format!("https://api.github.com/repos/{REPO}/releases/latest"))
         .header("Accept", "application/vnd.github+json")
         .send()
-        .await
-        .map_err(|e| e.to_string())?;
-    if !resp.status().is_success() {
-        return Err(format!("GitHub API: HTTP {}", resp.status()));
+        .await;
+    match api {
+        Ok(resp) if resp.status().is_success() => {
+            let j: serde_json::Value = resp.json().await.map_err(|e| e.to_string())?;
+            let tag = j["tag_name"].as_str().unwrap_or("").to_string();
+            let page = j["html_url"].as_str().unwrap_or("").to_string();
+            let assets = j["assets"]
+                .as_array()
+                .map(|arr| {
+                    arr.iter()
+                        .filter_map(|a| {
+                            let name = a["name"].as_str()?.to_string();
+                            let url = a["browser_download_url"].as_str()?.to_string();
+                            Some((name, url))
+                        })
+                        .collect()
+                })
+                .unwrap_or_default();
+            Ok((tag, page, assets))
+        }
+        Ok(resp) => {
+            eprintln!("[update] API HTTP {} — fallback HTML", resp.status());
+            html_fallback(&client).await
+        }
+        Err(e) => {
+            eprintln!("[update] API err {e} — fallback HTML");
+            html_fallback(&client).await
+        }
     }
-    resp.json().await.map_err(|e| e.to_string())
+}
+
+async fn html_fallback(client: &reqwest::Client) -> Result<ReleaseTuple, String> {
+    let atom = client
+        .get(format!("https://github.com/{REPO}/releases.atom"))
+        .send()
+        .await
+        .map_err(|e| format!("github.com non raggiungibile: {e}"))?;
+    if !atom.status().is_success() {
+        return Err(format!(
+            "GitHub: HTTP {} (repo privato senza token? imposta GITHUB_TOKEN, ~/.config/emanager/github-token o `gh auth login`)",
+            atom.status()
+        ));
+    }
+    let xml = atom.text().await.map_err(|e| e.to_string())?;
+    let tag = parse_atom_tag(&xml).ok_or("feed atom senza release (repo privato senza token?)")?;
+    let page = format!("https://github.com/{REPO}/releases/tag/{tag}");
+    let mut assets = Vec::new();
+    if let Ok(ea) = client
+        .get(format!("https://github.com/{REPO}/releases/expanded_assets/{tag}"))
+        .send()
+        .await
+    {
+        if ea.status().is_success() {
+            if let Ok(html) = ea.text().await {
+                assets = parse_expanded_assets(&html);
+            }
+        }
+    }
+    Ok((tag, page, assets))
 }
 
 #[tauri::command]
@@ -71,21 +202,9 @@ fn app_version(app: tauri::AppHandle) -> String {
 #[tauri::command]
 async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
     let current = app.package_info().version.to_string();
-    let rel = latest_release().await?;
-    let latest = rel["tag_name"].as_str().unwrap_or("").trim_start_matches('v').to_string();
-    let page_url = rel["html_url"].as_str().unwrap_or("").to_string();
-    let mut asset_url = None;
-    let mut asset_name = None;
-    if let Some(assets) = rel["assets"].as_array() {
-        for a in assets {
-            let name = a["name"].as_str().unwrap_or("");
-            if name.ends_with(".AppImage") {
-                asset_name = Some(name.to_string());
-                asset_url = a["browser_download_url"].as_str().map(|s| s.to_string());
-                break;
-            }
-        }
-    }
+    let (tag, page_url, assets) = latest_release().await?;
+    let latest = tag.trim_start_matches('v').to_string();
+    let appimage = assets.iter().find(|(n, _)| n.ends_with(".AppImage"));
     let checked_at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs().to_string())
@@ -96,8 +215,8 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
         current,
         latest,
         page_url,
-        asset_url,
-        asset_name,
+        asset_url: appimage.map(|(_, u)| u.clone()),
+        asset_name: appimage.map(|(n, _)| n.clone()),
         checked_at,
     })
 }
@@ -109,17 +228,14 @@ fn update_tmp_path() -> Result<std::path::PathBuf, String> {
     Ok(dir.join(".5emanager-update.AppImage"))
 }
 
-/// scarica il nuovo AppImage con eventi di progresso `update-progress` { received, total }
+/// scarica il nuovo AppImage con eventi di progresso `update-progress` { received, total } (token se presente)
 #[tauri::command]
 async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, String> {
     let dest = update_tmp_path()?;
-    let resp = http_client()?
-        .get(&url)
-        .send()
-        .await
-        .map_err(|e| e.to_string())?;
+    let client = http_client(find_token().as_deref())?;
+    let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
-        return Err(format!("download: HTTP {}", resp.status()));
+        return Err(format!("download: HTTP {} (repo privato? serve un token GitHub)", resp.status()));
     }
     let total = resp.content_length().unwrap_or(0);
     let mut file = tokio::fs::File::create(&dest).await.map_err(|e| e.to_string())?;
