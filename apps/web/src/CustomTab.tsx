@@ -15,6 +15,7 @@ import {
   type AttackDef,
   type School,
 } from '@dnd5e/core';
+import { parseDice } from '@dnd5e/core';
 import { useStore, persistCustom } from './store.js';
 
 const SCHOOLS: School[] = ['abjuration', 'conjuration', 'divination', 'enchantment', 'evocation', 'illusion', 'necromancy', 'transmutation'];
@@ -24,7 +25,7 @@ type Kind = 'spell' | 'weapon' | 'armor' | 'enemy' | 'feat' | 'race' | 'subclass
 const splitList = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 export default function CustomTab() {
-  const { reg, reloadCustom, t } = useStore();
+  const { reg, reloadCustom, t, tf } = useStore();
   const [kind, setKind] = useState<Kind>('spell');
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -207,7 +208,15 @@ export default function CustomTab() {
               <div><label>{t('cu.range', 'Portata')}</label><input value={spell.range} onChange={(e) => setSpell({ ...spell, range: e.target.value })} /></div>
               <div><label>{t('cu.components', 'Componenti')}</label><input value={spell.components} onChange={(e) => setSpell({ ...spell, components: e.target.value })} placeholder={t('cu.componentsPh', 'V, S, M (un diamante da 50 mo)')} /></div>
               <div><label>{t('cu.duration', 'Durata')}</label><input value={spell.duration} onChange={(e) => setSpell({ ...spell, duration: e.target.value })} /></div>
-              <div><label>{t('cu.damage', 'Dado danno (opz.)')}</label><input value={spell.damage} onChange={(e) => setSpell({ ...spell, damage: e.target.value })} placeholder="3d6" /></div>
+              <div><label>{t('cu.damage', 'Dado danno (opz.)')}</label><input value={spell.damage} onChange={(e) => setSpell({ ...spell, damage: e.target.value })} placeholder="3d6" />
+                {spell.damage && (() => {
+                  const p = parseDice(spell.damage);
+                  if (!p) return null;
+                  const avg = p.dice.reduce((sum, d) => sum + d.sign * d.count * ((d.faces + 1) / 2), 0) + p.mod;
+                  const baseline = [5.5, 10.5, 14, 18, 21, 24.5, 28, 31.5, 35, 38.5][spell.level] ?? 0;
+                  return <div className="muted" style={{ fontSize: 11 }}>{tf('cu.dmgAvg', 'danno medio {avg} · baseline liv {lvl}: {base}', { avg: Math.round(avg * 10) / 10, lvl: spell.level, base: baseline })}</div>;
+                })()}
+              </div>
               <div><label>{t('cu.classes', 'Classi (virgola)')}</label><input value={spell.classes} onChange={(e) => setSpell({ ...spell, classes: e.target.value })} /></div>
             </div>
             <label className="row"><input type="checkbox" checked={spell.ritual} onChange={(e) => setSpell({ ...spell, ritual: e.target.checked })} style={{ width: 'auto' }} /> Rituale (lanciabile senza slot)</label>

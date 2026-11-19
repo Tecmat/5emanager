@@ -12,7 +12,9 @@ import {
   maxSpellsKnown,
   prepareSpellForClass,
   preparedSpellsOfClass,
+  toggleFavoriteSpell,
   unprepareSpellForClass,
+  upcastExtraDice,
   type SpellDef,
 } from '@dnd5e/core';
 import { useStore } from './store.js';
@@ -34,7 +36,16 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
 
   return (
     <tr>
-      <td>{spell.name} {spell.source === 'custom' && <span className="tag custom">custom</span>}</td>
+      <td>
+        <button
+          style={{ padding: '0 4px', marginRight: 4, background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, color: 'inherit' }}
+          title={t('sp.favToggle', ' nei preferiti ⭐')}
+          onClick={() => onChange(toggleFavoriteSpell(char, spell.id))}
+        >
+          {(char.favoriteSpells ?? []).includes(spell.id) ? '⭐' : '☆'}
+        </button>
+        {spell.name} {spell.source === 'custom' && <span className="tag custom">custom</span>}
+      </td>
       <td>{spell.level === 0 ? t('sp.cantrip', 'trucchetto') : `${spell.level}°`}</td>
       <td className="muted">
         {spell.school}{spell.concentration ? ` · ${t('sp.concTag', 'conc.')}` : ''}{spell.ritual ? ` · ${t('sp.ritualTag', 'rituale')}` : ''}
@@ -109,6 +120,11 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
             )}
           </span>
         )}
+        {castable && spell.level > 0 && slotLevel > spell.level && upcastExtraDice(spell, slotLevel) && (
+          <div className="muted" style={{ fontSize: 11, marginTop: 2 }}>
+            {tf('sp.upcast', 'a slot {slot}°: danno {base} + {extra}', { slot: slotLevel, base: spell.damage ?? '—', extra: upcastExtraDice(spell, slotLevel) ?? '' })}
+          </div>
+        )}
         {castable && spell.level === 0 && <span className="muted" style={{ marginLeft: 6 }}>{t('sp.cantripFree', 'trucchetto (sempre lanciabile)')}</span>}
       </td>
     </tr>
@@ -118,6 +134,7 @@ function SpellRow({ spell, char, reg, onChange }: { spell: SpellDef; char: Retur
 export default function SpellsTab() {
   const { reg, char, setChar, t, tf } = useStore();
   const [filter, setFilter] = useState('');
+  const [favOnly, setFavOnly] = useState(false);
   if (!char) return null;
 
   const casters = castersOf(char, reg);
@@ -125,7 +142,9 @@ export default function SpellsTab() {
   const learnable = useMemo(() => learnableSpells(char, reg), [char, reg]);
   const known = char.spellsKnown.map((id) => reg.spells.get(id)).filter(Boolean) as SpellDef[];
   const q = filter.trim().toLowerCase();
+  const favs = char.favoriteSpells ?? [];
   const shown = (q ? learnable.filter((s) => s.name.toLowerCase().includes(q)) : learnable)
+    .filter((s) => !favOnly || favs.includes(s.id))
     .sort((a, b) => a.level - b.level || a.name.localeCompare(b.name));
 
   const slots = Object.entries(char.spellSlots)
@@ -181,7 +200,7 @@ export default function SpellsTab() {
         {known.length === 0 && <div className="muted">{t('sp.noneKnown', 'Nessun incantesimo conosciuto.')}</div>}
         <table>
           <tbody>
-            {known.sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)).map((s) => (
+            {known.filter((s) => !favOnly || favs.includes(s.id)).sort((a, b) => a.level - b.level || a.name.localeCompare(b.name)).map((s) => (
               <SpellRow key={s.id} spell={s} char={char} reg={reg} onChange={setChar} />
             ))}
           </tbody>
@@ -190,7 +209,13 @@ export default function SpellsTab() {
 
       <div className="card">
         <h3>{t('sp.grimoire', 'Grimorio — impara nuovi incantesimi')}</h3>
-        <input placeholder={t('sp.search', 'Cerca incantesimo...')} value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 300, marginBottom: 8 }} />
+        <div className="row" style={{ marginBottom: 8 }}>
+          <input placeholder={t('sp.search', 'Cerca incantesimo...')} value={filter} onChange={(e) => setFilter(e.target.value)} style={{ maxWidth: 300 }} />
+          <label style={{ margin: 0 }} className="row">
+            <input type="checkbox" checked={favOnly} onChange={(e) => setFavOnly(e.target.checked)} style={{ width: 'auto' }} />
+            {t('sp.favOnly', 'solo ⭐ preferiti')}
+          </label>
+        </div>
         <table>
           <thead>
             <tr><th>{t('sp.thSpell', 'Incantesimo')}</th><th>{t('sp.thLevel', 'Liv.')}</th><th>{t('sp.thType', 'Tipo')}</th><th>{t('sp.thAction', 'Azione')}</th></tr>

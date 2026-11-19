@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import {
   addCombatant,
+  clearTemplate,
   CONDITIONS,
   currentCombatant,
   damageCombatant,
@@ -10,11 +11,14 @@ import {
   removeCombatant,
   rerollInitiatives,
   setCombatantCondition,
+  setTemplate,
   startCombat,
   syncPlayerHp,
   type CombatState,
+  type TemplateShape,
 } from '@dnd5e/core';
 import { useStore } from './store.js';
+import TemplateView from './TemplateView.js';
 
 export default function CombatTab() {
   const { char, setChar, reg, t, tf } = useStore();
@@ -22,6 +26,10 @@ export default function CombatTab() {
   const [name, setName] = useState('');
   const [hp, setHp] = useState(10);
   const [dmg, setDmg] = useState(3);
+  const [showTpl, setShowTpl] = useState(false);
+  const [tplShape, setTplShape] = useState<TemplateShape>('cone');
+  const [tplSize, setTplSize] = useState(15);
+  const [tplWidth, setTplWidth] = useState(5);
 
   if (!char) return null;
 
@@ -53,6 +61,43 @@ export default function CombatTab() {
           <button onClick={() => setCombat(rerollInitiatives(combat))}>{t('cb.reroll', '🎲 Tira initiative')}</button>
           <button className="danger" onClick={() => setCombat(null)}>{t('cb.close', 'Chiudi combattimento')}</button>
         </div>
+        <div className="row" style={{ marginBottom: 10 }}>
+          <button onClick={() => setShowTpl((v) => !v)} title={t('cb.tpl', '📐 template')}>{t('cb.tpl', '📐 template')}</button>
+          {showTpl && (
+            <span className="row">
+              <select value={tplShape} onChange={(e) => setTplShape(e.target.value as TemplateShape)} style={{ width: 'auto' }}>
+                <option value="cone">{t('cb.cone', 'cono')}</option>
+                <option value="sphere">{t('cb.sphere', 'sfera')}</option>
+                <option value="line">{t('cb.line', 'linea')}</option>
+                <option value="cube">{t('cb.cube', 'cubo')}</option>
+              </select>
+              <label className="row" style={{ margin: 0, fontSize: 12 }}>
+                {t('cb.tplSize', 'misura (ft)')}
+                <input type="number" min={5} step={5} value={tplSize} onChange={(e) => setTplSize(Number(e.target.value))} style={{ width: 60 }} />
+              </label>
+              {tplShape === 'line' && (
+                <label className="row" style={{ margin: 0, fontSize: 12 }}>
+                  {t('cb.tplWidth', 'larghezza (ft)')}
+                  <input type="number" min={5} step={5} value={tplWidth} onChange={(e) => setTplWidth(Number(e.target.value))} style={{ width: 60 }} />
+                </label>
+              )}
+              <button
+                disabled={!cur}
+                onClick={() => setCombat(setTemplate(combat, { shape: tplShape, sizeFt: tplSize, widthFt: tplShape === 'line' ? tplWidth : undefined, originId: cur?.id }))}
+              >
+                {t('cb.tplPlace', 'Piazza sul turno corrente')}
+              </button>
+              {combat.template && (
+                <button className="danger" onClick={() => setCombat(clearTemplate(combat))}>{t('cb.tplClear', 'Rimuovi')}</button>
+              )}
+            </span>
+          )}
+        </div>
+        {combat.template && (
+          <div style={{ marginBottom: 10, maxWidth: 420 }}>
+            <TemplateView tpl={combat.template} />
+          </div>
+        )}
         <div className="row" style={{ marginBottom: 10 }}>
           <input placeholder={t('cb.enemyPh', 'Nome nemico')} value={name} onChange={(e) => setName(e.target.value)} style={{ width: 160 }} />
           <input type="number" min={1} value={hp} onChange={(e) => setHp(Number(e.target.value))} style={{ width: 70 }} />

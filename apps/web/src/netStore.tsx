@@ -1,21 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Character, CombatState } from '@dnd5e/core';
+import type { Campaign, Character, PlayerInfo } from '@dnd5e/core';
 import { NetClient, defaultWsUrl } from './net.js';
 
-export interface PlayerInfo {
-  id: string;
-  name: string;
-  role: 'master' | 'player';
-  characterId?: string;
-}
-
-export interface CampaignT {
-  id: string;
-  name: string;
-  players: PlayerInfo[];
-  characters: Record<string, Character>;
-  combat: CombatState | null;
-}
+// i tipi campagna/giocatore vivono nel core (condivisi con server e host P2P)
+export type { PlayerInfo };
+export type CampaignT = Campaign;
 
 export type ConnState =
   | { phase: 'offline' }

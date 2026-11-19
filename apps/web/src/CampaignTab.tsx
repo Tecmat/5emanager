@@ -11,12 +11,21 @@ import {
   skillBonus,
   speedOf,
   totalLevel,
+  currencyToCopper,
+  rollEncounter,
+  rollTreasure,
+  randomName,
   type Character,
+  type Currency,
+  type ItemRarity,
   type Registry,
+  type TemplateShape,
 } from '@dnd5e/core';
+import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
 import { P2PClient, P2PHost } from './p2p.js';
+import TemplateView from './TemplateView.js';
 
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
 function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
@@ -150,6 +159,20 @@ export default function CampaignTab() {
   const [targetId, setTargetId] = useState('');
   const [enemyId, setEnemyId] = useState('');
   const [moveAmt, setMoveAmt] = useState(6);
+  const [xpAllAmt, setXpAllAmt] = useState(300);
+  const [showTpl, setShowTpl] = useState(false);
+  const [tplShape, setTplShape] = useState<TemplateShape>('cone');
+  const [tplSize, setTplSize] = useState(15);
+  const [tplWidth, setTplWidth] = useState(5);
+  const [gName, setGName] = useState('');
+  const [gQty, setGQty] = useState(1);
+  const [gValue, setGValue] = useState('');
+  const [gRarity, setGRarity] = useState<ItemRarity | ''>('');
+  const [gMagic, setGMagic] = useState(false);
+  const [giveTarget, setGiveTarget] = useState('');
+  const [gGp, setGGp] = useState(0);
+  const [genResult, setGenResult] = useState<{ kind: 'name' | 'enc' | 'tre'; text: string; enemies?: { enemyId: string; count: number }[]; xp?: number; currency?: Partial<Currency>; items?: { name: string; quantity?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean }[] } | null>(null);
+  const [noteText, setNoteText] = useState('');
 
   const onEnter = (fn: () => void) => (e: React.KeyboardEvent) => {
     if (e.key === 'Enter') { e.preventDefault(); fn(); }
@@ -358,6 +381,10 @@ export default function CampaignTab() {
 
   const { campaign, you } = conn;
   const combat = campaign.combat;
+  const partyLevel = (() => {
+    const lvls = campaign.players.map((p) => (campaign.characters[p.id] ? totalLevel(campaign.characters[p.id]) : 0)).filter((l) => l > 0);
+    return lvls.length ? Math.max(1, Math.round(lvls.reduce((a, b) => a + b, 0) / lvls.length)) : 1;
+  })();
   const cur = combat?.combatants[combat.turnIndex];
   const myCharId = char?.id;
   const isMyTurn = !!(combat && cur && cur.isPlayer && cur.id === myCharId);
@@ -547,6 +574,131 @@ export default function CampaignTab() {
         </div>
       )}
 
+      {isMaster && (
+        <div className="card">
+          <h3>{t('cg.gen', '🎲 Generatore (master)')}</h3>
+          <div className="muted" style={{ marginBottom: 6 }}>{tf('cg.genTier', 'tier {t} (liv {lvl} medio party)', { t: partyLevel <= 4 ? 'Livello 1-4' : partyLevel <= 10 ? 'Livello 5-10' : partyLevel <= 16 ? 'Livello 11-16' : 'Livello 17-20', lvl: partyLevel })}</div>
+          <div className="row">
+            <button onClick={() => setGenResult({ kind: 'name', text: randomName(RANDOM_DATA) })}>{t('cg.genName', 'Nome')}</button>
+            <button onClick={() => { const e = rollEncounter(RANDOM_DATA, partyLevel); setGenResult({ kind: 'enc', text: `${e.name} — XP ${e.xp}`, enemies: e.enemies, xp: e.xp }); }}>{t('cg.genEnc', 'Incontro casuale')}</button>
+            <button onClick={() => { const tr = rollTreasure(RANDOM_DATA, partyLevel); setGenResult({ kind: 'tre', text: tr.text, currency: tr.currency, items: tr.items }); }}>{t('cg.genTre', 'Tesoro casuale')}</button>
+          </div>
+          {genResult && (
+            <div style={{ marginTop: 8, padding: 8, background: 'var(--panel2)', borderRadius: 8 }}>
+              <b>{genResult.text}</b>
+              {genResult.enemies && (
+                <div className="row" style={{ marginTop: 6 }}>
+                  {genResult.enemies.map((e, i) => (
+                    <span key={i} className="tag custom">{reg.enemies.get(e.enemyId)?.name ?? e.enemyId} x{e.count}</span>
+                  ))}
+                  {combat && (
+                    <button className="primary" onClick={() => { for (const e of genResult.enemies ?? []) for (let i = 0; i < e.count; i++) act({ kind: 'addEnemy', enemyId: e.enemyId, count: 1 }); }}>
+                      {t('cg.genAddEnemies', '⚔️ Aggiungi nemici al combattimento')}
+                    </button>
+                  )}
+                  {!combat && <span className="muted">({t('cg.startCombat', 'Avvio combattimento')}?)</span>}
+                </div>
+              )}
+              {(genResult.currency || genResult.items?.length) && (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button onClick={() => {
+                    if (genResult.currency) act({ kind: 'groupAddCurrency', amount: genResult.currency });
+                    for (const it of genResult.items ?? []) act({ kind: 'groupAddItem', item: { name: it.name, quantity: it.quantity ?? 1, valueGp: it.valueGp, rarity: it.rarity, magic: it.magic ?? false } });
+                    setGenResult(null);
+                  }}>
+                    {t('cg.genToGroup', '🎒 Metti nel gruppo / tesoreria')}
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      <div className="card">
+        <h3>{t('cg.group', '🎒 Inventario di gruppo e tesoreria')}</h3>
+        <div className="muted">{tf('cg.treasury', 'Tesoreria di gruppo: {gp} mo · {sp} ma · {ep} me · {cp} mr · {pp} mp', { gp: campaign.groupCurrency.gp, sp: campaign.groupCurrency.sp, ep: campaign.groupCurrency.ep, cp: campaign.groupCurrency.cp, pp: campaign.groupCurrency.pp })}</div>
+        {isMaster && (
+          <div className="row" style={{ marginTop: 6 }}>
+            <input type="number" min={0} value={gGp} onChange={(e) => setGGp(Number(e.target.value))} style={{ width: 80 }} />
+            <button onClick={() => { if (gGp > 0) act({ kind: 'groupAddCurrency', amount: { gp: gGp } }); setGGp(0); }}>{t('inv.addGold', 'Aggiungi MO')}</button>
+            <input type="number" value={xpAllAmt} onChange={(e) => setXpAllAmt(Number(e.target.value))} style={{ width: 80 }} />
+            <button className="primary" onClick={() => act({ kind: 'masterAddXpAll', amount: xpAllAmt })}>
+              {tf('cg.xpAll', '⭐ +{n} XP a tutta la party', { n: xpAllAmt })}
+            </button>
+          </div>
+        )}
+        <div className="row" style={{ marginTop: 8 }}>
+          <input placeholder={t('cg.thItem', 'Oggetto')} value={gName} onChange={(e) => setGName(e.target.value)} style={{ width: 160 }} />
+          <input type="number" min={1} value={gQty} onChange={(e) => setGQty(Number(e.target.value))} title={t('cg.gQty', 'Qtà')} style={{ width: 60 }} />
+          <input type="number" min={0} value={gValue} onChange={(e) => setGValue(e.target.value)} title={t('cg.gValue', 'Valore MO')} placeholder="MO" style={{ width: 70 }} />
+          <select value={gRarity} onChange={(e) => setGRarity(e.target.value as ItemRarity | '')} style={{ width: 'auto' }}>
+            <option value="">{t('inv.rarity', 'Rarità')}</option>
+            {(['common', 'uncommon', 'rare', 'veryRare', 'legendary'] as ItemRarity[]).map((r) => <option key={r} value={r}>{t('inv.r.' + r, r)}</option>)}
+          </select>
+          <label className="row" style={{ margin: 0 }}>
+            <input type="checkbox" checked={gMagic} onChange={(e) => setGMagic(e.target.checked)} style={{ width: 'auto' }} /> {t('inv.magic', 'Oggetto magico')}
+          </label>
+          <button
+            disabled={!gName.trim()}
+            onClick={() => {
+              act({ kind: 'groupAddItem', item: { name: gName.trim(), quantity: gQty, valueGp: gValue ? Number(gValue) : undefined, rarity: gRarity || undefined, magic: gMagic } });
+              setGName(''); setGQty(1); setGValue(''); setGRarity(''); setGMagic(false);
+            }}
+          >
+            {t('cg.gAdd', 'Aggiungi al gruppo')}
+          </button>
+        </div>
+        {campaign.groupInventory.length === 0 && <div className="muted" style={{ marginTop: 8 }}>{t('cg.groupEmpty', 'Il gruppo non ha ancora oggetti.')}</div>}
+        {campaign.groupInventory.length > 0 && (
+          <table style={{ marginTop: 8 }}>
+            <tbody>
+              {campaign.groupInventory.map((it) => (
+                <tr key={it.id}>
+                  <td>{it.name}{it.quantity > 1 ? ` x${it.quantity}` : ''} {it.magic && '✨'}{it.rarity && <span className="tag custom">{t('inv.r.' + it.rarity, it.rarity)}</span>}</td>
+                  <td className="muted">{it.valueGp ? `${it.valueGp * it.quantity} mo` : ''}</td>
+                  <td>
+                    {isMaster && (
+                      <span className="row">
+                        <select value={giveTarget} onChange={(e) => setGiveTarget(e.target.value)} style={{ width: 110 }}>
+                          <option value="">{t('cg.gNoPlayer', '— giocatore —')}</option>
+                          {campaign.players.map((pl) => <option key={pl.id} value={pl.id}>{pl.name}</option>)}
+                        </select>
+                        <button
+                          disabled={!giveTarget}
+                          title={t('cg.gGiveTitle', 'Assegna questo oggetto a un giocatore')}
+                          onClick={() => { act({ kind: 'groupGiveItem', itemId: it.id, playerId: giveTarget }); setGiveTarget(''); }}
+                        >
+                          {t('cg.gGive', 'dai a…')}
+                        </button>
+                        <button className="danger" title={t('cg.gRemoveTitle', 'Rimuovi dal gruppo')} onClick={() => act({ kind: 'groupRemoveItem', itemId: it.id })}>✕</button>
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <div className="card">
+        <h3>{t('cg.notes', '📝 Note di sessione (condivise)')}</h3>
+        <textarea
+          rows={4}
+          value={noteText || campaign.notes}
+          onChange={(e) => setNoteText(e.target.value)}
+          placeholder={t('cg.notesPh', 'Appunti visibili a tutta la campagna…')}
+          readOnly={!isMaster}
+          style={{ width: '100%' }}
+        />
+        {isMaster && (
+          <div style={{ marginTop: 6 }}>
+            <button className="primary" onClick={() => { act({ kind: 'setCampaignNote', text: noteText || campaign.notes }); }}>{t('cg.notesSave', 'Salva note')}</button>
+          </div>
+        )}
+      </div>
+
       {isMaster && !combat && (
         <div className="card">
           <h3>👑 {t('cg.startCombat', 'Avvio combattimento')}</h3>
@@ -577,7 +729,54 @@ export default function CampaignTab() {
             {(isMyTurn || isMaster) && (
               <button className="primary" onClick={() => act({ kind: 'nextTurn' })}>{t('cg.next', 'Turno ▶')}</button>
             )}
+            <button onClick={() => setShowTpl((v) => !v)} title={t('cb.tpl', '📐 template')}>{t('cb.tpl', '📐 template')}</button>
+            <button
+              title={t('cg.exportLog', '💾 Esporta log')}
+              onClick={() => {
+                const blob = new Blob([combat.log.join('\n')], { type: 'text/plain' });
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `${campaign.name.replace(/\s+/g, '-')}-log.txt`;
+                a.click();
+              }}
+            >
+              {t('cg.exportLog', '💾 Esporta log')}
+            </button>
           </div>
+          {showTpl && (isMaster || isMyTurn) && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <select value={tplShape} onChange={(e) => setTplShape(e.target.value as TemplateShape)} style={{ width: 'auto' }}>
+                <option value="cone">{t('cb.cone', 'cono')}</option>
+                <option value="sphere">{t('cb.sphere', 'sfera')}</option>
+                <option value="line">{t('cb.line', 'linea')}</option>
+                <option value="cube">{t('cb.cube', 'cubo')}</option>
+              </select>
+              <label className="row" style={{ margin: 0, fontSize: 12 }}>
+                {t('cb.tplSize', 'misura (ft)')}
+                <input type="number" min={5} step={5} value={tplSize} onChange={(e) => setTplSize(Number(e.target.value))} style={{ width: 60 }} />
+              </label>
+              {tplShape === 'line' && (
+                <label className="row" style={{ margin: 0, fontSize: 12 }}>
+                  {t('cb.tplWidth', 'larghezza (ft)')}
+                  <input type="number" min={5} step={5} value={tplWidth} onChange={(e) => setTplWidth(Number(e.target.value))} style={{ width: 60 }} />
+                </label>
+              )}
+              <button
+                disabled={!cur}
+                onClick={() => act({ kind: 'setTemplate', template: { shape: tplShape, sizeFt: tplSize, widthFt: tplShape === 'line' ? tplWidth : undefined, originId: cur?.id } })}
+              >
+                {t('cb.tplPlace', 'Piazza sul turno corrente')}
+              </button>
+              {combat.template && (
+                <button className="danger" onClick={() => act({ kind: 'clearTemplate' })}>{t('cb.tplClear', 'Rimuovi')}</button>
+              )}
+            </div>
+          )}
+          {combat.template && (
+            <div style={{ marginBottom: 10, maxWidth: 420 }}>
+              <TemplateView tpl={combat.template} />
+            </div>
+          )}
 
           <table>
             <thead>

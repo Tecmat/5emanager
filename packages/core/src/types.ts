@@ -213,6 +213,8 @@ export type Currency = { cp: number; sp: number; ep: number; gp: number; pp: num
 
 export type ItemKind = 'weapon' | 'armor' | 'shield' | 'gear' | 'treasure' | 'custom';
 
+export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'veryRare' | 'legendary';
+
 export interface InventoryItem {
   id: string;
   name: string;
@@ -229,6 +231,12 @@ export interface InventoryItem {
   charges?: { current: number; max: number };
   /** id del contenitore che contiene questo oggetto (zaino dentro zaino) */
   containerId?: string;
+  /** rarità dell'oggetto (filtri e tesoreria) */
+  rarity?: ItemRarity;
+  /** valore in monete d'oro dell'unità (per vendere/tesoro) */
+  valueGp?: number;
+  /** se l'oggetto lancia un incantesimo spendendo una carica (pergamene, bacchette...) */
+  spellId?: string;
 }
 
 export interface ClassLevel {
@@ -303,6 +311,8 @@ export interface Character {
   conditions: string[];
   /** diario di sessione: eventi automatici (XP, danni, level-up...) + note manuali */
   journal: { at: string; text: string }[];
+  /** incantesimi preferiti (⭐) mostrati con filtro in tab Incantesimi */
+  favoriteSpells: string[];
   /** livello di esaurimento 0-6 (6 = morte) */
   exhaustion: number;
   /** incantesimi preparati divisi per classe (multiclasse): classId -> spellId[] */

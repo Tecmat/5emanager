@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { createContext, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   createRegistry,
   loadData,
@@ -59,6 +59,9 @@ interface Store {
   resetChar: () => void;
   reloadCustom: () => void;
   customCount: number;
+  /** annulla l'ultima modifica alla scheda attiva (snapshot in memoria, max 30) */
+  undo: () => void;
+  canUndo: boolean;
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string, fallback?: string) => string;
@@ -117,6 +120,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const [viewChar, setViewCharState] = useState<Character | null>(null);
   const [viewLabel, setViewLabel] = useState<string | null>(null);
+  const histRef = useRef<Character[]>([]);
+  const [canUndo, setCanUndo] = useState(false);
   const setViewChar = (c: Character | null, label?: string | null) => {
     setViewCharState(c);
     setViewLabel(c ? (label ?? c.name) : null);
@@ -134,7 +139,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const setChar = (c: Character) => {
     if (viewChar) return; // sola lettura in modalità vista
     if (!data.activeId) return;
+    const prev = data.sheets[data.activeId];
+    if (prev && prev !== c) {
+      histRef.current = [...histRef.current.slice(-29), prev];
+      setCanUndo(true);
+    }
     persist({ ...data, sheets: { ...data.sheets, [data.activeId]: c } });
+  };
+
+  const undo = () => {
+    if (!data.activeId) return;
+    const prev = histRef.current.pop();
+    if (!prev) return;
+    setCanUndo(histRef.current.length > 0);
+    persist({ ...data, sheets: { ...data.sheets, [data.activeId]: prev } });
   };
 
   const createSheet = (c: Character) => {
@@ -178,6 +196,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     resetChar: () => { if (data.activeId) deleteSheet(data.activeId); },
     reloadCustom: loadCustom,
     customCount,
+    undo,
+    canUndo,
     lang,
     setLang: (l: Lang) => { storeLang(l); setLangState(l); },
     t: (key: string, fallback?: string) => translate(lang, key, fallback),

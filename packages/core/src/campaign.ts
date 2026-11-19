@@ -1,9 +1,10 @@
-import type { Character, HouseRules } from './types.js';
+import type { Character, Currency, HouseRules, InventoryItem, ItemRarity } from './types.js';
 import type { Registry, SrdData } from './registry.js';
-import type { CombatState } from './rules/combat.js';
+import type { CombatState, CombatTemplate } from './rules/combat.js';
 import {
   addEnemy,
   attack,
+  clearTemplate,
   currentCombatant,
   damageCombatant,
   healCombatant,
@@ -11,11 +12,13 @@ import {
   nextTurn,
   rerollInitiatives,
   setCombatantCondition,
+  setTemplate,
   startPartyCombat,
   useBonus,
   useReaction,
   type AttackMods,
 } from './rules/combat.js';
+import { addCurrencyRaw, addItem } from './rules/inventory.js';
 import { exhaustionEffects } from './rules/exhaustion.js';
 import { hasAdvantage, damageBonusDice } from './rules/effects.js';
 import { addCondition, removeCondition } from './rules/conditions.js';
@@ -39,8 +42,32 @@ export interface Campaign {
   players: PlayerInfo[];
   characters: Record<string, Character>;
   combat: CombatState | null;
+  /** inventario di gruppo condiviso (loot) */
+  groupInventory: InventoryItem[];
+  /** tesoreria di gruppo */
+  groupCurrency: Currency;
+  /** note di sessione condivise (visibili a tutti, modificabili dal master) */
+  notes: string;
   createdAt: string;
   updatedAt: string;
+}
+
+const ZERO_CURRENCY: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+
+/** riempe i campi mancanti delle campagne salvate prima della migrazione (group inventory, note...) */
+export function migrateCampaign(c: Campaign): Campaign {
+  return {
+    ...c,
+    groupInventory: c.groupInventory ?? [],
+    groupCurrency: c.groupCurrency ?? { ...ZERO_CURRENCY },
+    notes: c.notes ?? '',
+  };
+}
+
+let uidCounter = 0;
+export function uid(prefix = 'id'): string {
+  uidCounter = (uidCounter + 1) % 1e6;
+  return `${prefix}-${Date.now().toString(36)}-${uidCounter.toString(36)}${Math.random().toString(36).slice(2, 6)}`;
 }
 
 export type ClientAction =
@@ -67,7 +94,15 @@ export type ClientAction =
   | { kind: 'masterAddXp'; playerId: string; amount: number }
   | { kind: 'masterSetCondition'; playerId: string; conditionId: string; on: boolean }
   | { kind: 'dropConcentration' }
-  | { kind: 'deleteCampaign' };
+  | { kind: 'deleteCampaign' }
+  | { kind: 'masterAddXpAll'; amount: number }
+  | { kind: 'groupAddItem'; item: { name: string; quantity?: number; weight?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean; spellId?: string } }
+  | { kind: 'groupRemoveItem'; itemId: string }
+  | { kind: 'groupGiveItem'; itemId: string; playerId: string }
+  | { kind: 'groupAddCurrency'; amount: Partial<Currency> }
+  | { kind: 'setTemplate'; template: CombatTemplate }
+  | { kind: 'clearTemplate' }
+  | { kind: 'setCampaignNote'; text: string };
 
 /**
  * applica un'azione allo stato della campagna — PURO (niente I/O, niente fs):
@@ -217,6 +252,76 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
           combatants: c.combat.combatants.map((cb) => (ch && cb.id === ch.id ? { ...cb, concentrating: undefined } : cb)),
         };
       }
+      return [c];
+    }
+
+    case 'masterAddXpAll': {
+      if (!isMaster) return [c, 'Solo il master può dare XP a tutta la party'];
+      for (const pid of Object.keys(c.characters)) {
+        c.characters[pid] = addXp(c.characters[pid], action.amount);
+      }
+      return [c];
+    }
+
+    case 'groupAddItem': {
+      const item: InventoryItem = {
+        id: uid('grp'),
+        name: action.item.name,
+        kind: 'treasure',
+        quantity: Math.max(1, action.item.quantity ?? 1),
+        weight: action.item.weight ?? 0,
+        equipped: false,
+        magic: action.item.magic ?? false,
+        attuned: false,
+        valueGp: action.item.valueGp,
+        rarity: action.item.rarity,
+        spellId: action.item.spellId,
+      };
+      c.groupInventory = [...c.groupInventory, item];
+      if (c.combat) c.combat.log = [...c.combat.log, `🎒 ${player.name} aggiunge al gruppo: ${item.name}${item.quantity > 1 ? ` x${item.quantity}` : ''}.`];
+      return [c];
+    }
+
+    case 'groupRemoveItem': {
+      if (!isMaster) return [c, 'Solo il master può rimuovere oggetti dal gruppo'];
+      c.groupInventory = c.groupInventory.filter((i) => i.id !== action.itemId);
+      return [c];
+    }
+
+    case 'groupGiveItem': {
+      if (!isMaster) return [c, 'Solo il master può assegnare oggetti ai giocatori'];
+      const item = c.groupInventory.find((i) => i.id === action.itemId);
+      const target = c.characters[action.playerId];
+      if (!item || !target) return [c, 'Oggetto o giocatore non trovato'];
+      c.groupInventory = c.groupInventory.filter((i) => i.id !== action.itemId);
+      const r = addItem(target, { ...item, id: undefined });
+      c.characters[action.playerId] = r.character;
+      return [c];
+    }
+
+    case 'groupAddCurrency': {
+      if (!isMaster) return [c, 'Solo il master può modificare la tesoreria di gruppo'];
+      c.groupCurrency = addCurrencyRaw(c.groupCurrency, action.amount);
+      return [c];
+    }
+
+    case 'setTemplate': {
+      if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      if (!isMaster && !isTurn) return [c, 'Non è il tuo turno'];
+      c.combat = setTemplate(c.combat, action.template);
+      return [c];
+    }
+
+    case 'clearTemplate': {
+      if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      if (!isMaster && !isTurn) return [c, 'Non è il tuo turno'];
+      c.combat = clearTemplate(c.combat);
+      return [c];
+    }
+
+    case 'setCampaignNote': {
+      if (!isMaster) return [c, 'Solo il master può modificare le note di sessione'];
+      c.notes = action.text;
       return [c];
     }
 

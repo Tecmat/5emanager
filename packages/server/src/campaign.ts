@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_HOUSE_RULES, type Character, type SrdData } from '@dnd5e/core';
+import { DEFAULT_HOUSE_RULES, migrateCampaign, type Character, type SrdData } from '@dnd5e/core';
 import type { Campaign, PlayerInfo } from './protocol.js';
 
 export function hashPassword(pw: string): string {
@@ -27,7 +27,7 @@ export function saveCampaign(c: Campaign): void {
 export function loadCampaign(id: string): Campaign | null {
   const p = campaignPath(id);
   if (!existsSync(p)) return null;
-  return JSON.parse(readFileSync(p, 'utf8')) as Campaign;
+  return migrateCampaign(JSON.parse(readFileSync(p, 'utf8')) as Campaign);
 }
 
 export function listCampaigns(): { id: string; name: string; players: number }[] {
@@ -88,6 +88,9 @@ export function createCampaign(name: string, password: string, master: PlayerInf
     players: [master],
     characters: {},
     combat: null,
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -106,6 +109,9 @@ export function createCampaignAdmin(name: string, password: string): Campaign {
     players: [],
     characters: {},
     combat: null,
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

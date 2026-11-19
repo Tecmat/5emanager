@@ -8,18 +8,24 @@ import {
   moveItemToContainer,
   rechargeItem,
   removeItem,
+  sellItem,
   setAttuned,
   setCharges,
   setEquipped,
+  totalTreasureGp,
   totalWeight,
   useCharge,
+  castItemSpell,
   MAX_ATTUNEMENT,
   type ItemKind,
+  type ItemRarity,
 } from '@dnd5e/core';
 import { useStore } from './store.js';
 
 const KINDS: ItemKind[] = ['weapon', 'armor', 'shield', 'gear', 'treasure', 'custom'];
 const KIND_IT: Record<ItemKind, string> = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', gear: 'Attrezzatura', treasure: 'Tesoro', custom: 'Custom' };
+const RARITIES: ItemRarity[] = ['common', 'uncommon', 'rare', 'veryRare', 'legendary'];
+const RARITY_KEY: Record<ItemRarity, string> = { common: 'inv.r.common', uncommon: 'inv.r.uncommon', rare: 'inv.r.rare', veryRare: 'inv.r.veryRare', legendary: 'inv.r.legendary' };
 
 type SortKey = 'name' | 'kind' | 'weight' | 'qty';
 
@@ -34,6 +40,10 @@ export default function InventoryTab() {
   const [gp, setGp] = useState(0);
   const [container, setContainer] = useState('');
   const [chargesMax, setChargesMax] = useState('');
+  const [valueGp, setValueGp] = useState('');
+  const [rarity, setRarity] = useState<ItemRarity | ''>('');
+  const [spellId, setSpellId] = useState('');
+  const [fRarity, setFRarity] = useState('');
   const [q, setQ] = useState('');
   const [fKind, setFKind] = useState('');
   const [fMagic, setFMagic] = useState('');
@@ -47,16 +57,24 @@ export default function InventoryTab() {
   const add = () => {
     if (!name.trim()) return;
     const maxCh = Number(chargesMax);
+    const v = Number(valueGp);
     const r = addItem(char, {
       name: name.trim(), kind, quantity: qty, weight: w, equipped: kind === 'weapon' || kind === 'armor' || kind === 'shield',
       refId: refId || undefined, magic, attuned: false,
       containerId: container || undefined,
       charges: chargesMax && maxCh > 0 ? { current: maxCh, max: maxCh } : undefined,
+      valueGp: valueGp && v > 0 ? v : undefined,
+      rarity: rarity || undefined,
+      spellId: spellId || undefined,
     });
+    if (r.error) { alert(r.error); return; }
     setChar(r.character);
     setName('');
     setChargesMax('');
     setContainer('');
+    setValueGp('');
+    setRarity('');
+    setSpellId('');
   };
 
   const refOptions = kind === 'weapon' ? [...reg.weapons.values()] : kind === 'armor' || kind === 'shield' ? [...reg.armors.values()].filter((a) => (kind === 'shield' ? a.category === 'shield' : a.category !== 'shield')) : [];
@@ -66,6 +84,7 @@ export default function InventoryTab() {
     .filter((it) => !fKind || it.kind === fKind)
     .filter((it) => fMagic === '' || (fMagic === 'yes') === it.magic)
     .filter((it) => fEq === '' || (fEq === 'yes') === it.equipped)
+    .filter((it) => !fRarity || it.rarity === fRarity)
     .sort((a, b) =>
       sortKey === 'name' ? a.name.localeCompare(b.name)
       : sortKey === 'kind' ? a.kind.localeCompare(b.kind)
@@ -85,6 +104,7 @@ export default function InventoryTab() {
             <button onClick={() => setChar(addCurrency(char, { gp }))}>{t('inv.addGold', 'Aggiungi MO')}</button>
           </div>
           <div className="muted" style={{ marginTop: 8 }}>{tf('inv.attunement', 'Sintonizzazione: {a}/{b} oggetti magici', { a: attunedCount(char), b: MAX_ATTUNEMENT })}</div>
+          <div style={{ marginTop: 4 }}><b>{tf('inv.treasure', 'Tesoro totale: {gp} mo', { gp: Math.round(totalTreasureGp(char) * 100) / 100 })}</b></div>
         </div>
 
         <div className="card">
@@ -124,6 +144,24 @@ export default function InventoryTab() {
                 {char.inventory.map((i) => <option key={i.id} value={i.id}>{i.name}</option>)}
               </select>
             </div>
+            <div>
+              <label>{t('inv.value', 'Valore (MO)')}</label>
+              <input type="number" min={0} value={valueGp} onChange={(e) => setValueGp(e.target.value)} placeholder="50" />
+            </div>
+            <div>
+              <label>{t('inv.rarity', 'Rarità')}</label>
+              <select value={rarity} onChange={(e) => setRarity(e.target.value as ItemRarity | '')}>
+                <option value="">{t('inv.none', '(nessuno)')}</option>
+                {RARITIES.map((r) => <option key={r} value={r}>{t(RARITY_KEY[r], r)}</option>)}
+              </select>
+            </div>
+            <div>
+              <label>{t('inv.spellField', 'Incantesimo lanciato (pergamena/bacchetta, opz.)')}</label>
+              <select value={spellId} onChange={(e) => setSpellId(e.target.value)}>
+                <option value="">{t('inv.none', '(nessuno)')}</option>
+                {char.spellsKnown.map((sid) => <option key={sid} value={sid}>{reg.spells.get(sid)?.name ?? sid}</option>)}
+              </select>
+            </div>
           </div>
           <label style={{ marginTop: 8 }}><input type="checkbox" checked={magic} onChange={(e) => setMagic(e.target.checked)} style={{ width: 'auto' }} /> {t('inv.magic', 'Oggetto magico')}</label>
           <div style={{ marginTop: 10 }}><button className="primary" onClick={add}>{t('inv.add', 'Aggiungi')}</button></div>
@@ -148,6 +186,10 @@ export default function InventoryTab() {
             <option value="yes">{t('inv.yes', 'sì')}</option>
             <option value="no">{t('inv.no', 'no')}</option>
           </select>
+          <select value={fRarity} onChange={(e) => setFRarity(e.target.value)} style={{ width: 'auto' }}>
+            <option value="">{t('inv.allRarity', 'tutte le rarità')}</option>
+            {RARITIES.map((r) => <option key={r} value={r}>{t(RARITY_KEY[r], r)}</option>)}
+          </select>
           <select value={sortKey} onChange={(e) => setSortKey(e.target.value as SortKey)} style={{ width: 'auto' }}>
             <option value="name">{t('inv.sortName', 'ordina: nome')}</option>
             <option value="kind">{t('inv.sortKind', 'ordina: tipo')}</option>
@@ -158,7 +200,7 @@ export default function InventoryTab() {
         {items.length === 0 && <div className="muted">{t('inv.noMatch', 'Nessun oggetto corrisponde.')}</div>}
         <table>
           <thead>
-            <tr><th>{t('inv.thItem', 'Oggetto')}</th><th>{t('inv.thKind', 'Tipo')}</th><th>{t('inv.thQty', 'Qtà')}</th><th>{t('inv.thWeight', 'Peso')}</th><th>{t('inv.thCharges', 'Cariche')}</th><th>{t('inv.thContainer', 'Contenitore')}</th><th>{t('inv.thEquip', 'Equip.')}</th><th>{t('inv.thMagic', 'Magico')}</th><th>{t('inv.thAtt', 'Sint.')}</th><th></th></tr>
+            <tr><th>{t('inv.thItem', 'Oggetto')}</th><th>{t('inv.thKind', 'Tipo')}</th><th>{t('inv.thQty', 'Qtà')}</th><th>{t('inv.thWeight', 'Peso')}</th><th>{t('inv.thRarity', 'Rarità')}</th><th>{t('inv.thValue', 'Valore')}</th><th>{t('inv.thCharges', 'Cariche')}</th><th>{t('inv.thContainer', 'Contenitore')}</th><th>{t('inv.thEquip', 'Equip.')}</th><th>{t('inv.thMagic', 'Magico')}</th><th>{t('inv.thAtt', 'Sint.')}</th><th></th></tr>
           </thead>
           <tbody>
             {items.map((it) => (
@@ -170,6 +212,8 @@ export default function InventoryTab() {
                 <td>{KIND_IT[it.kind]}</td>
                 <td>{it.quantity}</td>
                 <td>{it.weight * it.quantity}</td>
+                <td>{it.rarity ? t(RARITY_KEY[it.rarity], it.rarity) : ''}</td>
+                <td>{it.valueGp ? `${it.valueGp * it.quantity} mo` : ''}</td>
                 <td>
                   {it.charges ? (
                     <span className="row">
@@ -207,7 +251,27 @@ export default function InventoryTab() {
                     }} style={{ width: 'auto' }} />
                   )}
                 </td>
-                <td><button className="danger" onClick={() => setChar(removeItem(char, it.id))}>✕</button></td>
+                <td>
+                  <span className="row">
+                    {it.spellId && it.charges && it.charges.current > 0 && (
+                      <button
+                        title={t('inv.castTitle', "Lancia l'incantesimo dell'oggetto spendendo 1 carica (senza slot)")}
+                        onClick={() => { const r = castItemSpell(char, it.id, reg); if (r.error) alert(r.error); else setChar(r.character); }}
+                      >
+                        {t('inv.castSpell', '✨ lancia')}
+                      </button>
+                    )}
+                    {it.valueGp ? (
+                      <button
+                        title={t('inv.sellTitle', 'Vendi 1 unità al suo valore')}
+                        onClick={() => { const r = sellItem(char, it.id); if (r.error) alert(r.error); else setChar(r.character); }}
+                      >
+                        {tf('inv.sell', '💰 +{gp} mo', { gp: it.valueGp ?? 0 })}
+                      </button>
+                    ) : null}
+                    <button className="danger" onClick={() => setChar(removeItem(char, it.id))}>✕</button>
+                  </span>
+                </td>
               </tr>
             ))}
           </tbody>

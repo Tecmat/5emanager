@@ -2,11 +2,20 @@ import { useState } from 'react';
 import { rollDice, type AdvantageMode, type DiceRollResult } from '@dnd5e/core';
 import { useStore } from './store.js';
 
+const MACROS_KEY = 'dnd5e.macros.v1';
+
 export default function DiceRoller() {
   const { t, tf } = useStore();
   const [expr, setExpr] = useState('1d20');
   const [mode, setMode] = useState<AdvantageMode>('none');
   const [history, setHistory] = useState<DiceRollResult[]>([]);
+  const [macros, setMacros] = useState<string[]>(() => {
+    try { return JSON.parse(localStorage.getItem(MACROS_KEY) ?? '[]') as string[]; } catch { return []; }
+  });
+  const saveMacros = (m: string[]) => {
+    setMacros(m);
+    try { localStorage.setItem(MACROS_KEY, JSON.stringify(m)); } catch { /* quota */ }
+  };
 
   const roll = () => {
     const r = rollDice(expr, mode);
@@ -28,7 +37,30 @@ export default function DiceRoller() {
           <option value="disadvantage">{t('dr.disadvantage', 'Svantaggio')}</option>
         </select>
         <button className="primary" onClick={roll}>{t('dr.roll', 'Tira')}</button>
+        <button
+          title={t('dr.macroAdd', 'Salva espressione come macro')}
+          onClick={() => { const e = expr.trim(); if (e && !macros.includes(e)) saveMacros([...macros, e]); }}
+        >
+          + 📌
+        </button>
       </div>
+      {macros.length > 0 && (
+        <div className="row" style={{ marginTop: 6 }}>
+          <span className="muted">{t('dr.macro', 'Macro:')}</span>
+          {macros.map((m) => (
+            <span key={m} className="tag custom" style={{ cursor: 'pointer' }} title={m} onClick={() => setExpr(m)}>
+              {m}
+              <button
+                style={{ padding: '0 4px', marginLeft: 2, background: 'none', border: 'none', color: 'inherit', cursor: 'pointer' }}
+                onClick={(e) => { e.stopPropagation(); saveMacros(macros.filter((x) => x !== m)); }}
+                aria-label={`✕ ${m}`}
+              >
+                ✕
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
       <div style={{ marginTop: 8 }}>
         {history.map((r, i) => (
           <div key={i} className="muted" style={{ fontSize: 12 }}>

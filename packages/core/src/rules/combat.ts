@@ -27,11 +27,27 @@ export interface Combatant {
   reactionUsed: boolean;
 }
 
+export type TemplateShape = 'cone' | 'sphere' | 'line' | 'cube';
+
+/** area/zone mostrata sulla griglia durante il combattimento (misure in piedi, 5 ft = 1 cella) */
+export interface CombatTemplate {
+  shape: TemplateShape;
+  /** lunghezza/raggio/lato in piedi a seconda della forma */
+  sizeFt: number;
+  /** larghezza della linea in piedi */
+  widthFt?: number;
+  /** combattente da cui origina il template */
+  originId?: string;
+  label?: string;
+}
+
 export interface CombatState {
   combatants: Combatant[];
   round: number;
   turnIndex: number;
   log: string[];
+  /** template area correntemente mostrato (cono/sfera/linea/cubo) */
+  template?: CombatTemplate;
 }
 
 const DEFAULT_SPEED = 30;
@@ -218,9 +234,25 @@ export function damageCombatant(state: CombatState, id: string, amount: number):
     if (c.id !== id) return c;
     const hp = Math.max(0, c.hp - amount);
     log.push(`💥 ${c.name} subisce ${amount} danni (${hp}/${c.maxHp} PF).`);
+    if (c.concentrating && amount > 0) {
+      const dc = Math.max(10, Math.floor(amount / 2));
+      log.push(`🎯 ${c.name} deve superare un tiro salvezza di Costituzione CD ${dc} per mantenere la concentrazione su ${c.concentrating}.`);
+    }
     return { ...c, hp };
   });
   return { ...state, combatants, log };
+}
+
+/** piazza un template area (cono/sfera/linea/cubo) sul campo di battaglia */
+export function setTemplate(state: CombatState, t: CombatTemplate): CombatState {
+  const shapeIt: Record<TemplateShape, string> = { cone: 'cono', sphere: 'sfera', line: 'linea', cube: 'cubo' };
+  const label = t.label ?? `${shapeIt[t.shape]} ${t.sizeFt} ft`;
+  return { ...state, template: { ...t, label }, log: [...state.log, `📐 Template: ${label}${t.originId ? ` (da ${state.combatants.find((c) => c.id === t.originId)?.name ?? t.originId})` : ''}.`] };
+}
+
+export function clearTemplate(state: CombatState): CombatState {
+  if (!state.template) return state;
+  return { ...state, template: undefined, log: [...state.log, '📐 Template rimosso.'] };
 }
 
 export function healCombatant(state: CombatState, id: string, amount: number): CombatState {

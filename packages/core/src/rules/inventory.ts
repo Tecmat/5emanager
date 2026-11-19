@@ -125,3 +125,29 @@ export function updateItem(char: Character, itemId: string, patch: Partial<Inven
     updatedAt: new Date().toISOString(),
   };
 }
+
+/** vende 1 unità dell'oggetto al suo valueGp: aggiorna la valuta e decrementa/rimuove l'oggetto */
+export function sellItem(char: Character, itemId: string): { character: Character; gainedGp: number; error?: string } {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return { character: char, gainedGp: 0, error: 'Oggetto non trovato' };
+  const value = item.valueGp ?? 0;
+  if (value <= 0) return { character: char, gainedGp: 0, error: `${item.name} non ha un valore (imposta "valore MO")` };
+  let next = addCurrency(char, { gp: value });
+  if (item.quantity > 1) next = updateItem(next, itemId, { quantity: item.quantity - 1 });
+  else next = removeItem(next, itemId);
+  return { character: next, gainedGp: value };
+}
+
+/** valore totale del tesoro del PG in monete d'oro (valuta + valore degli oggetti) */
+export function totalTreasureGp(char: Character): number {
+  return currencyToCopper(char.currency) / 100 + char.inventory.reduce((s, i) => s + (i.valueGp ?? 0) * i.quantity, 0);
+}
+
+/** somma in rame di una valuta (utile per la tesoreria di gruppo) */
+export function addCurrencyRaw(c: Currency, amount: Partial<Currency>): Currency {
+  const next = { ...c };
+  for (const [k, v] of Object.entries(amount) as [keyof Currency, number][]) {
+    next[k] = Math.max(0, next[k] + v);
+  }
+  return next;
+}

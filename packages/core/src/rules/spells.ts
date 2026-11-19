@@ -2,7 +2,7 @@ import type { Character, SpellDef } from '../types.js';
 import type { Registry } from '../registry.js';
 import { casterLevel, cantripsKnown } from './levelup.js';
 import { abilityModifier, maxHp } from './derived.js';
-import { updateItem } from './inventory.js';
+import { updateItem, useCharge } from './inventory.js';
 import { logJournal } from '../character.js';
 
 export interface CasterSummary {
@@ -191,7 +191,61 @@ export function castSpell(char: Character, spellId: string, slotLevel: number, r
   };
   const mat = consumeMaterialComponent(next, spell);
   next = mat.character;
-  return { character: logJournal(next, `Lancia ${spell.name} (slot ${slotLevel}°)`), warning: mat.warning };
+  const up = upcastExtraDice(spell, slotLevel);
+  const upText = up ? ` — upcast +${up}` : '';
+  return { character: logJournal(next, `Lancia ${spell.name} (slot ${slotLevel}°)${upText}`), warning: mat.warning };
+}
+
+/**
+ * dado/dadi extra dell'upcast: cerca nell'higherLevel del testo pattern "+NdM"
+ * (es. "+1d6 per ogni slot di livello superiore") e moltiplica per gli slot extra.
+ * Ritorna es. "3d6" oppure null se non c'è upcast di danno.
+ */
+export function upcastExtraDice(spell: SpellDef, slotLevel: number): string | null {
+  if (slotLevel <= spell.level || !spell.higherLevel) return null;
+  const m = spell.higherLevel.match(/\+\s*(\d+)\s*d\s*(\d+)/i);
+  if (!m) return null;
+  const perSlot = Number(m[1]);
+  const faces = Number(m[2]);
+  const extra = perSlot * (slotLevel - spell.level);
+  if (extra <= 0) return null;
+  return `${extra}d${faces}`;
+}
+
+/** anteprima del danno con upcast: base + extra (solo testo, es. { base: '8d6', extra: '2d6' }) */
+export function spellDamagePreview(spell: SpellDef, slotLevel: number): { base?: string; extra?: string } {
+  return { base: spell.damage, extra: upcastExtraDice(spell, slotLevel) ?? undefined };
+}
+
+/** aggiunge/rimuove un incantesimo dai preferiti ⭐ */
+export function toggleFavoriteSpell(char: Character, spellId: string): Character {
+  const has = (char.favoriteSpells ?? []).includes(spellId);
+  return {
+    ...char,
+    favoriteSpells: has ? char.favoriteSpells.filter((s) => s !== spellId) : [...(char.favoriteSpells ?? []), spellId],
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/**
+ * lancia l'incantesimo di un oggetto (pergamena/bacchetta: item.spellId) spendendo 1 carica,
+ * SENZA consumare slot (come una pergamena) e senza componenti materiali.
+ */
+export function castItemSpell(char: Character, itemId: string, reg: Registry): CastResult {
+  const item = char.inventory.find((i) => i.id === itemId);
+  if (!item) return { character: char, error: 'Oggetto non trovato' };
+  if (!item.spellId) return { character: char, error: 'Questo oggetto non lancia incantesimi' };
+  const spell = reg.spells.get(item.spellId);
+  if (!spell) return { character: char, error: 'Incantesimo non trovato: ' + item.spellId };
+  if (!item.charges || item.charges.current <= 0) return { character: char, error: `${item.name} non ha cariche` };
+  const used = useCharge(char, itemId);
+  if (used.error) return { character: char, error: used.error };
+  const next: Character = {
+    ...used.character,
+    concentrationSpellId: spell.concentration ? spell.id : used.character.concentrationSpellId,
+    updatedAt: new Date().toISOString(),
+  };
+  return { character: logJournal(next, `Usa ${item.name} per lanciare ${spell.name} (${item.charges!.max - item.charges!.current + 1}/${item.charges!.max} cariche)`) };
 }
 
 /** lancio come rituale: nessuno slot consumato (richiede spell.ritual), +10 minuti */

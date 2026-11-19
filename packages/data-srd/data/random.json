@@ -1,0 +1,75 @@
+{
+  "names": {
+    "first": ["Aldric", "Brynn", "Caelum", "Daria", "Emeric", "Freya", "Garrick", "Hilda", "Ivo", "Jorah", "Kaela", "Lirien", "Morgan", "Nadia", "Osric", "Petra", "Quentin", "Runa", "Sten", "Thalia", "Ulric", "Vera", "Wyn", "Ysolt", "Aeliana", "Bram", "Corin", "Delia", "Eamon"],
+    "last": ["del Corvo", "Fierobianco", "Manvale", "Ombrafoca", "Pietragrigia", "Solelesto", "Stormborn", "Valleampia", "del Nord", "Tagliaboschi", "Argentovivo", "Cuorenero", "Lamalunga", "Passoveloce", "Scudodiquercia", "Ventofreddo", "d'Ombra", "Ferrofreddo", "Lucedoro", "Nerobianco"],
+    "epithet": ["il Coraggioso", "la Saggia", "il Silenzioso", "la Tempestosa", "il Giusto", "l'Ingegnoso", "la Ferrea", "il Veloce", "il Valoroso", "la Sognatrice"]
+  },
+  "tiers": [
+    {
+      "tier": "Livello 1-4",
+      "minLevel": 1,
+      "maxLevel": 4,
+      "encounters": [
+        { "name": "Imboscata di goblin", "enemies": [{ "enemyId": "goblin", "count": 4 }], "xp": 200 },
+        { "name": "Un orco solitario", "enemies": [{ "enemyId": "orc", "count": 1 }], "xp": 100 },
+        { "name": " Branco di lupi", "enemies": [{ "enemyId": "wolf", "count": 3 }], "xp": 150 },
+        { "name": "Scheletri dal cimitero", "enemies": [{ "enemyId": "skeleton", "count": 4 }], "xp": 200 },
+        { "name": "Banditi sul sentiero", "enemies": [{ "enemyId": "bandit", "count": 3 }], "xp": 150 },
+        { "name": "Un ogre affamato", "enemies": [{ "enemyId": "ogre", "count": 1 }], "xp": 450 }
+      ],
+      "treasure": [
+        { "text": "Un baule con monete", "currency": { "gp": 45, "sp": 30, "cp": 120 } },
+        { "text": "Bottino di banditi", "currency": { "gp": 12, "sp": 80 }, "items": [{ "name": "Pugnale +1", "valueGp": 120, "rarity": "uncommon", "magic": true }] },
+        { "text": "Pozioni di guarigione x2", "items": [{ "name": "Pozione di guarigione", "quantity": 2, "valueGp": 50 }] },
+        { "text": "Un amuleto strano", "currency": { "gp": 25 }, "items": [{ "name": "Amuleto misterioso", "valueGp": 75, "rarity": "uncommon", "magic": true }] }
+      ]
+    },
+    {
+      "tier": "Livello 5-10",
+      "minLevel": 5,
+      "maxLevel": 10,
+      "encounters": [
+        { "name": "Pattuglia di orchi", "enemies": [{ "enemyId": "orc", "count": 3 }, { "enemyId": "goblin", "count": 4 }], "xp": 700 },
+        { "name": "Ogre e lupi", "enemies": [{ "enemyId": "ogre", "count": 1 }, { "enemyId": "wolf", "count": 2 }], "xp": 700 },
+        { "name": "Scheletri guerrieri", "enemies": [{ "enemyId": "skeleton", "count": 6 }], "xp": 600 },
+        { "name": "Covo di banditi", "enemies": [{ "enemyId": "bandit", "count": 6 }], "xp": 600 },
+        { "name": "Doppio ogre", "enemies": [{ "enemyId": "ogre", "count": 2 }], "xp": 900 }
+      ],
+      "treasure": [
+        { "text": "Forziere del capo", "currency": { "gp": 320, "sp": 150, "ep": 40 }, "items": [{ "name": "Spada lunga +1", "valueGp": 500, "rarity": "uncommon", "magic": true }] },
+        { "text": "Sacchetto di gemme", "currency": { "gp": 180 }, "items": [{ "name": "Zaffiro", "valueGp": 250, "rarity": "rare" }, { "name": "Rubino", "valueGp": 150, "rarity": "uncommon" }] },
+        { "text": "Bacchetta magica", "items": [{ "name": "Bacchetta del dardo magico (7 cariche)", "valueGp": 350, "rarity": "uncommon", "magic": true, "spellId": "magic-missile" }] },
+        { "text": "Pergamena di palla di fuoco", "items": [{ "name": "Pergamena di Palla di fuoco", "valueGp": 150, "rarity": "uncommon", "magic": true, "spellId": "fireball" }] }
+      ]
+    },
+    {
+      "tier": "Livello 11-16",
+      "minLevel": 11,
+      "maxLevel": 16,
+      "encounters": [
+        { "name": "Orchi con ogre", "enemies": [{ "enemyId": "orc", "count": 4 }, { "enemyId": "ogre", "count": 2 }], "xp": 2600 },
+        { "name": "Armata di scheletri", "enemies": [{ "enemyId": "skeleton", "count": 10 }], "xp": 2500 },
+        { "name": "Clan di banditi", "enemies": [{ "enemyId": "bandit", "count": 8 }, { "enemyId": "ogre", "count": 1 }], "xp": 2900 }
+      ],
+      "treasure": [
+        { "text": "Tesoro del covo", "currency": { "gp": 1200, "pp": 15, "ep": 200 }, "items": [{ "name": "Armatura +1", "valueGp": 1500, "rarity": "rare", "magic": true }] },
+        { "text": "Collezione di arte", "currency": { "gp": 900 }, "items": [{ "name": "Statua d'argento", "valueGp": 750, "rarity": "rare" }] },
+        { "text": "Grimoriorubato", "items": [{ "name": "Pergamena di Fulmine", "valueGp": 350, "rarity": "rare", "magic": true, "spellId": "lightning-bolt" }] }
+      ]
+    },
+    {
+      "tier": "Livello 17-20",
+      "minLevel": 17,
+      "maxLevel": 20,
+      "encounters": [
+        { "name": "Warband di orchi e 2 ogre", "enemies": [{ "enemyId": "orc", "count": 6 }, { "enemyId": "ogre", "count": 2 }], "xp": 8000 },
+        { "name": "Legione di scheletri", "enemies": [{ "enemyId": "skeleton", "count": 16 }], "xp": 8000 },
+        { "name": "Accampamento banditi élite", "enemies": [{ "enemyId": "bandit", "count": 10 }, { "enemyId": "ogre", "count": 2 }], "xp": 8500 }
+      ],
+      "treasure": [
+        { "text": "Tesoro leggendario", "currency": { "gp": 8000, "pp": 250 }, "items": [{ "name": "Spada sacra +2", "valueGp": 5000, "rarity": "veryRare", "magic": true }, { "name": "Anello di protezione", "valueGp": 3500, "rarity": "rare", "magic": true }] },
+        { "text": "Scrigno di gemme grandi", "currency": { "gp": 5000 }, "items": [{ "name": "Diamante", "valueGp": 5000, "rarity": "rare" }, { "name": "Smeraldo", "valueGp": 2500, "rarity": "uncommon" }] }
+      ]
+    }
+  ]
+}

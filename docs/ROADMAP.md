@@ -1,5 +1,45 @@
 # Roadmap — espansione di 5e Manager
 
+## ✅ P1/P2 completate (v0.1.13, branch vibe/dnd5e-scheda-f0caaa)
+
+- **P1 Upcast del danno**: `upcastExtraDice`/`spellDamagePreview` nel core (parse dell'`higherLevel`, es. +1d6/slot) — anteprima "a slot N°: danno X + Y" in tab Incantesimi e voce `upcast +NdM` nel diario al lancio
+- **P1 XP a tutta la party**: azione `masterAddXpAll` (server + P2P) + bottone ⭐ nel pannello master
+- **P1 Inventario di gruppo + tesoreria condivisa**: `Campaign.groupInventory`/`groupCurrency` con azioni `groupAddItem` (tutti), `groupRemoveItem`/`groupGiveItem`/`groupAddCurrency` (master), card 🎒 in Campagna; migrazione campagne existentes (`migrateCampaign`)
+- **P1 Note di sessione condivise**: `Campaign.notes` + azione `setCampaignNote` (master), card 📝 in Campagna
+- **P1 Reminder TS concentrazione**: `damageCombatant` logga `🎯 TS Cos CD max(10, metà danno)` quando un combattente concentrato subisce danni
+- **P1 Preferiti incantesimi ⭐**: `Character.favoriteSpells` + stella per riga + filtro "solo ⭐" in Incantesimi
+- **P2 Pergamene/oggetti che lanciano**: `InventoryItem.spellId` + `castItemSpell` (1 carica, nessuno slot, niente componenti materiali) + bottone ✨ in Inventario
+- **P2 Template aree in combattimento**: cono/sfera/linea/cubo con misure in ft su griglia 5 ft (SVG `TemplateView`), azioni `setTemplate`/`clearTemplate` (master o turno corrente), in Combattimento locale e live
+- **P2 Generatore casuale master**: `rules/random.ts` + `data-srd/data/random.json` (nomi, incontri e tesori per tier di livello) — card 🎲 in Campagna con "aggiungi nemici al combattimento" e "metti nel gruppo/tesoreria"
+- **P2 Rarità/valore + vendita**: `rarity`/`valueGp` sugli oggetti, filtro per rarità, colonna valore, bottone 💰 vendi (+MO), "Tesoro totale" in Panoramica-inventario (`totalTreasureGp`)
+- **P2 Undo**: snapshot in memoria (max 30) in `store.tsx`, bottone ↩ in header + **Ctrl/Cmd+Z**; shortcuts **1-6** cambiano tab, **E** edit on/off
+- **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello (CustomTab)
+- **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
+- **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab)
+- **P2 Accessibilità**: `:focus-visible`, `prefers-reduced-motion`, aria-label su bottoni icona e tab
+- **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
+- i18n esteso a tutte le nuove UI (IT/EN)
+
+## 💡 Idee nuove (P3 — proposte, da valutare insieme)
+
+- Riposo breve con dadi vita per classe (spesa/ripristino PF)
+- Slot equipaggiamento standard (testa, amuleto, 2 anelli, armatura, scudo, 2 mani) con validazione equip
+- "Simula il PG fino al 20" (validazione custom class: level-up automatico senza errori)
+- Log dei tiri del combattimento persistente per round (estendere `combat.log` con storico separato)
+- Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
+- Timer di turno + beep opzionale al cambio turno
+- Crafting/ricette e compravendita con calcolo del resto
+- Tema automatico chiaro/scuro dal sistema operativo (`prefers-color-scheme`)
+- Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
+- PWA offline completa (service worker che cachea anche i dati SRD)
+- Notifiche push promemoria sessione (Android/desktop)
+- iOS via Capacitor (stesso codice) — momentaneamente in pausa
+- Sync cloud opzionale (login multi-dispositivo, conflitto last-write)
+- Generatore di dungeon/stanze casuali (tabelle JSON, come il generatore incontri)
+- Schede "pronte" (pregen) da sfogliare e clonare
+- Esportazione campagna intera (log + schede + tesoreria) in un file
+- Statistiche di campagna (danni totali, incantesimi lanciati, round) dal log
+
 ## ✅ P0 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
 
 - Esaurimento 1–6 con effetti automatici (core `rules/exhaustion.ts`: svantaggio prove, velocità, PF max dimezzati, morte a liv 6) + selettore in Panoramica
@@ -41,10 +81,10 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** Livelli di **esaurimento** (1–6) al posto della singola condizione — scala effetti automatici
 - **P0** Multiclasse con **prerequisiti** (es. 13 Int per il mago): warning in `applyLevelUp`
 - **P1** Ritratto/immagine del PG (upload → IndexedDB, non localStorage)
-- **P1** **Diario di sessione / note con timestamp** (log automatico: XP, level-up, danni subiti)
-- **P1** Esportazione scheda in **PDF stampabile** (CSS print + `window.print()`)
+- ✅ **P1** **Diario di sessione / note con timestamp** (log automatico: XP, level-up, danni subiti)
+- ✅ **P1** Esportazione scheda in **PDF stampabile** (CSS print + `window.print()`)
 - **P1** Background e talenti come entità vere (oggi solo testo) — `data-srd` + selettori
-- **P2** Cronologia con **undo** (snapshot dello stato prima di ogni azione)
+- ✅ **P2** Cronologia con **undo** (snapshot dello stato prima di ogni azione)
 
 ## 2. Incantesimi (core/spells + web)
 
@@ -52,10 +92,10 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** Preparazione separata **per classe** (multiclasse) invece che globale
 - **P0** **Tracciamento componenti materiali** (consumabili con cariche, es. "diamante worth 500gp")
 - **P0** Ritual casting: lanzio come rituale senza slot (10 min extra)
-- **P1** Upcast automatico del danno (tabella `higherLevel` numerica, es. `+1d6/slot`) e pokazarlo nel lancio
-- **P1** Concentration tracker nel tab Combattimento (chi sta concentrando cosa, reminder TS Con)
-- **P1** Liste incantesimo custom per PG ("i miei preferiti", filtri per scuola/livello già presenti)
-- **P2** Pergamene e oggetti che lanciano incantesimi (charges) nell'inventario
+- ✅ **P1** Upcast automatico del danno (tabella `higherLevel` numerica, es. `+1d6/slot`) e pokazarlo nel lancio
+- ✅ **P1** Concentration tracker nel tab Combattimento (chi sta concentrando cosa, reminder TS Con)
+- ✅ **P1** Liste incantesimo custom per PG ("i miei preferiti", filtri per scuola/livello già presenti)
+- ✅ **P2** Pergamene e oggetti che lanciano incantesimi (charges) nell'inventario
 
 ## 3. Combattimento (core/combat + web)
 
@@ -65,7 +105,7 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P1** **Statblock nemici custom** (nome, CA, HP, attaques con dado e bonus) salvabili in `data-srd`-like JSON e riutilizzabili
 - **P1** Log dei tiri del combattimento (history persistente per round)
 - **P1** Tracker PF di tutto il gruppo (party) lato master
-- **P1** Aree/zone (cono/sfera/linea) con mesures in griglia — toggle "mostratemplate"
+- ✅ **P1** Aree/zone (cono/sfera/linea) con mesures in griglia — toggle "mostratemplate"
 - **P2** Timer di turno, musik/ambient, mappa tattica minimale con token trascinabili
 
 ## 4. Inventario (core/inventory + web)
@@ -74,8 +114,8 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** Oggetti **consumabili con cariche/usi** (pozioni, munizioni, batterie di bacchette)
 - **P0** **Contenitori** (zaino dentro zaino) con peso ricorsivo
 - **P1** Slot equipaggiamento standard (testa, amuleto, anelli x2, armatura, scudo, 2 mani...) con validazione equip
-- **P1** Rarità e valore singamente, filtro per rarità, totale del tesoro
-- **P2** Crafting/ricette, transactions con PNG (compra/vendi con calcolo resto)
+- ✅ **P1** Rarità e valore singamente, filtro per rarità, totale del tesoro
+- ✅ **P2** Crafting/ricette, transactions con PNG (compra/vendi con calcolo resto)
 
 ## 5. Contenuti custom — editor avanzato (il cuore della "drastica" espansione)
 
@@ -84,15 +124,15 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** **Mini-DSL degli effetti** interpretato dal core: `+1 CA`, `advantage: saves vs magic`, `+1d6 fire damage`, `proficiency: skill stealth`... (`core/rules/effects.ts` nuovo, `derived.ts` lo applica)
 - **P1** **Pacchetti custom esportabili/importabili** (un file `.5epack` JSON con tutto: classi, incantesimi, nemici) — share tra giocatori
 - **P1** Validazione "simula il personaggio" (test automatico che un PG custom sale di livello senza errori fino al 20)
-- **P2** Editor di incantesimi con preview del danno medio e confronto con il baseline SRD
+- ✅ **P2** Editor di incantesimi con preview del danno medio e confronto con il baseline SRD
 
 ## 6. Campagna / strumenti master (nuovo `packages/campaign`?)
 
 - **P0** **Multi-personaggio**: più schede nella stessa app, switch rápido (party)
 - **P0** **DM screen**: vista compatta con PG, PF, CA, TS passivi, condizioni — per il master
-- **P1** Inventario di gruppo condiviso + tesoreria di gruppo
-- **P1** Assegnazione XP di sessione a tutta la party + note di sessione condivise
-- **P2** Generatore casuale (nomi, incontri, tesori) con tabelle in JSON
+- ✅ **P1** Inventario di gruppo condiviso + tesoreria di gruppo
+- ✅ **P1** Assegnazione XP di sessione a tutta la party + note di sessione condivise
+- ✅ **P2** Generatore casuale (nomi, incontri, tesori) con tabelle in JSON
 
 ## 7. Dati e sync
 
@@ -113,15 +153,15 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 
 - **P0** **Tema chiaro/scuro** (CSS variables già pronte in `styles.css`)
 - **P0** i18n **IT/EN** (tutti i testi in file `locales/`)
-- **P1** Scorciatoie da tastiera, comandi rapidi (cmd-K palette)
+- ✅ **P1** Scorciatoie da tastiera, comandi rapidi (cmd-K palette)
 - **P1** Animazioni tiro dado, suoni opzionali
-- **P2** Accessibilità completa (screen reader, contrasto WCAG, riduzione movimento)
+- ✅ **P2** Accessibilità completa (screen reader, contrasto WCAG, riduzione movimento)
 
 ## 10. Qualità
 
 - **P1** Test e2e con **Playwright** (flusso: crea PG → XP → level-up → lancia incantesimo)
 - **P1** Copertura core > 90% (oggi 39 test unit)
-- **P2** Performance: virtualizzazione liste lunghe (grimorio 100+ incantesimi), code-splitting per tab
+- ✅ **P2** Performance: virtualizzazione liste lunghe (grimorio 100+ incantesimi), code-splitting per tab
 
 ---
 

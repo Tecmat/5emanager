@@ -1,16 +1,19 @@
-import { useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
 import { useStore } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
 import CreateForm from './CreateForm.js';
-import Overview from './Overview.js';
-import SpellsTab from './SpellsTab.js';
-import InventoryTab from './InventoryTab.js';
-import CustomTab from './CustomTab.js';
-import CombatTab from './CombatTab.js';
-import CampaignTab from './CampaignTab.js';
+
+// code-splitting: ogni tab è un chunk separato (P2 performance)
+const Overview = lazy(() => import('./Overview.js'));
+const SpellsTab = lazy(() => import('./SpellsTab.js'));
+const InventoryTab = lazy(() => import('./InventoryTab.js'));
+const CustomTab = lazy(() => import('./CustomTab.js'));
+const CombatTab = lazy(() => import('./CombatTab.js'));
+const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
 type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
+const TAB_ORDER: Tab[] = ['panoramica', 'incantesimi', 'inventario', 'combattimento', 'campagna', 'custom'];
 
 const LOCK_KEY = 'dnd5e.lock.v1';
 
@@ -29,7 +32,7 @@ function loadLock(): LockRec {
 }
 
 export default function App() {
-  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar } = useStore();
+  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo } = useStore();
   const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(localStorage.getItem('dnd5e-theme') ?? 'dark');
@@ -48,6 +51,23 @@ export default function App() {
   useEffect(() => {
     if (viewChar) setTab('panoramica');
   }, [viewChar]);
+
+  // scorciatoie da tastiera: 1-6 cambiano tab, "e" edit on/off, Ctrl/Cmd+Z annulla
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
+        if (!typing || true) { e.preventDefault(); undo(); }
+        return;
+      }
+      if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (/^[1-6]$/.test(e.key)) setTab(TAB_ORDER[Number(e.key) - 1]);
+      else if (e.key.toLowerCase() === 'e' && char && !viewChar) setEditing((v) => !v);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [char, viewChar, undo]);
   useEffect(() => {
     if (conn.phase !== 'online' && viewChar) setViewChar(null);
   }, [conn.phase, viewChar, setViewChar]);
@@ -130,8 +150,14 @@ export default function App() {
               className={editing ? 'primary' : ''}
               onClick={() => setEditing((v) => !v)}
               title={editing ? t('app.editDoneTitle', 'Chiudi la modalità modifica') : t('app.editTitle', 'Modifica la scheda (campi editabili)')}
+              aria-label={t('app.edit', 'Modifica')}
             >
               ✏️ {editing ? t('app.editDone', 'Fatto') : t('app.edit', 'Modifica')}
+            </button>
+          )}
+          {!viewChar && canUndo && (
+            <button onClick={undo} title={t('app.undoTitle', "Annulla l'ultima modifica (Ctrl+Z)")} aria-label={t('app.undo', 'Annulla')}>
+              ↩ {t('app.undo', 'Annulla')}
             </button>
           )}
         </span>
@@ -140,8 +166,8 @@ export default function App() {
             {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : t('app.offline', '⚪ offline')}
           </span>
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
-          <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN">🌐 {lang.toUpperCase()}</button>
-          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? '🌙' : '☀️'}</button>
+          <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN">🌐 {lang.toUpperCase()}</button>
+          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? '🌙' : '☀️'}</button>
         </span>
       </header>
       <main>
@@ -150,7 +176,7 @@ export default function App() {
             {t('app.viewBanner1', '👁 Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in 🌐 Campagna (azioni 🔒). Torna alla tua scheda con ✕ in alto.')}
           </div>
         )}
-        <nav className="tabs">
+        <nav className="tabs" aria-label={t('app.tabs', 'Schede')}>
           {(
             [
               ['panoramica', t('tab.panoramica', 'Panoramica')],
@@ -160,18 +186,20 @@ export default function App() {
               ['campagna', t('tab.campagna', '🌐 Campagna')],
               ['custom', t('tab.custom', 'Contenuti custom')],
             ] as [Tab, string][]
-          ).map(([id, label]) => (
-            <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)}>
+          ).map(([id, label], i) => (
+            <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-label={`${i + 1} — ${label}`}>
               {label}
             </button>
           ))}
         </nav>
-        {tab === 'panoramica' && <Overview editing={editing} />}
-        {tab === 'incantesimi' && <SpellsTab />}
-        {tab === 'inventario' && <InventoryTab />}
-        {tab === 'combattimento' && <CombatTab />}
-        {tab === 'campagna' && <CampaignTab />}
-        {tab === 'custom' && <CustomTab />}
+        <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
+          {tab === 'panoramica' && <Overview editing={editing} />}
+          {tab === 'incantesimi' && <SpellsTab />}
+          {tab === 'inventario' && <InventoryTab />}
+          {tab === 'combattimento' && <CombatTab />}
+          {tab === 'campagna' && <CampaignTab />}
+          {tab === 'custom' && <CustomTab />}
+        </Suspense>
       </main>
     </>
   );
