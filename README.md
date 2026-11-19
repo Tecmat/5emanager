@@ -70,6 +70,12 @@ Il server gira anche **direttamente su Android via Termux** ([docs/ANDROID_SERVE
 In produzione (`npm run build -w @dnd5e/web` + `vite preview`) il service worker è
 registrato automaticamente: dal browser scegli "Aggiungi a schermata Home" / "Installa app".
 
+## Aggiornamenti in-app 🔄
+
+Il bottone 🔄 in alto a destra controlla l'ultima release GitHub e aggiorna senza uscire dall'app:
+web/PWA (service worker + `/version.json`), desktop AppImage (download + sostituzione + riavvio, lato Rust),
+Android APK (apre il download dell'asset). Dettagli in [docs/UPDATE.md](docs/UPDATE.md).
+
 ## Licenze
 
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
