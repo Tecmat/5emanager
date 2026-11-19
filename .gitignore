@@ -5,3 +5,6 @@ dist/
 apps/web/android/
 apps/web/ios/
 src-tauri/target/
+
+# generato da apps/web/scripts/write-version.mjs ad ogni build
+apps/web/public/version.json

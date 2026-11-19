@@ -1,7 +1,7 @@
 {
   "name": "dnd5e-manager",
   "private": true,
-  "version": "0.1.14",
+  "version": "0.1.15",
   "type": "module",
   "description": "Gestore di schede D&D 5e: level-up automatizzato, incantesimi, inventario e contenuti custom. WebApp + Desktop (Tauri) + Android (Capacitor).",
   "workspaces": [
