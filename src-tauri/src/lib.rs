@@ -221,37 +221,78 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
     })
 }
 
-/// percorso del file temporaneo di download (accanto all'eseguibile, così il rename finale resta sulla stessa fs)
-fn update_tmp_path() -> Result<std::path::PathBuf, String> {
-    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let dir = exe.parent().ok_or("exe senza directory")?;
-    Ok(dir.join(".5emanager-update.AppImage"))
+/// percorso del file temporaneo di download: prima accanto all'eseguibile (così il rename finale
+/// resta sulla stessa fs), poi in cache (se la cartella dell'AppImage è read-only, es. os error 30)
+fn update_tmp_candidates(app: &tauri::AppHandle) -> Vec<std::path::PathBuf> {
+    let mut v = Vec::new();
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(dir) = exe.parent() {
+            v.push(dir.join(".5emanager-update.AppImage"));
+        }
+    }
+    if let Ok(dir) = app.path().app_cache_dir() {
+        v.push(dir.join("5emanager").join(".5emanager-update.AppImage"));
+    }
+    v
 }
 
-/// scarica il nuovo AppImage con eventi di progresso `update-progress` { received, total } (token se presente)
+/// scarica il nuovo AppImage con eventi di progresso `update-progress` { received, total } (token se presente).
+/// Se la cartella dell'eseguibile non è scrivibile (fs read-only) ripiega sulla cache.
 #[tauri::command]
 async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, String> {
-    let dest = update_tmp_path()?;
     let client = http_client(find_token().as_deref())?;
     let resp = client.get(&url).send().await.map_err(|e| e.to_string())?;
     if !resp.status().is_success() {
         return Err(format!("download: HTTP {} (repo privato? serve un token GitHub)", resp.status()));
     }
     let total = resp.content_length().unwrap_or(0);
-    let mut file = tokio::fs::File::create(&dest).await.map_err(|e| e.to_string())?;
-    let mut received: u64 = 0;
-    let mut stream = resp.bytes_stream();
-    while let Some(chunk) = stream.next().await {
-        let chunk = chunk.map_err(|e| e.to_string())?;
-        file.write_all(&chunk).await.map_err(|e| e.to_string())?;
-        received += chunk.len() as u64;
-        let _ = app.emit(
-            "update-progress",
-            serde_json::json!({ "received": received, "total": total }),
-        );
+    let mut last_err = String::new();
+    for dest in update_tmp_candidates(&app) {
+        if let Some(dir) = dest.parent() {
+            if std::fs::create_dir_all(dir).is_err() {
+                continue;
+            }
+        }
+        let file = tokio::fs::File::create(&dest).await;
+        let mut file = match file {
+            Ok(f) => f,
+            Err(e) => {
+                last_err = format!("{dest:?}: {e}");
+                continue; // es. read-only fs → prova il prossimo percorso
+            }
+        };
+        let mut received: u64 = 0;
+        let mut stream = resp.bytes_stream();
+        let mut failed = false;
+        while let Some(chunk) = stream.next().await {
+            match chunk {
+                Ok(chunk) => {
+                    if let Err(e) = file.write_all(&chunk).await {
+                        last_err = format!("write {dest:?}: {e}");
+                        failed = true;
+                        break;
+                    }
+                    received += chunk.len() as u64;
+                    let _ = app.emit(
+                        "update-progress",
+                        serde_json::json!({ "received": received, "total": total }),
+                    );
+                }
+                Err(e) => {
+                    last_err = e.to_string();
+                    failed = true;
+                    break;
+                }
+            }
+        }
+        if failed {
+            let _ = std::fs::remove_file(&dest);
+            continue;
+        }
+        let _ = file.flush().await;
+        return Ok(dest.to_string_lossy().to_string());
     }
-    file.flush().await.map_err(|e| e.to_string())?;
-    Ok(dest.to_string_lossy().to_string())
+    Err(format!("nessuna cartella scrivibile per il download ({last_err})"))
 }
 
 fn chmod755(p: &std::path::Path) -> Result<(), String> {
@@ -271,20 +312,21 @@ fn launch_and_exit(p: &std::path::Path) -> ! {
     std::process::exit(0);
 }
 
-/// sostituisce l'AppImage in esecuzione con quello scaricato e riavvia (questa funzione non ritorna)
+/// sostituisce l'AppImage in esecuzione con quello scaricato e riavvia (questa funzione non ritorna).
+/// Se la cartella dell'AppImage è read-only, avvia la copia scaricata in cache (la userà al posto suo).
 #[tauri::command]
 fn apply_update(app: tauri::AppHandle) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let tmp = update_tmp_path()?;
-    if !tmp.exists() {
+    let tmp = update_tmp_candidates(&app).into_iter().find(|p| p.exists());
+    let Some(tmp) = tmp else {
         return Err("Nessun aggiornamento scaricato (usa prima Scarica e installa)".into());
-    }
-    // 1) rename sul posto: su Linux si può sostituire un binario in esecuzione (l'inode vecchio resta montato)
-    if std::fs::rename(&tmp, &exe).is_ok() {
+    };
+    // 1) il tmp è accanto all'exe → rename sul posto (su Linux si può sostituire un binario in esecuzione)
+    if tmp.parent() == exe.parent() && std::fs::rename(&tmp, &exe).is_ok() {
         chmod755(&exe)?;
         launch_and_exit(&exe);
     }
-    // 2) fallback: la cartella dell'AppImage non è scrivibile → copia in cache e avvia quella
+    // 2) fallback (fs read-only): copia in cache come nuovo AppImage e avvialo
     let dir = app
         .path()
         .app_cache_dir()
