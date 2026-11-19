@@ -6,15 +6,19 @@ niente server, niente dominio, niente porte da aprire.
 
 ## Come si usa
 
-### 🔍 Modo automatico (consigliato, stessa rete)
+### 🔍 Modo automatico (consigliato, stessa rete) — un solo tasto
 
 1. L'**host** apre la tab 🌐 Campagna → **📡 P2P** → "Faccio da host", mette nome campagna,
-   password e nome, spunta **📡 Annunciati su un server LAN** (inserendo il `ws://…` di un
-   server 5emanager raggiungibile, es. quello di casa) e preme **Avvia host P2P**.
-2. Ogni **giocatore** (stessa rete) apre 📡 P2P → "Mi unisco a un host", mette nome e password,
-   inserisce lo stesso indirizzo del server LAN e preme **🔍 Cerca host**: vede l'host nella
-   lista e preme **▶** — la connessione si apre da sola (il server fa solo da relay dei
-   codici di segnalazione, il traffico di gioco resta P2P diretto tra i dispositivi).
+   password e nome, spunta **📡 Annunciati su un server LAN** e preme **Avvia host P2P**.
+   Il server LAN viene individuato da solo (origin della pagina se la web app è servita dal
+   server, oppure l'ultimo `ws://…` salvato); in alternativa si può indicare a mano.
+2. Ogni **giocatore** (stessa rete) apre 📡 P2P → "Mi unisco a un host", mette nome e password
+   e preme un solo tasto **🔍 Cerca host sulla rete**: la lista si aggiorna da sola ogni 8 s,
+   vede l'host e preme **▶** — la connessione si apre da sola (il server fa solo da relay
+   dei codici di segnalazione, il traffico di gioco resta P2P diretto tra i dispositivi).
+   - Su **Android/AppImage** il server LAN è l'ultimo `ws://…` impostato (campo "Server
+     WebSocket" in alto); se è `localhost` va sostituito con l'IP del server (es.
+     `ws://192.168.1.10:3001`).
 
 ### ✍️ Modo manuale (senza alcun server, solo WhatsApp/QR)
 
