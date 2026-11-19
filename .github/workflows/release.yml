@@ -60,14 +60,14 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: rustup target add x86_64-pc-windows-msi
+      - run: rustup target add x86_64-pc-windows-msvc
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       # exe nudo (le risorse web sono embedded nel binario) → zip portatile, niente installatore
       # (su Windows i bundle validi sono solo msi/nsis: disattivo il bundling via --config)
       - shell: pwsh
         run: |
-          npm run tauri:build -- --target x86_64-pc-windows-msi --config '{"bundle":{"active":false}}'
+          npm run tauri:build -- --target x86_64-pc-windows-msvc --config '{"bundle":{"active":false}}'
           if ($LASTEXITCODE -ne 0) { throw "tauri build fallito" }
           $exe = Get-ChildItem -Recurse src-tauri/target -Filter '*.exe' | Where-Object { $_.FullName -match 'release' -and $_.Name -notmatch 'build|rustc|\.dll' } | Select-Object -First 1
           if (-not $exe) { throw "exe non trovato" }
@@ -124,8 +124,8 @@ jobs:
         run: |
           cd apps/web/ios/App
           # risolve le dipendenze SwiftPM (Capacitor) prima del build
-          xcodebuild -scheme App -destination 'generic/platform=iOS' -resolvePackageDependencies
-          xcodebuild -scheme App -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' build
+          xcodebuild -workspace App.xcworkspace -scheme App -destination 'generic/platform=iOS' -resolvePackageDependencies
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' build
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/App.app Payload/
           zip -rq "$GITHUB_WORKSPACE/app-unsigned.ipa" Payload
