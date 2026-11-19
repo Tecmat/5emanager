@@ -7,6 +7,7 @@ import {
   checkUpdate,
   detectPlatform,
   downloadDesktopUpdate,
+  errMsg,
   openAndroidDownload,
   type DownloadProgress,
   type UpdateInfo,
@@ -39,7 +40,7 @@ export default function UpdateButton() {
       setStatus('ready');
     } catch (e) {
       setStatus('error');
-      setMsg(`${t('up.errCheck', 'Controllo non riuscito')} — ${(e as Error).message}`);
+      setMsg(`${t('up.errCheck', 'Controllo non riuscito')} — ${errMsg(e)}`);
     }
   };
 
@@ -76,7 +77,7 @@ export default function UpdateButton() {
       }
     } catch (e) {
       setStatus('error');
-      setMsg((e as Error).message);
+      setMsg(errMsg(e));
     }
   };
 
@@ -85,7 +86,7 @@ export default function UpdateButton() {
       await applyDesktopUpdate();
     } catch (e) {
       setStatus('error');
-      setMsg((e as Error).message);
+      setMsg(errMsg(e));
     }
   };
 

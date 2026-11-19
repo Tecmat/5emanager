@@ -17,6 +17,13 @@ import { isNewerVersion, parseAssetUrlsFromExpandedAssets, parseLatestTagFromAto
 export const REPO = 'Tecmat/5emanager';
 export type Platform = 'web' | 'desktop' | 'android';
 
+/** Tauri rigetta le Err(String) dei comandi come stringa semplice, non come Error: normalizza */
+export function errMsg(e: unknown): string {
+  if (typeof e === 'string') return e;
+  const m = (e as Error | undefined)?.message;
+  return m ?? String(e);
+}
+
 export interface UpdateInfo {
   platform: Platform;
   current: string;
@@ -142,18 +149,20 @@ export async function checkUpdateWeb(): Promise<UpdateInfo> {
   throw new Error(errors.join(' · '));
 }
 
-/** desktop: comando Tauri (Rust con token locale); fallback al flusso web */
+/** desktop: comando Tauri (Rust con token locale); fallback al flusso web con errori aggregati */
 export async function checkUpdate(): Promise<UpdateInfo> {
   if (detectPlatform() === 'desktop') {
+    let tauriErr = '';
     try {
       const { invoke } = await import('@tauri-apps/api/core');
       return (await invoke('check_update')) as UpdateInfo;
     } catch (e) {
-      try {
-        return await checkUpdateWeb();
-      } catch {
-        throw new Error(`comando Tauri: ${(e as Error).message}`);
-      }
+      tauriErr = errMsg(e);
+    }
+    try {
+      return await checkUpdateWeb();
+    } catch (e) {
+      throw new Error([tauriErr ? `tauri: ${tauriErr}` : '', errMsg(e)].filter(Boolean).join(' · '));
     }
   }
   return checkUpdateWeb();
