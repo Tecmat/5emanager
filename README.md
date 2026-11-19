@@ -1,2 +1,1 @@
-#Ci si prova
-Si presume
+Ci si prova
