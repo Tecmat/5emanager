@@ -1,353 +1,353 @@
 {
- "id": "rogue",
- "name": "Ladro",
- "hitDie": 8,
- "primaryAbility": [
-  "dex"
- ],
- "savingThrows": [
-  "dex",
-  "int"
- ],
- "armorProficiencies": [
-  "light"
- ],
- "weaponProficiencies": [
-  "simple",
-  "hand-crossbow",
-  "longsword",
-  "rapier",
-  "shortsword"
- ],
- "toolProficiencies": [
-  "thieves-tools"
- ],
- "skillChoices": {
-  "choose": 4,
-  "from": [
-   "acrobatics",
-   "athletics",
-   "deception",
-   "insight",
-   "intimidation",
-   "investigation",
-   "perception",
-   "performance",
-   "persuasion",
-   "sleightOfHand",
-   "stealth"
-  ]
- },
- "features": {
-  "1": [
-   {
-    "id": "expertise",
-    "name": "Competenza",
-    "description": "Raddoppia il bonus di proficiency in 2 abilità a scelta (e Thieves' Tools).",
-    "effects": [
-     {
-      "type": "expertise",
-      "choose": 2,
-      "from": [
-       "acrobatics",
-       "athletics",
-       "deception",
-       "insight",
-       "intimidation",
-       "investigation",
-       "perception",
-       "performance",
-       "persuasion",
-       "sleightOfHand",
-       "stealth"
-      ]
-     },
-     {
-      "type": "proficiency",
-      "kind": "tool",
-      "value": "thieves-tools"
-     }
+  "id": "rogue",
+  "name": "Ladro",
+  "hitDie": 8,
+  "primaryAbility": [
+    "dex"
+  ],
+  "savingThrows": [
+    "dex",
+    "int"
+  ],
+  "armorProficiencies": [
+    "light"
+  ],
+  "weaponProficiencies": [
+    "simple",
+    "hand-crossbow",
+    "longsword",
+    "rapier",
+    "shortsword"
+  ],
+  "toolProficiencies": [
+    "thieves-tools"
+  ],
+  "skillChoices": {
+    "choose": 4,
+    "from": [
+      "acrobatics",
+      "athletics",
+      "deception",
+      "insight",
+      "intimidation",
+      "investigation",
+      "perception",
+      "performance",
+      "persuasion",
+      "sleightOfHand",
+      "stealth"
     ]
-   },
-   {
-    "id": "sneak-attack",
-    "name": "Attacco Furtivo",
-    "description": "1d6 danni extra con arma con la proprietà finesse o a distanza, se hai vantaggio o il bersaglio ha un alleato a 1,5 m.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Attacco Furtivo: +1d6 danni (scala con il livello: 2d6 al 3°, 3d6 al 5°, ... 10d6 al 19°).",
-      "data": {
-       "damagePerLevel": "1d6",
-       "stepEvery": 2
+  },
+  "features": {
+    "1": [
+      {
+        "id": "expertise",
+        "name": "Competenza",
+        "description": "Raddoppia il bonus di proficiency in 2 abilità a scelta (e Thieves' Tools).",
+        "effects": [
+          {
+            "type": "expertise",
+            "choose": 2,
+            "from": [
+              "acrobatics",
+              "athletics",
+              "deception",
+              "insight",
+              "intimidation",
+              "investigation",
+              "perception",
+              "performance",
+              "persuasion",
+              "sleightOfHand",
+              "stealth"
+            ]
+          },
+          {
+            "type": "proficiency",
+            "kind": "tool",
+            "value": "thieves-tools"
+          }
+        ]
+      },
+      {
+        "id": "sneak-attack",
+        "name": "Attacco Furtivo",
+        "description": "1d6 danni extra con arma con la proprietà finesse o a distanza, se hai vantaggio o il bersaglio ha un alleato a 1,5 m.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Attacco Furtivo: +1d6 danni (scala con il livello: 2d6 al 3°, 3d6 al 5°, ... 10d6 al 19°).",
+            "data": {
+              "damagePerLevel": "1d6",
+              "stepEvery": 2
+            }
+          }
+        ]
+      },
+      {
+        "id": "thieves-cant",
+        "name": "Gergo dei Ladri",
+        "description": "Linguaggio segreto dei ladri.",
+        "effects": [
+          {
+            "type": "proficiency",
+            "kind": "language",
+            "value": "thieves-cant"
+          }
+        ]
       }
-     }
+    ],
+    "2": [
+      {
+        "id": "cunning-action",
+        "name": "Azione Scaltra",
+        "description": "Scatto, Disimpegno o Nascondersi come azione bonus.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Azione bonus: Scatto, Disimpegno o Nascondersi."
+          }
+        ]
+      }
+    ],
+    "3": [
+      {
+        "id": "roguish-archetype",
+        "name": "Archetipo Ladronesco",
+        "description": "Scegli un archetipo.",
+        "effects": [
+          {
+            "type": "subclass",
+            "options": [
+              "thief",
+              "assassin",
+              "arcane-trickster"
+            ]
+          }
+        ]
+      }
+    ],
+    "4": [
+      {
+        "id": "asi-4",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "5": [
+      {
+        "id": "uncanny-dodge",
+        "name": "Schivata Prodigiosa",
+        "description": "Reazione: dimezza i danni di un attacco che puoi vedere.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Reazione: dimezza i danni di un attacco che puoi vedere."
+          }
+        ]
+      }
+    ],
+    "6": [
+      {
+        "id": "expertise-2",
+        "name": "Competenza (2)",
+        "description": "Altre 2 competenze raddoppiate.",
+        "effects": [
+          {
+            "type": "expertise",
+            "choose": 2,
+            "from": [
+              "acrobatics",
+              "athletics",
+              "deception",
+              "insight",
+              "intimidation",
+              "investigation",
+              "perception",
+              "performance",
+              "persuasion",
+              "sleightOfHand",
+              "stealth"
+            ]
+          }
+        ]
+      }
+    ],
+    "8": [
+      {
+        "id": "asi-8",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "9": [
+      {
+        "id": "evasion",
+        "name": "Elusione",
+        "description": "Tiro salvezza su Des: nessun danno se fallito, metà se riuscito.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Elusione: su TS Des contro effetti che dimezzano i danni, nessun danno al successo, metà al fallimento."
+          }
+        ]
+      }
+    ],
+    "10": [
+      {
+        "id": "asi-10",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "11": [
+      {
+        "id": "reliable-talent",
+        "name": "Talento Infallibile",
+        "description": "I tiri di caratteristica con proficiency non possono essere sotto 10.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Talento Infallibile: i d20 delle abilità con proficiency non scendono sotto 10."
+          }
+        ]
+      }
+    ],
+    "12": [
+      {
+        "id": "asi-12",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "14": [
+      {
+        "id": "blindsense",
+        "name": "Sesto Blindato",
+        "description": "Percepi creature invisibili/nascoste entro 3m.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Sesto blindato: percepi creature invisibili entro 3m."
+          }
+        ]
+      }
+    ],
+    "15": [
+      {
+        "id": "slippery-mind",
+        "name": "Mente Sfuggente",
+        "description": "Proficiency nei TS su Wis.",
+        "effects": [
+          {
+            "type": "proficiency",
+            "kind": "savingThrow",
+            "value": "wis"
+          }
+        ]
+      }
+    ],
+    "16": [
+      {
+        "id": "asi-16",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "18": [
+      {
+        "id": "elusive",
+        "name": "Elusivo",
+        "description": "Nessun attacco ha vantaggio contro di te a meno che tu non sia incapacitato.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Elusivo: gli attacchi non hanno vantaggio contro di te."
+          }
+        ]
+      }
+    ],
+    "19": [
+      {
+        "id": "asi-19",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "20": [
+      {
+        "id": "stroke-of-luck",
+        "name": "Colpo di Fortuna",
+        "description": "Se fallisci un tiro, puoi convertirlo in 20. 1 uso, riposo breve/lungo.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "stroke-of-luck",
+            "name": "Colpo di Fortuna",
+            "uses": 1,
+            "shortRest": true,
+            "longRest": true
+          }
+        ]
+      }
     ]
-   },
-   {
-    "id": "thieves-cant",
-    "name": "Gergo dei Ladri",
-    "description": "Linguaggio segreto dei ladri.",
-    "effects": [
-     {
-      "type": "proficiency",
-      "kind": "language",
-      "value": "thieves-cant"
-     }
-    ]
-   }
-  ],
-  "2": [
-   {
-    "id": "cunning-action",
-    "name": "Azione Scaltra",
-    "description": "Scatto, Disimpegno o Nascondersi come azione bonus.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Azione bonus: Scatto, Disimpegno o Nascondersi."
-     }
-    ]
-   }
-  ],
-  "3": [
-   {
-    "id": "roguish-archetype",
-    "name": "Archetipo Ladronesco",
-    "description": "Scegli un archetipo.",
-    "effects": [
-     {
-      "type": "subclass",
-      "options": [
-       "thief",
-       "assassin",
-       "arcane-trickster"
-      ]
-     }
-    ]
-   }
-  ],
-  "4": [
-   {
-    "id": "asi-4",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "5": [
-   {
-    "id": "uncanny-dodge",
-    "name": "Schivata Prodigiosa",
-    "description": "Reazione: dimezza i danni di un attacco che puoi vedere.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Reazione: dimezza i danni di un attacco che puoi vedere."
-     }
-    ]
-   }
-  ],
-  "6": [
-   {
-    "id": "expertise-2",
-    "name": "Competenza (2)",
-    "description": "Altre 2 competenze raddoppiate.",
-    "effects": [
-     {
-      "type": "expertise",
-      "choose": 2,
-      "from": [
-       "acrobatics",
-       "athletics",
-       "deception",
-       "insight",
-       "intimidation",
-       "investigation",
-       "perception",
-       "performance",
-       "persuasion",
-       "sleightOfHand",
-       "stealth"
-      ]
-     }
-    ]
-   }
-  ],
-  "8": [
-   {
-    "id": "asi-8",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "9": [
-   {
-    "id": "evasion",
-    "name": "Elusione",
-    "description": "Tiro salvezza su Des: nessun danno se fallito, metà se riuscito.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Elusione: su TS Des contro effetti che dimezzano i danni, nessun danno al successo, metà al fallimento."
-     }
-    ]
-   }
-  ],
-  "10": [
-   {
-    "id": "asi-10",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "11": [
-   {
-    "id": "reliable-talent",
-    "name": "Talento Infallibile",
-    "description": "I tiri di caratteristica con proficiency non possono essere sotto 10.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Talento Infallibile: i d20 delle abilità con proficiency non scendono sotto 10."
-     }
-    ]
-   }
-  ],
-  "12": [
-   {
-    "id": "asi-12",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "14": [
-   {
-    "id": "blindsense",
-    "name": "Sesto Blindato",
-    "description": "Percepi creature invisibili/nascoste entro 3m.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Sesto blindato: percepi creature invisibili entro 3m."
-     }
-    ]
-   }
-  ],
-  "15": [
-   {
-    "id": "slippery-mind",
-    "name": "Mente Sfuggente",
-    "description": "Proficiency nei TS su Wis.",
-    "effects": [
-     {
-      "type": "proficiency",
-      "kind": "savingThrow",
-      "value": "wis"
-     }
-    ]
-   }
-  ],
-  "16": [
-   {
-    "id": "asi-16",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "18": [
-   {
-    "id": "elusive",
-    "name": "Elusivo",
-    "description": "Nessun attacco ha vantaggio contro di te a meno che tu non sia incapacitato.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Elusivo: gli attacchi non hanno vantaggio contro di te."
-     }
-    ]
-   }
-  ],
-  "19": [
-   {
-    "id": "asi-19",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "20": [
-   {
-    "id": "stroke-of-luck",
-    "name": "Colpo di Fortuna",
-    "description": "Se fallisci un tiro, puoi convertirlo in 20. 1 uso, riposo breve/lungo.",
-    "effects": [
-     {
-      "type": "resource",
-      "id": "stroke-of-luck",
-      "name": "Colpo di Fortuna",
-      "uses": 1,
-      "shortRest": true,
-      "longRest": true
-     }
-    ]
-   }
-  ]
- },
- "source": "srd",
- "multiclassPrereq": {
-  "dex": 13
- }
+  },
+  "source": "srd",
+  "multiclassPrereq": {
+    "dex": 13
+  }
 }

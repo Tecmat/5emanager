@@ -1,304 +1,304 @@
 {
- "id": "sorcerer",
- "name": "Stregone",
- "hitDie": 6,
- "primaryAbility": [
-  "cha"
- ],
- "savingThrows": [
-  "con",
-  "cha"
- ],
- "armorProficiencies": [],
- "weaponProficiencies": [
-  "dagger",
-  "dart",
-  "sling",
-  "quarterstaff",
-  "light-crossbow"
- ],
- "toolProficiencies": [],
- "skillChoices": {
-  "choose": 2,
-  "from": [
-   "arcana",
-   "deception",
-   "insight",
-   "intimidation",
-   "persuasion",
-   "religion"
-  ]
- },
- "spellcasting": {
-  "ability": "cha",
-  "type": "full",
-  "cantrips": {
-   "1": 4,
-   "2": 4,
-   "3": 4,
-   "4": 5,
-   "5": 5,
-   "6": 5,
-   "7": 5,
-   "8": 5,
-   "9": 5,
-   "10": 6,
-   "11": 6,
-   "12": 6,
-   "13": 6,
-   "14": 6,
-   "15": 6,
-   "16": 6,
-   "17": 6,
-   "18": 6,
-   "19": 6,
-   "20": 6
+  "id": "sorcerer",
+  "name": "Stregone",
+  "hitDie": 6,
+  "primaryAbility": [
+    "cha"
+  ],
+  "savingThrows": [
+    "con",
+    "cha"
+  ],
+  "armorProficiencies": [],
+  "weaponProficiencies": [
+    "dagger",
+    "dart",
+    "sling",
+    "quarterstaff",
+    "light-crossbow"
+  ],
+  "toolProficiencies": [],
+  "skillChoices": {
+    "choose": 2,
+    "from": [
+      "arcana",
+      "deception",
+      "insight",
+      "intimidation",
+      "persuasion",
+      "religion"
+    ]
   },
-  "spellsKnown": {
-   "1": 2,
-   "2": 3,
-   "3": 4,
-   "4": 5,
-   "5": 6,
-   "6": 7,
-   "7": 8,
-   "8": 9,
-   "9": 10,
-   "10": 11,
-   "11": 12,
-   "12": 13,
-   "13": 14,
-   "14": 15,
-   "15": 15,
-   "16": 16,
-   "17": 17,
-   "18": 18,
-   "19": 19,
-   "20": 20
+  "spellcasting": {
+    "ability": "cha",
+    "type": "full",
+    "cantrips": {
+      "1": 4,
+      "2": 4,
+      "3": 4,
+      "4": 5,
+      "5": 5,
+      "6": 5,
+      "7": 5,
+      "8": 5,
+      "9": 5,
+      "10": 6,
+      "11": 6,
+      "12": 6,
+      "13": 6,
+      "14": 6,
+      "15": 6,
+      "16": 6,
+      "17": 6,
+      "18": 6,
+      "19": 6,
+      "20": 6
+    },
+    "spellsKnown": {
+      "1": 2,
+      "2": 3,
+      "3": 4,
+      "4": 5,
+      "5": 6,
+      "6": 7,
+      "7": 8,
+      "8": 9,
+      "9": 10,
+      "10": 11,
+      "11": 12,
+      "12": 13,
+      "13": 14,
+      "14": 15,
+      "15": 15,
+      "16": 16,
+      "17": 17,
+      "18": 18,
+      "19": 19,
+      "20": 20
+    },
+    "prepare": false,
+    "slots": {}
   },
-  "prepare": false,
-  "slots": {}
- },
- "features": {
-  "1": [
-   {
-    "id": "spellcasting",
-    "name": "Lancio di Incantesimi",
-    "description": "Magia innata: incantesimi conosciuti dallo stregone.",
-    "effects": [
-     {
-      "type": "spellcasting",
-      "ability": "cha",
-      "prepare": false
-     }
+  "features": {
+    "1": [
+      {
+        "id": "spellcasting",
+        "name": "Lancio di Incantesimi",
+        "description": "Magia innata: incantesimi conosciuti dallo stregone.",
+        "effects": [
+          {
+            "type": "spellcasting",
+            "ability": "cha",
+            "prepare": false
+          }
+        ]
+      },
+      {
+        "id": "sorcerous-origin",
+        "name": "Origine Stregonesca",
+        "description": "Scegli un'origine.",
+        "effects": [
+          {
+            "type": "subclass",
+            "options": [
+              "draconic",
+              "wild-magic",
+              "divine-soul"
+            ]
+          }
+        ]
+      }
+    ],
+    "2": [
+      {
+        "id": "font-of-magic",
+        "name": "Fonte di Magia",
+        "description": "2 punti stregoneria; converti slot in punti e viceversa.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "sorcery-points",
+            "name": "Punti Stregoneria",
+            "uses": 2,
+            "longRest": true
+          }
+        ]
+      }
+    ],
+    "3": [
+      {
+        "id": "metamagic",
+        "name": "Metamagia",
+        "description": "Scegli 2 metamagie.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Metamagia: 2 metamagie a scelta."
+          }
+        ]
+      }
+    ],
+    "4": [
+      {
+        "id": "asi-4",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "6": [
+      {
+        "id": "origin-feature-6",
+        "name": "Privilegio di origine",
+        "description": "Privilegio dell'origine al 6° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio di origine (6°)."
+          }
+        ]
+      }
+    ],
+    "8": [
+      {
+        "id": "asi-8",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "10": [
+      {
+        "id": "metamagic-2",
+        "name": "Metamagia (2)",
+        "description": "Scegli un'altra metamagia.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Metamagia: +1 metamagia."
+          }
+        ]
+      }
+    ],
+    "12": [
+      {
+        "id": "asi-12",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "14": [
+      {
+        "id": "origin-feature-14",
+        "name": "Privilegio di origine",
+        "description": "Privilegio dell'origine al 14° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio di origine (14°)."
+          }
+        ]
+      }
+    ],
+    "16": [
+      {
+        "id": "asi-16",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "17": [
+      {
+        "id": "metamagic-3",
+        "name": "Metamagia (3)",
+        "description": "Altra metamagia.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Metamagia: +1 metamagia."
+          }
+        ]
+      }
+    ],
+    "18": [
+      {
+        "id": "sorcerous-restoration",
+        "name": "Restauro Stregonesco",
+        "description": "1/riposo breve: recupera 4 punti stregoneria.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Restauro stregonesco: 4 punti stregoneria a riposo breve."
+          }
+        ]
+      }
+    ],
+    "19": [
+      {
+        "id": "asi-19",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "20": [
+      {
+        "id": "sorcerous-burst",
+        "name": "Scoppio Stregonesco",
+        "description": "Incantesimo di 3° o inferiore: +1d8 danni e tiri il dado di nuovo e tieni il più alto una volta per turno.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Scoppio stregonesco: +1d8 danni ai 3° livello o inferiore."
+          }
+        ]
+      }
     ]
-   },
-   {
-    "id": "sorcerous-origin",
-    "name": "Origine Stregonesca",
-    "description": "Scegli un'origine.",
-    "effects": [
-     {
-      "type": "subclass",
-      "options": [
-       "draconic",
-       "wild-magic",
-       "divine-soul"
-      ]
-     }
-    ]
-   }
-  ],
-  "2": [
-   {
-    "id": "font-of-magic",
-    "name": "Fonte di Magia",
-    "description": "2 punti stregoneria; converti slot in punti e viceversa.",
-    "effects": [
-     {
-      "type": "resource",
-      "id": "sorcery-points",
-      "name": "Punti Stregoneria",
-      "uses": 2,
-      "longRest": true
-     }
-    ]
-   }
-  ],
-  "3": [
-   {
-    "id": "metamagic",
-    "name": "Metamagia",
-    "description": "Scegli 2 metamagie.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Metamagia: 2 metamagie a scelta."
-     }
-    ]
-   }
-  ],
-  "4": [
-   {
-    "id": "asi-4",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "6": [
-   {
-    "id": "origin-feature-6",
-    "name": "Privilegio di origine",
-    "description": "Privilegio dell'origine al 6° livello.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Privilegio di origine (6°)."
-     }
-    ]
-   }
-  ],
-  "8": [
-   {
-    "id": "asi-8",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "10": [
-   {
-    "id": "metamagic-2",
-    "name": "Metamagia (2)",
-    "description": "Scegli un'altra metamagia.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Metamagia: +1 metamagia."
-     }
-    ]
-   }
-  ],
-  "12": [
-   {
-    "id": "asi-12",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "14": [
-   {
-    "id": "origin-feature-14",
-    "name": "Privilegio di origine",
-    "description": "Privilegio dell'origine al 14° livello.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Privilegio di origine (14°)."
-     }
-    ]
-   }
-  ],
-  "16": [
-   {
-    "id": "asi-16",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "17": [
-   {
-    "id": "metamagic-3",
-    "name": "Metamagia (3)",
-    "description": "Altra metamagia.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Metamagia: +1 metamagia."
-     }
-    ]
-   }
-  ],
-  "18": [
-   {
-    "id": "sorcerous-restoration",
-    "name": "Restauro Stregonesco",
-    "description": "1/riposo breve: recupera 4 punti stregoneria.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Restauro stregonesco: 4 punti stregoneria a riposo breve."
-     }
-    ]
-   }
-  ],
-  "19": [
-   {
-    "id": "asi-19",
-    "name": "Aumento dei punteggi caratteristica",
-    "description": "+2 punti o un talento.",
-    "effects": [
-     {
-      "type": "asi",
-      "points": 2
-     },
-     {
-      "type": "feat"
-     }
-    ]
-   }
-  ],
-  "20": [
-   {
-    "id": "sorcerous-burst",
-    "name": "Scoppio Stregonesco",
-    "description": "Incantesimo di 3° o inferiore: +1d8 danni e tiri il dado di nuovo e tieni il più alto una volta per turno.",
-    "effects": [
-     {
-      "type": "custom",
-      "description": "Scoppio stregonesco: +1d8 danni ai 3° livello o inferiore."
-     }
-    ]
-   }
-  ]
- },
- "source": "srd",
- "multiclassPrereq": {
-  "cha": 13
- }
+  },
+  "source": "srd",
+  "multiclassPrereq": {
+    "cha": 13
+  }
 }
