@@ -35,16 +35,11 @@ export default function UpdateButton() {
     setDownloaded(false);
     try {
       const [api, sw] = await Promise.all([checkUpdate(), platform === 'web' ? checkSwUpdate() : Promise.resolve(false)]);
-      if (api) {
-        setInfo({ ...api, available: api.available || sw });
-        setStatus('ready');
-      } else {
-        setStatus('error');
-        setMsg(t('up.errCheck', 'Controllo non riuscito (rete assente o GitHub non raggiungibile)'));
-      }
+      setInfo({ ...api, available: api.available || sw });
+      setStatus('ready');
     } catch (e) {
       setStatus('error');
-      setMsg((e as Error).message);
+      setMsg(`${t('up.errCheck', 'Controllo non riuscito')} — ${(e as Error).message}`);
     }
   };
 
@@ -145,6 +140,11 @@ export default function UpdateButton() {
             </div>
           )}
           {msg && <div className={status === 'error' ? 'error' : 'ok'} style={{ marginTop: 8, fontSize: 12, whiteSpace: 'pre-line' }}>{msg}</div>}
+          {status === 'error' && /404|privat/i.test(msg) && (
+            <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
+              {t('up.privateHint', 'Sembra che il repo sia privato: sul server imposta GITHUB_TOKEN (vedi docs/UPDATE.md e docs/DEPLOY_DEBIAN.md); sul desktop basta `gh auth login` o la env GITHUB_TOKEN. La web app usa /api/update del server.')}
+            </div>
+          )}
           {status === 'ready' && info?.available && (
             <div className="row" style={{ marginTop: 8 }}>
               {platform === 'web' && <button className="primary" onClick={apply}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
