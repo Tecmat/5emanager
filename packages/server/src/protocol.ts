@@ -21,7 +21,13 @@ export type ClientMessage =
   | { t: 'adminRejectAccount'; username: string }
   | { t: 'adminAccountDetail'; username: string }
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
-  | { t: 'action'; action: ClientAction };
+  | { t: 'action'; action: ClientAction }
+  // discovery P2P: gli host P2P si annunciano qui (solo relay dei codici SDP, il gioco resta P2P diretto)
+  | { t: 'p2pAnnounce'; name: string }
+  | { t: 'p2pList' }
+  | { t: 'p2pJoin'; hostId: string }
+  | { t: 'p2pOffer'; to: string; code: string }
+  | { t: 'p2pAnswer'; to: string; code: string };
 
 
 export type ServerMessage =
@@ -40,4 +46,8 @@ export type ServerMessage =
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
   | { t: 'notice'; message: string }
   | { t: 'campaignDeleted'; id: string }
+  | { t: 'p2pHosts'; hosts: { id: string; name: string }[] }
+  | { t: 'p2pJoinRequest'; from: string }
+  | { t: 'p2pOffer'; from: string; name: string; code: string }
+  | { t: 'p2pAnswer'; from: string; code: string }
   | { t: 'error'; message: string };

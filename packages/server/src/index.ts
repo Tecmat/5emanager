@@ -105,6 +105,8 @@ function campaignRegistry(c: Campaign): Registry {
 
 interface Conn {
   ws: WebSocket;
+  /** id univoco della connessione (usato per il relay P2P) */
+  id: string;
   campaignId?: string;
   playerId?: string;
   /** token di sessione account (dopo register/login) */
@@ -115,6 +117,28 @@ interface Conn {
 
 const conns = new Set<Conn>();
 const campaigns = new Map<string, Campaign>();
+
+/** host P2P annunciati su questa rete: connId -> { name, at } (in memoria, TTL 90s) */
+const p2pHosts = new Map<string, { name: string; at: number }>();
+const P2P_HOST_TTL_MS = 90_000;
+
+function p2pHostList(): { id: string; name: string }[] {
+  const now = Date.now();
+  for (const [id, h] of p2pHosts) if (now - h.at > P2P_HOST_TTL_MS) p2pHosts.delete(id);
+  return [...p2pHosts.entries()].map(([id, h]) => ({ id, name: h.name }));
+}
+
+function broadcastP2PHosts(): void {
+  const msg = JSON.stringify({ t: 'p2pHosts', hosts: p2pHostList() });
+  for (const c of conns) if (c.ws.readyState === WebSocket.OPEN) c.ws.send(msg);
+}
+
+function p2pRelay(conn: Conn, to: string, msg: object): void {
+  const target = [...conns].find((c) => c.id === to);
+  if (target && target.ws.readyState === WebSocket.OPEN) {
+    target.ws.send(JSON.stringify({ ...msg, from: conn.id }));
+  }
+}
 
 function send(ws: WebSocket, msg: ServerMessage): void {
   if (ws.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
@@ -167,6 +191,35 @@ function handleMessage(conn: Conn, raw: string): void {
 
   if (msg.t === 'ping') {
     send(conn.ws, { t: 'pong', id: msg.id, serverTime: Date.now() });
+    return;
+  }
+
+  // ---- discovery P2P: relay di annunci e codici SDP (il gioco resta P2P diretto) ----
+  if (msg.t === 'p2pAnnounce') {
+    p2pHosts.set(conn.id, { name: String(msg.name || 'Host P2P'), at: Date.now() });
+    broadcastP2PHosts();
+    return;
+  }
+  if (msg.t === 'p2pList') {
+    send(conn.ws, { t: 'p2pHosts', hosts: p2pHostList() });
+    return;
+  }
+  if (msg.t === 'p2pJoin') {
+    const host = p2pHosts.get(String(msg.hostId));
+    if (!host) {
+      send(conn.ws, { t: 'error', message: 'Host non trovato (forse si è disconnesso)' });
+      return;
+    }
+    p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest' });
+    return;
+  }
+  if (msg.t === 'p2pOffer') {
+    const host = p2pHosts.get(conn.id);
+    p2pRelay(conn, String(msg.to), { t: 'p2pOffer', name: host?.name ?? 'Host P2P', code: String(msg.code) });
+    return;
+  }
+  if (msg.t === 'p2pAnswer') {
+    p2pRelay(conn, String(msg.to), { t: 'p2pAnswer', code: String(msg.code) });
     return;
   }
 
@@ -357,7 +410,7 @@ export function createDndServer(port = PORT, host = HOST) {
   const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 * 1024 });
 
   wss.on('connection', (ws) => {
-    const conn: Conn = { ws };
+    const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10) };
     conns.add(conn);
     ws.on('message', (data) => {
       try {
@@ -368,6 +421,7 @@ export function createDndServer(port = PORT, host = HOST) {
     });
     ws.on('close', () => {
       conns.delete(conn);
+      if (p2pHosts.delete(conn.id)) broadcastP2PHosts();
       if (conn.campaignId && conn.playerId) {
         const c = campaigns.get(conn.campaignId);
         if (c) {
