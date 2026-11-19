@@ -1,506 +1,508 @@
 {
-  "id": "ranger",
-  "name": "Ranger",
-  "hitDie": 10,
-  "primaryAbility": [
-    "dex",
-    "wis"
-  ],
-  "savingThrows": [
-    "str",
-    "dex"
-  ],
-  "armorProficiencies": [
-    "light",
-    "medium",
-    "shield"
-  ],
-  "weaponProficiencies": [
-    "simple",
-    "martial"
-  ],
-  "toolProficiencies": [],
-  "skillChoices": {
-    "choose": 3,
-    "from": [
-      "animalHandling",
-      "athletics",
-      "insight",
-      "investigation",
-      "nature",
-      "perception",
-      "stealth",
-      "survival"
-    ]
+ "id": "ranger",
+ "name": "Ranger",
+ "hitDie": 10,
+ "primaryAbility": [
+  "dex",
+  "wis"
+ ],
+ "savingThrows": [
+  "str",
+  "dex"
+ ],
+ "armorProficiencies": [
+  "light",
+  "medium",
+  "shield"
+ ],
+ "weaponProficiencies": [
+  "simple",
+  "martial"
+ ],
+ "toolProficiencies": [],
+ "skillChoices": {
+  "choose": 3,
+  "from": [
+   "animalHandling",
+   "athletics",
+   "insight",
+   "investigation",
+   "nature",
+   "perception",
+   "stealth",
+   "survival"
+  ]
+ },
+ "spellcasting": {
+  "ability": "wis",
+  "type": "half",
+  "cantrips": {
+   "1": 2,
+   "2": 2,
+   "3": 2,
+   "4": 3,
+   "5": 3,
+   "6": 3,
+   "7": 3,
+   "8": 3,
+   "9": 3,
+   "10": 4,
+   "11": 4,
+   "12": 4,
+   "13": 4,
+   "14": 4,
+   "15": 4,
+   "16": 4,
+   "17": 4,
+   "18": 4,
+   "19": 4,
+   "20": 4
   },
-  "spellcasting": {
-    "ability": "wis",
-    "type": "half",
-    "cantrips": {
-      "1": 2,
-      "2": 2,
-      "3": 2,
-      "4": 3,
-      "5": 3,
-      "6": 3,
-      "7": 3,
-      "8": 3,
-      "9": 3,
-      "10": 4,
-      "11": 4,
-      "12": 4,
-      "13": 4,
-      "14": 4,
-      "15": 4,
-      "16": 4,
-      "17": 4,
-      "18": 4,
-      "19": 4,
-      "20": 4
-    },
-    "spellsKnown": {
-      "1": 2,
-      "2": 3,
-      "3": 3,
-      "4": 4,
-      "5": 4,
-      "6": 5,
-      "7": 5,
-      "8": 6,
-      "9": 6,
-      "10": 7,
-      "11": 7,
-      "12": 8,
-      "13": 8,
-      "14": 9,
-      "15": 9,
-      "16": 10,
-      "17": 10,
-      "18": 11,
-      "19": 11,
-      "20": 12
-    },
-    "prepare": true,
-    "slots": {
-      "1": [],
-      "2": [
-        2
-      ],
-      "3": [
-        3
-      ],
-      "4": [
-        3
-      ],
-      "5": [
-        4,
-        2
-      ],
-      "6": [
-        4,
-        2
-      ],
-      "7": [
-        4,
-        3
-      ],
-      "8": [
-        4,
-        3
-      ],
-      "9": [
-        4,
-        3,
-        2
-      ],
-      "10": [
-        4,
-        3,
-        2
-      ],
-      "11": [
-        4,
-        3,
-        3
-      ],
-      "12": [
-        4,
-        3,
-        3
-      ],
-      "13": [
-        4,
-        3,
-        3,
-        1
-      ],
-      "14": [
-        4,
-        3,
-        3,
-        1
-      ],
-      "15": [
-        4,
-        3,
-        3,
-        2
-      ],
-      "16": [
-        4,
-        3,
-        3,
-        2
-      ],
-      "17": [
-        4,
-        3,
-        3,
-        3,
-        1
-      ],
-      "18": [
-        4,
-        3,
-        3,
-        3,
-        1
-      ],
-      "19": [
-        4,
-        3,
-        3,
-        3,
-        2
-      ],
-      "20": [
-        4,
-        3,
-        3,
-        3,
-        2
-      ]
-    }
+  "spellsKnown": {
+   "1": 2,
+   "2": 3,
+   "3": 3,
+   "4": 4,
+   "5": 4,
+   "6": 5,
+   "7": 5,
+   "8": 6,
+   "9": 6,
+   "10": 7,
+   "11": 7,
+   "12": 8,
+   "13": 8,
+   "14": 9,
+   "15": 9,
+   "16": 10,
+   "17": 10,
+   "18": 11,
+   "19": 11,
+   "20": 12
   },
-  "features": {
-    "1": [
-      {
-        "id": "favored-enemy",
-        "name": "Nemico Prescelto",
-        "description": "Vantaggio a prove su una specie; la conosci.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Nemico prescelto advantage su prove contro una specie a scelta."
-          }
-        ]
-      },
-      {
-        "id": "natural-explorer",
-        "name": "Esploratore Naturale",
-        "description": "Vantaggio a initiative e prove in un terreno prescelto.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Esploratore naturale: terreno prescelto con vantaggi."
-          }
-        ]
-      }
-    ],
-    "2": [
-      {
-        "id": "fighting-style-ranger",
-        "name": "Stile di Combattimento",
-        "description": "Scegli uno stile.",
-        "effects": [
-          {
-            "type": "fightingStyle",
-            "options": [
-              "archery",
-              "defense",
-              "dueling",
-              "two-weapon-fighting"
-            ]
-          }
-        ]
-      },
-      {
-        "id": "spellcasting",
-        "name": "Lancio di Incantesimi",
-        "description": "Prepari incantesimi (Sag + livello).",
-        "effects": [
-          {
-            "type": "spellcasting",
-            "ability": "wis",
-            "prepare": true
-          }
-        ]
-      }
-    ],
-    "3": [
-      {
-        "id": "primeval-awareness",
-        "name": "Consapevolezza Primordiale",
-        "description": "1 slot: percepisci la presenza di creature in 1,5 km.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Consapevolezza primordiale: percepisci creature entro 1,5 km spendendo uno slot."
-          }
-        ]
-      },
-      {
-        "id": "ranger-archetype",
-        "name": "Archetipo del Ranger",
-        "description": "Scegli un archetipo.",
-        "effects": [
-          {
-            "type": "subclass",
-            "options": [
-              "hunter"
-            ]
-          }
-        ]
-      }
-    ],
-    "4": [
-      {
-        "id": "asi-4",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "5": [
-      {
-        "id": "extra-attack",
-        "name": "Attacco Extra",
-        "description": "Due attacchi con l'azione Attacco.",
-        "effects": [
-          {
-            "type": "extraAttack",
-            "count": 1
-          }
-        ]
-      }
-    ],
-    "6": [
-      {
-        "id": "archetype-feature-6",
-        "name": "Privilegio di archetipo",
-        "description": "Privilegio dell'archetipo al 6° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di archetipo (6°)."
-          }
-        ]
-      }
-    ],
-    "7": [
-      {
-        "id": "natural-explorer-2",
-        "name": "Esploratore Naturale (2)",
-        "description": "Non puoi perdersi, etc.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Esploratore naturale migliorato: niente sorpresa, immune a non-magico terreno difficile."
-          }
-        ]
-      }
-    ],
-    "8": [
-      {
-        "id": "asi-8",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      },
-      {
-        "id": "lands-stride",
-        "name": "Passo della Terra",
-        "description": "Movimento difficile non rallenta; immune a piante non magiche.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Passo della terra."
-          }
-        ]
-      }
-    ],
-    "9": [
-      {
-        "id": "archetype-feature-9",
-        "name": "Privilegio di archetipo",
-        "description": "Privilegio dell'archetipo al 9° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di archetipo (9°)."
-          }
-        ]
-      }
-    ],
-    "10": [
-      {
-        "id": "hide-in-plain-sight",
-        "name": "Nascondersi in Bella Vista",
-        "description": "Puoi nasconderti anche senza copertura.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Nascondersi in bella vista: +10 a Furtività in natura."
-          }
-        ]
-      }
-    ],
-    "11": [
-      {
-        "id": "archetype-feature-11",
-        "name": "Privilegio di archetipo",
-        "description": "Privilegio dell'archetipo all'11° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di archetipo (11°)."
-          }
-        ]
-      }
-    ],
-    "12": [
-      {
-        "id": "asi-12",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "14": [
-      {
-        "id": "vanish",
-        "name": "Sparire",
-        "description": "Azione: nascondersi come reazione, immune a being tracked.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Sparire: nascondersi come azione bonus."
-          }
-        ]
-      }
-    ],
-    "15": [
-      {
-        "id": "archetype-feature-15",
-        "name": "Privilegio di archetipo",
-        "description": "Privilegio dell'archetipo al 15° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di archetipo (15°)."
-          }
-        ]
-      }
-    ],
-    "16": [
-      {
-        "id": "asi-16",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "17": [
-      {
-        "id": "archetype-feature-17",
-        "name": "Privilegio di archetipo",
-        "description": "Privilegio dell'archetipo al 17° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di archetipo (17°)."
-          }
-        ]
-      }
-    ],
-    "18": [
-      {
-        "id": "feral-senses",
-        "name": "Sensi Fieri",
-        "description": "Combatti creature invisibili; percepisci entro 9 m.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Sensi fieri: combatti invisibili, percepi entro 9 m."
-          }
-        ]
-      }
-    ],
-    "19": [
-      {
-        "id": "asi-19",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "20": [
-      {
-        "id": "foe-slayer",
-        "name": "Cacciatore di Nemici",
-        "description": "+1d8 danni una volta per turno contro il nemico prescelto.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Cacciatore di nemici: +1d8 danni 1/turno."
-          }
-        ]
-      }
-    ]
-  },
-  "source": "srd",
-  "multiclassPrereq": {
-    "dex": 13,
-    "wis": 13
+  "prepare": true,
+  "slots": {
+   "1": [],
+   "2": [
+    2
+   ],
+   "3": [
+    3
+   ],
+   "4": [
+    3
+   ],
+   "5": [
+    4,
+    2
+   ],
+   "6": [
+    4,
+    2
+   ],
+   "7": [
+    4,
+    3
+   ],
+   "8": [
+    4,
+    3
+   ],
+   "9": [
+    4,
+    3,
+    2
+   ],
+   "10": [
+    4,
+    3,
+    2
+   ],
+   "11": [
+    4,
+    3,
+    3
+   ],
+   "12": [
+    4,
+    3,
+    3
+   ],
+   "13": [
+    4,
+    3,
+    3,
+    1
+   ],
+   "14": [
+    4,
+    3,
+    3,
+    1
+   ],
+   "15": [
+    4,
+    3,
+    3,
+    2
+   ],
+   "16": [
+    4,
+    3,
+    3,
+    2
+   ],
+   "17": [
+    4,
+    3,
+    3,
+    3,
+    1
+   ],
+   "18": [
+    4,
+    3,
+    3,
+    3,
+    1
+   ],
+   "19": [
+    4,
+    3,
+    3,
+    3,
+    2
+   ],
+   "20": [
+    4,
+    3,
+    3,
+    3,
+    2
+   ]
   }
+ },
+ "features": {
+  "1": [
+   {
+    "id": "favored-enemy",
+    "name": "Nemico Prescelto",
+    "description": "Vantaggio a prove su una specie; la conosci.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Nemico prescelto advantage su prove contro una specie a scelta."
+     }
+    ]
+   },
+   {
+    "id": "natural-explorer",
+    "name": "Esploratore Naturale",
+    "description": "Vantaggio a initiative e prove in un terreno prescelto.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Esploratore naturale: terreno prescelto con vantaggi."
+     }
+    ]
+   }
+  ],
+  "2": [
+   {
+    "id": "fighting-style-ranger",
+    "name": "Stile di Combattimento",
+    "description": "Scegli uno stile.",
+    "effects": [
+     {
+      "type": "fightingStyle",
+      "options": [
+       "archery",
+       "defense",
+       "dueling",
+       "two-weapon-fighting"
+      ]
+     }
+    ]
+   },
+   {
+    "id": "spellcasting",
+    "name": "Lancio di Incantesimi",
+    "description": "Prepari incantesimi (Sag + livello).",
+    "effects": [
+     {
+      "type": "spellcasting",
+      "ability": "wis",
+      "prepare": true
+     }
+    ]
+   }
+  ],
+  "3": [
+   {
+    "id": "primeval-awareness",
+    "name": "Consapevolezza Primordiale",
+    "description": "1 slot: percepisci la presenza di creature in 1,5 km.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Consapevolezza primordiale: percepisci creature entro 1,5 km spendendo uno slot."
+     }
+    ]
+   },
+   {
+    "id": "ranger-archetype",
+    "name": "Archetipo del Ranger",
+    "description": "Scegli un archetipo.",
+    "effects": [
+     {
+      "type": "subclass",
+      "options": [
+       "hunter",
+       "beast-master",
+       "gloom-stalker"
+      ]
+     }
+    ]
+   }
+  ],
+  "4": [
+   {
+    "id": "asi-4",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "5": [
+   {
+    "id": "extra-attack",
+    "name": "Attacco Extra",
+    "description": "Due attacchi con l'azione Attacco.",
+    "effects": [
+     {
+      "type": "extraAttack",
+      "count": 1
+     }
+    ]
+   }
+  ],
+  "6": [
+   {
+    "id": "archetype-feature-6",
+    "name": "Privilegio di archetipo",
+    "description": "Privilegio dell'archetipo al 6° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di archetipo (6°)."
+     }
+    ]
+   }
+  ],
+  "7": [
+   {
+    "id": "natural-explorer-2",
+    "name": "Esploratore Naturale (2)",
+    "description": "Non puoi perdersi, etc.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Esploratore naturale migliorato: niente sorpresa, immune a non-magico terreno difficile."
+     }
+    ]
+   }
+  ],
+  "8": [
+   {
+    "id": "asi-8",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   },
+   {
+    "id": "lands-stride",
+    "name": "Passo della Terra",
+    "description": "Movimento difficile non rallenta; immune a piante non magiche.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Passo della terra."
+     }
+    ]
+   }
+  ],
+  "9": [
+   {
+    "id": "archetype-feature-9",
+    "name": "Privilegio di archetipo",
+    "description": "Privilegio dell'archetipo al 9° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di archetipo (9°)."
+     }
+    ]
+   }
+  ],
+  "10": [
+   {
+    "id": "hide-in-plain-sight",
+    "name": "Nascondersi in Bella Vista",
+    "description": "Puoi nasconderti anche senza copertura.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Nascondersi in bella vista: +10 a Furtività in natura."
+     }
+    ]
+   }
+  ],
+  "11": [
+   {
+    "id": "archetype-feature-11",
+    "name": "Privilegio di archetipo",
+    "description": "Privilegio dell'archetipo all'11° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di archetipo (11°)."
+     }
+    ]
+   }
+  ],
+  "12": [
+   {
+    "id": "asi-12",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "14": [
+   {
+    "id": "vanish",
+    "name": "Sparire",
+    "description": "Azione: nascondersi come reazione, immune a being tracked.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Sparire: nascondersi come azione bonus."
+     }
+    ]
+   }
+  ],
+  "15": [
+   {
+    "id": "archetype-feature-15",
+    "name": "Privilegio di archetipo",
+    "description": "Privilegio dell'archetipo al 15° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di archetipo (15°)."
+     }
+    ]
+   }
+  ],
+  "16": [
+   {
+    "id": "asi-16",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "17": [
+   {
+    "id": "archetype-feature-17",
+    "name": "Privilegio di archetipo",
+    "description": "Privilegio dell'archetipo al 17° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di archetipo (17°)."
+     }
+    ]
+   }
+  ],
+  "18": [
+   {
+    "id": "feral-senses",
+    "name": "Sensi Fieri",
+    "description": "Combatti creature invisibili; percepisci entro 9 m.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Sensi fieri: combatti invisibili, percepi entro 9 m."
+     }
+    ]
+   }
+  ],
+  "19": [
+   {
+    "id": "asi-19",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "20": [
+   {
+    "id": "foe-slayer",
+    "name": "Cacciatore di Nemici",
+    "description": "+1d8 danni una volta per turno contro il nemico prescelto.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Cacciatore di nemici: +1d8 danni 1/turno."
+     }
+    ]
+   }
+  ]
+ },
+ "source": "srd",
+ "multiclassPrereq": {
+  "dex": 13,
+  "wis": 13
+ }
 }

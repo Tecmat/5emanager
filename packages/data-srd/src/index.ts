@@ -15,6 +15,7 @@ import sorcerer from '../data/classes/sorcerer.json';
 import warlock from '../data/classes/warlock.json';
 import subclasses from '../data/subclasses.json';
 import subclassesB from '../data/subclasses-b.json';
+import subclassesC from '../data/subclasses-c.json';
 import races from '../data/races.json';
 import spellsA from '../data/spells-a.json';
 import spellsB from '../data/spells-b.json';
@@ -39,7 +40,7 @@ for (const cls of classList) {
 
 export const SRD_DATA: SrdData = {
   classes: classList,
-  subclasses: [...subclasses, ...subclassesB] as unknown as SrdData['subclasses'],
+  subclasses: [...subclasses, ...subclassesB, ...subclassesC] as unknown as SrdData['subclasses'],
   races: races as unknown as SrdData['races'],
   spells: [...spellsA, ...spellsB] as unknown as SrdData['spells'],
   weapons: weapons as unknown as SrdData['weapons'],

@@ -1,308 +1,310 @@
 {
-  "id": "druid",
-  "name": "Druido",
-  "hitDie": 8,
-  "primaryAbility": [
-    "wis"
-  ],
-  "savingThrows": [
-    "int",
-    "wis"
-  ],
-  "armorProficiencies": [
-    "light",
-    "medium",
-    "shield"
-  ],
-  "weaponProficiencies": [
-    "club",
-    "dagger",
-    "dart",
-    "javelin",
-    "mace",
-    "quarterstaff",
-    "scimitar",
-    "sickle",
-    "sling"
-  ],
-  "toolProficiencies": [
-    "herbalism-kit"
-  ],
-  "skillChoices": {
-    "choose": 2,
-    "from": [
-      "arcana",
-      "animalHandling",
-      "insight",
-      "medicine",
-      "nature",
-      "perception",
-      "religion",
-      "survival"
+ "id": "druid",
+ "name": "Druido",
+ "hitDie": 8,
+ "primaryAbility": [
+  "wis"
+ ],
+ "savingThrows": [
+  "int",
+  "wis"
+ ],
+ "armorProficiencies": [
+  "light",
+  "medium",
+  "shield"
+ ],
+ "weaponProficiencies": [
+  "club",
+  "dagger",
+  "dart",
+  "javelin",
+  "mace",
+  "quarterstaff",
+  "scimitar",
+  "sickle",
+  "sling"
+ ],
+ "toolProficiencies": [
+  "herbalism-kit"
+ ],
+ "skillChoices": {
+  "choose": 2,
+  "from": [
+   "arcana",
+   "animalHandling",
+   "insight",
+   "medicine",
+   "nature",
+   "perception",
+   "religion",
+   "survival"
+  ]
+ },
+ "spellcasting": {
+  "ability": "wis",
+  "type": "full",
+  "cantrips": {
+   "1": 2,
+   "2": 2,
+   "3": 2,
+   "4": 3,
+   "5": 3,
+   "6": 3,
+   "7": 3,
+   "8": 3,
+   "9": 3,
+   "10": 4,
+   "11": 4,
+   "12": 4,
+   "13": 4,
+   "14": 4,
+   "15": 4,
+   "16": 4,
+   "17": 4,
+   "18": 4,
+   "19": 4,
+   "20": 4
+  },
+  "spellsKnown": "all",
+  "prepare": true,
+  "slots": {}
+ },
+ "features": {
+  "1": [
+   {
+    "id": "spellcasting",
+    "name": "Lancio di Incantesimi",
+    "description": "Prepari incantesimi dalla lista del druido.",
+    "effects": [
+     {
+      "type": "spellcasting",
+      "ability": "wis",
+      "prepare": true
+     }
     ]
-  },
-  "spellcasting": {
-    "ability": "wis",
-    "type": "full",
-    "cantrips": {
-      "1": 2,
-      "2": 2,
-      "3": 2,
-      "4": 3,
-      "5": 3,
-      "6": 3,
-      "7": 3,
-      "8": 3,
-      "9": 3,
-      "10": 4,
-      "11": 4,
-      "12": 4,
-      "13": 4,
-      "14": 4,
-      "15": 4,
-      "16": 4,
-      "17": 4,
-      "18": 4,
-      "19": 4,
-      "20": 4
-    },
-    "spellsKnown": "all",
-    "prepare": true,
-    "slots": {}
-  },
-  "features": {
-    "1": [
-      {
-        "id": "spellcasting",
-        "name": "Lancio di Incantesimi",
-        "description": "Prepari incantesimi dalla lista del druido.",
-        "effects": [
-          {
-            "type": "spellcasting",
-            "ability": "wis",
-            "prepare": true
-          }
-        ]
-      },
-      {
-        "id": "druidic",
-        "name": "Druidico",
-        "description": "Conosci il linguaggio druidico.",
-        "effects": [
-          {
-            "type": "proficiency",
-            "kind": "language",
-            "value": "druidic"
-          }
-        ]
-      }
-    ],
-    "2": [
-      {
-        "id": "wild-shape",
-        "name": "Forma Selvatica",
-        "description": "Trasformazione in bestia (CR ≤ 1/4). 2 usi, riposo breve/lungo.",
-        "effects": [
-          {
-            "type": "resource",
-            "id": "wild-shape",
-            "name": "Forma Selvatica",
-            "uses": 2,
-            "shortRest": true,
-            "longRest": true
-          }
-        ]
-      },
-      {
-        "id": "druidic-circle",
-        "name": "Cerchio Druidico",
-        "description": "Scegli un cerchio.",
-        "effects": [
-          {
-            "type": "subclass",
-            "options": [
-              "moon"
-            ]
-          }
-        ]
-      }
-    ],
-    "4": [
-      {
-        "id": "asi-4",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "5": [
-      {
-        "id": "wild-shape-improved",
-        "name": "Forma Selvatica Migliorata",
-        "description": "CR ≤ 1/2, forme che nuotano o volano.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Forma selvatica migliorata: CR 1/2, nuoto e volo."
-          }
-        ]
-      }
-    ],
-    "6": [
-      {
-        "id": "circle-feature-6",
-        "name": "Privilegio di cerchio",
-        "description": "Privilegio del cerchio al 6° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di cerchio (6°)."
-          }
-        ]
-      }
-    ],
-    "8": [
-      {
-        "id": "asi-8",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "10": [
-      {
-        "id": "circle-feature-10",
-        "name": "Privilegio di cerchio",
-        "description": "Privilegio del cerchio al 10° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di cerchio (10°)."
-          }
-        ]
-      }
-    ],
-    "12": [
-      {
-        "id": "asi-12",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "14": [
-      {
-        "id": "circle-feature-14",
-        "name": "Privilegio di cerchio",
-        "description": "Privilegio del cerchio al 14° livello.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Privilegio di cerchio (14°)."
-          }
-        ]
-      }
-    ],
-    "16": [
-      {
-        "id": "asi-16",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "18": [
-      {
-        "id": "timeless-body",
-        "name": "Corpo Senza Tempo",
-        "description": "Nessun invecchiamento, no fame/sete, immunità a malattie e veleni.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Corpo senza tempo."
-          }
-        ]
-      },
-      {
-        "id": "beast-spells",
-        "name": "Incantesimi Bestiali",
-        "description": "Lanci incantesimi mentre sei in forma selvatica.",
-        "effects": [
-          {
-            "type": "custom",
-            "description": "Incantesimi bestiali."
-          }
-        ]
-      }
-    ],
-    "19": [
-      {
-        "id": "asi-19",
-        "name": "Aumento dei punteggi caratteristica",
-        "description": "+2 punti o un talento.",
-        "effects": [
-          {
-            "type": "asi",
-            "points": 2
-          },
-          {
-            "type": "feat"
-          }
-        ]
-      }
-    ],
-    "20": [
-      {
-        "id": "archdruid",
-        "name": "Arcidruido",
-        "description": "Forma selvatica illimitata.",
-        "effects": [
-          {
-            "type": "resource",
-            "id": "wild-shape",
-            "name": "Forma Selvatica",
-            "uses": 999,
-            "shortRest": true,
-            "longRest": true
-          }
-        ]
-      }
+   },
+   {
+    "id": "druidic",
+    "name": "Druidico",
+    "description": "Conosci il linguaggio druidico.",
+    "effects": [
+     {
+      "type": "proficiency",
+      "kind": "language",
+      "value": "druidic"
+     }
     ]
-  },
-  "source": "srd",
-  "multiclassPrereq": {
-    "wis": 13
-  }
+   }
+  ],
+  "2": [
+   {
+    "id": "wild-shape",
+    "name": "Forma Selvatica",
+    "description": "Trasformazione in bestia (CR ≤ 1/4). 2 usi, riposo breve/lungo.",
+    "effects": [
+     {
+      "type": "resource",
+      "id": "wild-shape",
+      "name": "Forma Selvatica",
+      "uses": 2,
+      "shortRest": true,
+      "longRest": true
+     }
+    ]
+   },
+   {
+    "id": "druidic-circle",
+    "name": "Cerchio Druidico",
+    "description": "Scegli un cerchio.",
+    "effects": [
+     {
+      "type": "subclass",
+      "options": [
+       "moon",
+       "land",
+       "spores"
+      ]
+     }
+    ]
+   }
+  ],
+  "4": [
+   {
+    "id": "asi-4",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "5": [
+   {
+    "id": "wild-shape-improved",
+    "name": "Forma Selvatica Migliorata",
+    "description": "CR ≤ 1/2, forme che nuotano o volano.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Forma selvatica migliorata: CR 1/2, nuoto e volo."
+     }
+    ]
+   }
+  ],
+  "6": [
+   {
+    "id": "circle-feature-6",
+    "name": "Privilegio di cerchio",
+    "description": "Privilegio del cerchio al 6° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di cerchio (6°)."
+     }
+    ]
+   }
+  ],
+  "8": [
+   {
+    "id": "asi-8",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "10": [
+   {
+    "id": "circle-feature-10",
+    "name": "Privilegio di cerchio",
+    "description": "Privilegio del cerchio al 10° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di cerchio (10°)."
+     }
+    ]
+   }
+  ],
+  "12": [
+   {
+    "id": "asi-12",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "14": [
+   {
+    "id": "circle-feature-14",
+    "name": "Privilegio di cerchio",
+    "description": "Privilegio del cerchio al 14° livello.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Privilegio di cerchio (14°)."
+     }
+    ]
+   }
+  ],
+  "16": [
+   {
+    "id": "asi-16",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "18": [
+   {
+    "id": "timeless-body",
+    "name": "Corpo Senza Tempo",
+    "description": "Nessun invecchiamento, no fame/sete, immunità a malattie e veleni.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Corpo senza tempo."
+     }
+    ]
+   },
+   {
+    "id": "beast-spells",
+    "name": "Incantesimi Bestiali",
+    "description": "Lanci incantesimi mentre sei in forma selvatica.",
+    "effects": [
+     {
+      "type": "custom",
+      "description": "Incantesimi bestiali."
+     }
+    ]
+   }
+  ],
+  "19": [
+   {
+    "id": "asi-19",
+    "name": "Aumento dei punteggi caratteristica",
+    "description": "+2 punti o un talento.",
+    "effects": [
+     {
+      "type": "asi",
+      "points": 2
+     },
+     {
+      "type": "feat"
+     }
+    ]
+   }
+  ],
+  "20": [
+   {
+    "id": "archdruid",
+    "name": "Arcidruido",
+    "description": "Forma selvatica illimitata.",
+    "effects": [
+     {
+      "type": "resource",
+      "id": "wild-shape",
+      "name": "Forma Selvatica",
+      "uses": 999,
+      "shortRest": true,
+      "longRest": true
+     }
+    ]
+   }
+  ]
+ },
+ "source": "srd",
+ "multiclassPrereq": {
+  "wis": 13
+ }
 }
