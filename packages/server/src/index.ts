@@ -39,6 +39,7 @@ import {
   sessionUsername,
 } from './accounts.js';
 import { applyAction } from './combat-ops.js';
+import { handleUpdateApi } from './update-api.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -61,6 +62,11 @@ const MIME: Record<string, string> = {
 
 function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  // check-update lato server (funziona anche con repo privato se GITHUB_TOKEN è impostato)
+  if (rawPath === '/api/update' || rawPath === '/api/update/asset') {
+    void handleUpdateApi(req, res);
+    return;
+  }
   if (rawPath === '/admin' || rawPath === '/admin.html') {
     if (existsSync(ADMIN_PAGE)) {
       res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
