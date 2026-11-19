@@ -1,8 +1,10 @@
 import { hostsInSubnet, localIpViaWebRTC } from '@dnd5e/core';
+import { LAN_BEACON_PORT } from './lanBeacon.js';
 
 /**
- * Scansione automatica della rete locale: trova i server 5emanager sondando /api/info
- * su tutta la sottorete del dispositivo (IP locale preso via ICE WebRTC).
+ * Scansione automatica della rete locale: trova server 5emanager (porta 3001) e
+ * host P2P annunciati dai dispositivi (beacon su LAN_BEACON_PORT), sondando
+ * /api/info su tutta la sottorete del dispositivo (IP locale via ICE WebRTC).
  * Così l'app "per gente comune" non deve chiedere IP a mano: basta un tasto.
  */
 
@@ -13,16 +15,24 @@ export interface LanServer {
   version?: string;
 }
 
-async function probe(ip: string, port: number, timeoutMs = 600): Promise<LanServer | null> {
+export interface LanPeer extends LanServer {
+  /** 'server' = server 5emanager (ws://ip:port), 'p2p' = host P2P sul dispositivo (beacon) */
+  kind: 'server' | 'p2p';
+}
+
+/** porte sondate: server 5emanager + beacon P2P dei dispositivi */
+export const SCAN_PORTS = [3001, LAN_BEACON_PORT];
+
+async function probe(ip: string, port: number, timeoutMs = 600): Promise<LanPeer | null> {
   try {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs);
     try {
       const r = await fetch(`http://${ip}:${port}/api/info`, { signal: ctl.signal });
       if (!r.ok) return null;
-      const j = (await r.json()) as { app?: string; name?: string; version?: string };
+      const j = (await r.json()) as { app?: string; kind?: string; name?: string; version?: string };
       if (j.app !== '5emanager') return null;
-      return { ip, port, name: j.name, version: j.version };
+      return { ip, port, name: j.name, version: j.version, kind: j.kind === 'p2p-host' ? 'p2p' : 'server' };
     } finally {
       clearTimeout(t);
     }
@@ -31,23 +41,36 @@ async function probe(ip: string, port: number, timeoutMs = 600): Promise<LanServ
   }
 }
 
-/** scansione della /24 locale: ritorna i server 5emanager trovati (con nome host e IP) */
-export async function scanLan(port = 3001, onProgress?: (done: number, total: number) => void): Promise<LanServer[]> {
+/**
+ * Scansiona la /24 locale su tutte le porte note: ritorna server e host P2P trovati
+ * (con nome e IP). onProgress(d, t) conta gli IP sondati.
+ */
+export async function scanLanPeers(onProgress?: (done: number, total: number) => void): Promise<LanPeer[]> {
   const myIp = await localIpViaWebRTC(1200);
   if (!myIp) return [];
   const hosts = hostsInSubnet(myIp, 24);
-  const found: LanServer[] = [];
+  const found: LanPeer[] = [];
   const CONC = 24;
   let done = 0;
   for (let i = 0; i < hosts.length; i += CONC) {
     const batch = hosts.slice(i, i + CONC);
-    const results = await Promise.all(batch.map((h) => probe(h, port)));
+    const results = await Promise.all(
+      batch.flatMap((h) => SCAN_PORTS.map((p) => probe(h, p))),
+    );
     for (const r of results) if (r) found.push(r);
     done += batch.length;
     onProgress?.(done, hosts.length);
   }
   // include anche il nostro IP: l'host potrebbe essere questo dispositivo
-  const self = await probe(myIp, port);
-  if (self) found.unshift(self);
+  for (const p of SCAN_PORTS) {
+    const self = await probe(myIp, p);
+    if (self) found.unshift(self);
+  }
   return found;
+}
+
+/** solo i server 5emanager (porta 3001) — mantiene il comportamento precedente */
+export async function scanLan(port = 3001, onProgress?: (done: number, total: number) => void): Promise<LanServer[]> {
+  const peers = await scanLanPeers(onProgress);
+  return peers.filter((p) => p.kind === 'server' && p.port === port);
 }

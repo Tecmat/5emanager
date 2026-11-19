@@ -12,6 +12,7 @@ import {
   speedOf,
   totalLevel,
   currencyToCopper,
+  localIpViaWebRTC,
   rollEncounter,
   rollTreasure,
   randomName,
@@ -24,10 +25,12 @@ import {
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
-import { P2PClient, P2PDiscovery, P2PHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
+import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { errMsg } from './update.js';
-import { scanLan, type LanServer } from './lan.js';
+import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
+import { LAN_BEACON_PORT, beaconStart, lanBeaconSupported } from './lanBeacon.js';
+import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
 
 /** QR del testo (per condividere il codice invito) */
@@ -127,7 +130,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
 }
 
 export default function CampaignTab() {
-  const { reg, char, sheets, viewChar, viewLabel, setViewChar, t, tf } = useStore();
+  const { reg, char, sheets, viewChar, viewLabel, setViewChar, t, tf, getCampaignSheet, setCampaignSheet, setCampaignMeta, selectSheet, campaignMeta } = useStore();
   const {
     conn, auth, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
@@ -143,6 +146,8 @@ export default function CampaignTab() {
   const [myAnswer, setMyAnswer] = useState('');
   const [hosts, setHosts] = useState<P2PHostInfo[]>([]);
   const [lanServers, setLanServers] = useState<LanServer[]>([]);
+  const [lanP2pHosts, setLanP2pHosts] = useState<LanPeer[]>([]);
+  const [beaconInfo, setBeaconInfo] = useState<{ ip: string; port: number } | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanProg, setScanProg] = useState<{ d: number; t: number } | null>(null);
   const [pendingJoins, setPendingJoins] = useState<{ from: string; name: string }[]>([]);
@@ -151,9 +156,9 @@ export default function CampaignTab() {
   const [discMsg, setDiscMsg] = useState('');
   const [hostNotice, setHostNotice] = useState('');
   const [announce, setAnnounce] = useState(false);
-  const hostRef = useRef<P2PHost | P2PRelayHost | null>(null);
-  const [hostMode, setHostMode] = useState<'rtc' | 'relay'>('rtc');
-  const p2pClientRef = useRef<P2PClient | P2PRelayClient | null>(null);
+  const hostRef = useRef<P2PHost | P2PRelayHost | P2PLanHost | null>(null);
+  const [hostMode, setHostMode] = useState<'rtc' | 'relay' | 'lan'>('rtc');
+  const p2pClientRef = useRef<P2PClient | P2PRelayClient | P2PLanClient | null>(null);
   const discRef = useRef<P2PDiscovery | null>(null);
   const discHostIdRef = useRef('');
   const announceTimerRef = useRef<number | undefined>(undefined);
@@ -269,6 +274,52 @@ export default function CampaignTab() {
     if (announce) void startAnnounce();
   };
 
+  /**
+   * HOST "stile Soul Knight": questo dispositivo apre il beacon LAN (porta 3177) e
+   * diventa la campagna: gli altri, sulla stessa WiFi/hotspot, lo trovano con
+   * "Scansiona rete" e si uniscono con un tap. Niente server, niente codici.
+   */
+  const startLanHost = async () => {
+    setError('');
+    if (!lanBeaconSupported()) {
+      setError(t('cg.lanNoNative', 'Beacon LAN disponibile solo nell\'app (AppImage/desktop/Android): dal browser usa la modalità server o il codice invito.'));
+      return;
+    }
+    try {
+      const nm = campaignName || name || 'Campagna LAN';
+      await beaconStart(LAN_BEACON_PORT, nm);
+      const host = new P2PLanHost({ campaignName: nm, password, masterName: name || 'Master', reg, cb: hostCb });
+      hostRef.current = host;
+      setHostMode('lan');
+      setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+      setP2PTransport((m: any) => {
+        if (m?.t === 'action') host.applyAction(host.masterId, m.action);
+      });
+      const ip = await localIpViaWebRTC(1200);
+      setBeaconInfo({ ip: ip ?? '0.0.0.0', port: LAN_BEACON_PORT });
+      setHostNotice(tf('cg.lanBeaconOn', '📡 In onda su questa rete: ws://{ip}:{port} — i giocatori ti vedono con "Scansiona rete" e entrano con un tap.', { ip: ip ?? '?', port: LAN_BEACON_PORT }));
+    } catch (e) {
+      setError(errMsg(e));
+    }
+  };
+
+  /** giocatore: un tap su un host P2P trovato in LAN → WS diretto, niente codici */
+  const joinLanPeer = async (peer: LanPeer) => {
+    setError('');
+    setDiscMsg(tf('cg.p2pJoiningLan', 'Mi collego a "{name}" ({ip})…', { name: peer.name ?? 'host', ip: peer.ip }));
+    try {
+      const client = new P2PLanClient(peer.ip, peer.port);
+      client.onMessage = (m) => handleNetMessage(m);
+      p2pClientRef.current = client;
+      setP2PTransport((m) => client.send(m as never));
+      await client.connect();
+      client.onOpen = () => client.join(name || 'Giocatore', password);
+      client.join(name || 'Giocatore', password);
+    } catch (e) {
+      setError(errMsg(e));
+    }
+  };
+
   /** host: genera un nuovo codice invito da dare al giocatore */
   const newInvite = async () => {
     setError('');
@@ -298,15 +349,19 @@ export default function CampaignTab() {
     return client;
   };
 
-  /** un tasto: scansiona la rete locale (trova i server 5emanager), poi cerca gli host */
+  /** un tasto: scansiona la rete locale (server 5emanager + host P2P dei dispositivi), poi cerca gli host */
   const scanAndSearch = async () => {
     setScanning(true);
     setScanProg(null);
     setLanServers([]);
+    setLanP2pHosts([]);
     try {
-      const found = await scanLan(3001, (d, t2) => setScanProg({ d, t: t2 }));
-      setLanServers(found);
-      if (found.length > 0) setUrl(`ws://${found[0].ip}:${found[0].port}`);
+      const found = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
+      const servers = found.filter((p) => p.kind === 'server');
+      const p2p = found.filter((p) => p.kind === 'p2p');
+      setLanServers(servers);
+      setLanP2pHosts(p2p);
+      if (servers.length > 0) setUrl(`ws://${servers[0].ip}:${servers[0].port}`);
     } catch { /* no WebRTC: si può sempre inserire l'IP a mano */ }
     finally {
       setScanning(false);
@@ -391,8 +446,10 @@ export default function CampaignTab() {
 
   const exitP2P = () => {
     stopDiscovery();
+    if (hostRef.current && 'close' in hostRef.current) (hostRef.current as P2PLanHost).close();
     hostRef.current = null;
     setHostMode('rtc');
+    setBeaconInfo(null);
     p2pClientRef.current?.close();
     p2pClientRef.current = null;
     setP2PTransport(null);
@@ -444,6 +501,35 @@ export default function CampaignTab() {
       if (ch && ch !== viewChar) setViewChar(ch, viewLabel);
     }
   }, [conn, viewChar, viewLabel, setViewChar]);
+
+  // entrando in una campagna: scheda DEDICATA "campagna:<id>" (la locale resta separata e intatta)
+  const camp = conn.phase === 'online' ? conn.campaign : null;
+  useEffect(() => {
+    if (!camp) return;
+    setCampaignMeta(camp.id, { name: camp.name, server: url });
+    let cs = getCampaignSheet(camp.id);
+    if (!cs && char && !isCampaignSheetId(char.id)) {
+      cs = { ...char, id: campaignSheetId(camp.id) };
+      setCampaignSheet(camp.id, cs);
+    }
+    if (cs) {
+      selectSheet(cs.id);
+      act({ kind: 'setCharacter', character: cs });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [camp?.id]);
+
+  // mentre sei online, ogni modifica alla scheda di campagna viene inviata al server
+  // (e salvata nella libreria dell'account, se loggato) — debounce 1.5 s
+  useEffect(() => {
+    if (!camp || !char || char.id !== campaignSheetId(camp.id)) return;
+    const h = window.setTimeout(() => {
+      act({ kind: 'setCharacter', character: char });
+      if (auth) act({ kind: 'saveCharacter', character: char });
+    }, 1500);
+    return () => window.clearTimeout(h);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [char, camp?.id, auth?.username]);
 
   // timer di turno (locale, per dispositivo): riparte a ogni cambio turno
   const combatTurnKey = conn.phase === 'online' ? conn.campaign.combat?.turnIndex ?? -1 : -1;
@@ -508,11 +594,16 @@ export default function CampaignTab() {
                     </datalist>
                   </div>
                 )}
-                <div style={{ marginTop: 10 }}>
+                <div className="row" style={{ marginTop: 10 }}>
                   <button className="primary" onClick={startP2PHost}>{t('cg.startHost', 'Avvia host P2P')}</button>
+                  {lanBeaconSupported() && (
+                    <button className="primary" onClick={startLanHost} title={t('cg.hostLanTitle', 'Questo dispositivo diventa la campagna: gli altri sulla stessa rete ti trovano con un tasto e si uniscono con un tap')}>
+                      🖥️ {t('cg.hostLan', 'Ospita su questa rete (LAN)')}
+                    </button>
+                  )}
                 </div>
                 <div className="muted" style={{ marginTop: 8 }}>
-                  {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Dopo l'avvio generi un codice invito (testo o QR) da dare ai giocatori — oppure li lasci trovare dalla lista se annunci l'host.")}
+                  {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Con \"Ospita su questa rete\" gli amici sulla stessa WiFi ti vedono subito (un tap e sono dentro, li accetti tu); altrimenti usi il codice invito (testo/QR) qui sotto.")}
                 </div>
               </>
             )}
@@ -548,6 +639,21 @@ export default function CampaignTab() {
                           onClick={() => { setUrl(`ws://${s.ip}:${s.port}`); void searchHosts(); }}
                         >
                           🖥 {s.name ?? 'server'} ({s.ip})
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                  {lanP2pHosts.length > 0 && (
+                    <div className="row" style={{ marginTop: 6 }}>
+                      <span className="muted">{t('cg.p2pLanHostsFound', '🎮 host di campagna su questa rete (tap per entrare):')}</span>
+                      {lanP2pHosts.map((p) => (
+                        <button
+                          key={p.ip + ':' + p.port}
+                          className="tag custom lan-host-btn"
+                          style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }}
+                          onClick={() => void joinLanPeer(p)}
+                        >
+                          ▶ {p.name ?? 'host'} ({p.ip})
                         </button>
                       ))}
                     </div>
@@ -795,16 +901,21 @@ export default function CampaignTab() {
         {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
       </div>
 
-      {hostRef.current && isMaster && hostMode === 'relay' && (
+      {hostRef.current && isMaster && (hostMode === 'relay' || hostMode === 'lan') && (
         <div className="card">
-          <h3>{t('cg.addPlayers', '📨 Aggiungi giocatori (P2P relay)')}</h3>
-          {discState === 'on' ? (
+          <h3>{hostMode === 'lan' ? t('cg.addPlayersLan', '🖥️ Aggiungi giocatori (host su questa rete)') : t('cg.addPlayers', '📨 Aggiungi giocatori (P2P relay)')}</h3>
+          {hostMode === 'lan' && beaconInfo && (
+            <div className="ok" style={{ marginBottom: 8 }}>
+              📡 {tf('cg.lanBeaconOn', 'In onda su ws://{ip}:{port} — i giocatori sulla stessa rete ti trovano con "Scansiona rete" e entrano con un tap.', { ip: beaconInfo.ip, port: beaconInfo.port })}
+            </div>
+          )}
+          {hostMode === 'relay' && (discState === 'on' ? (
             <div className="ok" style={{ marginBottom: 8 }}>
               📡 {tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url })} — {t('cg.p2pRelayPlayersHint', 'chi cerca host sulla rete ti vede e entra con un click (trasporto relay via server, perché WebRTC non è disponibile qui).')}
             </div>
           ) : (
             <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
-          )}
+          ))}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
           {pendingJoins.length > 0 && (
             <div style={{ marginTop: 8 }}>
@@ -815,7 +926,7 @@ export default function CampaignTab() {
                   <button
                     className="primary"
                     onClick={() => {
-                      (hostRef.current as P2PRelayHost).acceptJoin(pj.from);
+                      (hostRef.current as P2PRelayHost | P2PLanHost).acceptJoin(pj.from);
                       setPendingJoins((p) => p.filter((x) => x.from !== pj.from));
                       setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
                     }}
@@ -825,7 +936,7 @@ export default function CampaignTab() {
                   <button
                     className="danger"
                     onClick={() => {
-                      (hostRef.current as P2PRelayHost).rejectJoin(pj.from);
+                      (hostRef.current as P2PRelayHost | P2PLanHost).rejectJoin(pj.from);
                       setPendingJoins((p) => p.filter((x) => x.from !== pj.from));
                     }}
                   >

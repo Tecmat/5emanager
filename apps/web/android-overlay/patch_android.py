@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
-"""Patch del progetto Android generato da Capacitor (CI): aggiunge il plugin UpdateInstaller
-(download + installazione APK in-app), il FileProvider e i permessi necessari.
+"""Patch del progetto Android generato da Capacitor (CI): aggiunge i plugin UpdateInstaller
+(download + installazione APK in-app) e LanBeacon (host P2P LAN stile Soul Knight:
+mini server HTTP+WS sul dispositivo), il FileProvider e i permessi necessari.
 Uso: python3 apps/web/android-overlay/patch_android.py apps/web/android
 """
 import pathlib
@@ -14,20 +15,21 @@ overlay = pathlib.Path(__file__).parent
 # 1) AndroidManifest.xml: permesso REQUEST_INSTALL_PACKAGES + FileProvider
 manifest = root / "app/src/main/AndroidManifest.xml"
 s = manifest.read_text()
-if "REQUEST_INSTALL_PACKAGES" not in s:
-    s = re.sub(
-        r"(<manifest[^>]*>)",
-        r'\1\n    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />\n    <uses-permission android:name="android.permission.CAMERA" />',
-        s,
-        count=1,
-    )
-elif "android.permission.CAMERA" not in s:
-    s = re.sub(
-        r"(<manifest[^>]*>)",
-        r'\1\n    <uses-permission android:name="android.permission.CAMERA" />',
-        s,
-        count=1,
-    )
+PERMS = [
+    "android.permission.REQUEST_INSTALL_PACKAGES",
+    "android.permission.CAMERA",
+    "android.permission.INTERNET",
+    "android.permission.ACCESS_NETWORK_STATE",
+    "android.permission.ACCESS_WIFI_STATE",
+]
+for p in PERMS:
+    if p not in s:
+        s = re.sub(
+            r"(<manifest[^>]*>)",
+            r'\1\n    <uses-permission android:name="' + p + '" />',
+            s,
+            count=1,
+        )
 if "fileprovider" not in s:
     provider = (
         "\n        <provider\n"
@@ -44,40 +46,52 @@ if "fileprovider" not in s:
     s = s.replace("</application>", provider, 1)
 manifest.write_text(s)
 
-# 2) copia plugin Kotlin e file_paths.xml
+# 2) copia i plugin Java e file_paths.xml
 pkg_dir = root / "app/src/main/java/com/tecmat/emanager"
 pkg_dir.mkdir(parents=True, exist_ok=True)
 shutil.copy(overlay / "UpdateInstallerPlugin.java", pkg_dir / "UpdateInstallerPlugin.java")
+shutil.copy(overlay / "LanBeaconPlugin.java", pkg_dir / "LanBeaconPlugin.java")
 res_xml = root / "app/src/main/res/xml"
 res_xml.mkdir(parents=True, exist_ok=True)
 shutil.copy(overlay / "file_paths.xml", res_xml / "file_paths.xml")
 
-# 3) registra il plugin in MainActivity
+# 2b) dipendenze NanoHTTPD (beacon LAN P2P: HTTP /api/info + WebSocket) in app/build.gradle
+gradle = root / "app" / "build.gradle"
+g = gradle.read_text()
+for dep in [
+    "implementation 'org.nanohttpd:nanohttpd:2.3.1'",
+    "implementation 'org.nanohttpd:nanohttpd-websocket:2.3.1'",
+]:
+    if dep not in g:
+        if "dependencies {" in g:
+            g = g.replace("dependencies {", "dependencies {\n    " + dep, 1)
+        else:
+            g += "\ndependencies {\n    " + dep + "\n}\n"
+gradle.write_text(g)
+
+# 3) registra i plugin in MainActivity
 ma = pkg_dir / "MainActivity.java"
 t = ma.read_text()
-if "UpdateInstallerPlugin" not in t:
-    if "import com.getcapacitor.BridgeActivity;" in t:
-        t = t.replace(
-            "import com.getcapacitor.BridgeActivity;",
-            "import com.getcapacitor.BridgeActivity;\nimport com.tecmat.emanager.UpdateInstallerPlugin;",
-            1,
-        )
-    else:
-        t = re.sub(r"(package [^;]+;)", r"\1\nimport com.tecmat.emanager.UpdateInstallerPlugin;", t, count=1)
-    if "super.onCreate(savedInstanceState);" in t:
-        t = t.replace(
-            "super.onCreate(savedInstanceState);",
-            "super.onCreate(savedInstanceState);\n        registerPlugin(UpdateInstallerPlugin.class);",
-            1,
-        )
-    else:
-        # fallback: aggiungi un metodo onCreate se manca
-        t = re.sub(
-            r"(public class MainActivity extends BridgeActivity \{)",
-            r"\1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        registerPlugin(UpdateInstallerPlugin.class);\n    }",
-            t,
-            count=1,
-        )
-    ma.write_text(t)
+plugins = ["UpdateInstallerPlugin", "LanBeaconPlugin"]
+for pl in plugins:
+    if pl not in t:
+        imp = "import com.tecmat.emanager." + pl + ";"
+        if "import com.getcapacitor.BridgeActivity;" in t:
+            t = t.replace("import com.getcapacitor.BridgeActivity;",
+                          "import com.getcapacitor.BridgeActivity;\n" + imp, 1)
+        else:
+            t = re.sub(r"(package [^;]+;)", r"\1\n" + imp, t, count=1)
+        reg = "registerPlugin(" + pl + ".class);"
+        if "super.onCreate(savedInstanceState);" in t:
+            t = t.replace("super.onCreate(savedInstanceState);",
+                          "super.onCreate(savedInstanceState);\n        " + reg, 1)
+        else:
+            t = re.sub(
+                r"(public class MainActivity extends BridgeActivity \{)",
+                r"\1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        " + reg + "\n    }",
+                t,
+                count=1,
+            )
+ma.write_text(t)
 
-print("android patch ok: UpdateInstaller + FileProvider + REQUEST_INSTALL_PACKAGES + CAMERA")
+print("android patch ok: UpdateInstaller + LanBeacon + FileProvider + permessi (INSTALL_PACKAGES, CAMERA, INTERNET, WIFI)")

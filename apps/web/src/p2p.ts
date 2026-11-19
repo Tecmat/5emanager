@@ -485,3 +485,196 @@ export class P2PRelayClient {
 
   close(): void { /* non chiude la connessione discovery (condivisa) */ }
 }
+
+// ---------------------------------------------------------------------------
+// Trasporto LAN "stile Soul Knight": il dispositivo HOST apre un beacon nativo
+// (Tauri/AppImage/Windows/macOS via comando Rust, APK via plugin LanBeacon) che
+// serve /api/info (scoperta) e accetta WebSocket su /ws. I giocatori, trovando
+// l'host con la scansione LAN, aprono un WebSocket DIRETTO ws://ip:porta/ws e si
+// uniscono con un tap — niente server, niente codici, niente WebRTC.
+// Stessi messaggi di gioco di P2PHost/P2PRelayHost (join/welcome/state/action…).
+// ---------------------------------------------------------------------------
+
+import { beaconBroadcast, beaconSend, beaconStop, onLanEvt } from './lanBeacon.js';
+
+function makeP2PCampaign(opts: { campaignName: string; password: string; masterName: string }): Campaign {
+  const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
+  return {
+    id: Math.random().toString(36).slice(2, 10),
+    name: opts.campaignName || 'Campagna P2P',
+    passwordHash: opts.password,
+    houseRules: { ...DEFAULT_HOUSE_RULES },
+    custom: {},
+    players: [master],
+    characters: {},
+    combat: null,
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+}
+
+/** HOST lato dispositivo: la campagna vive qui, i giocatori arrivano dal beacon LAN via WS diretto */
+export class P2PLanHost {
+  campaign: Campaign;
+  reg: Registry;
+  masterId: string;
+  requireAccept: boolean;
+  private cb: HostCallbacks;
+  private pending = new Map<string, { name: string; password: string }>();
+  private offEvt: (() => void) | null = null;
+
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; requireAccept?: boolean }) {
+    this.reg = opts.reg;
+    this.cb = opts.cb;
+    this.requireAccept = opts.requireAccept ?? true;
+    this.campaign = makeP2PCampaign(opts);
+    this.masterId = this.campaign.players[0].id;
+    this.offEvt = onLanEvt((ev) => {
+      const [kind, id, payload] = ev;
+      if (kind === 'msg' && payload) {
+        let msg: AnyMsg;
+        try { msg = JSON.parse(payload); } catch { return; }
+        this.handleData(id, msg);
+      } else if (kind === 'close') {
+        const p = this.campaign.players.find((x) => x.id === id);
+        if (p && p.id !== this.masterId) {
+          this.campaign.players = this.campaign.players.filter((x) => x.id !== id);
+          this.cb.onPeerLeft(id);
+          this.broadcastState();
+        }
+      }
+    });
+  }
+
+  private handleData(from: string, msg: AnyMsg): void {
+    if (msg.t === 'join') {
+      const name = String(msg.name || 'Giocatore');
+      const password = String(msg.password ?? '');
+      if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
+        this.pending.set(from, { name, password });
+        this.cb.onJoinPending?.({ from, name });
+        return;
+      }
+      this.doJoin(from, name, password);
+      return;
+    }
+    if (msg.t === 'ping') {
+      this.sendTo(from, { t: 'pong', id: msg.id, serverTime: Date.now() });
+      return;
+    }
+    if (msg.t === 'action') this.applyAction(from, msg.action as ClientAction);
+  }
+
+  private doJoin(from: string, name: string, password: string): void {
+    if (password !== this.campaign.passwordHash) {
+      this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
+      return;
+    }
+    if (this.campaign.players.some((p) => p.id !== this.masterId && p.name.toLowerCase() === name.toLowerCase())) {
+      this.sendTo(from, { t: 'error', message: 'Nome già in uso in questa campagna' });
+      return;
+    }
+    const player: PlayerInfo = { id: from, name, role: 'player' };
+    this.campaign.players.push(player);
+    this.sendTo(from, { t: 'welcome', you: player, campaign: this.campaign });
+    this.cb.onPeerJoined(player);
+    this.broadcastState();
+  }
+
+  /** il master accetta la richiesta in attesa */
+  acceptJoin(from: string): void {
+    const p = this.pending.get(from);
+    this.pending.delete(from);
+    this.doJoin(from, p?.name ?? 'Giocatore', p?.password ?? '');
+  }
+
+  /** il master rifiuta la richiesta */
+  rejectJoin(from: string): void {
+    this.pending.delete(from);
+    this.sendTo(from, { t: 'error', message: 'Richiesta rifiutata dal master' });
+  }
+
+  applyAction(playerId: string, action: ClientAction): void {
+    if (action.kind === 'deleteCampaign') {
+      this.broadcast({ t: 'campaignDeleted', id: this.campaign.id });
+      return;
+    }
+    const [next, err] = applyCampaignAction(this.campaign, playerId, this.reg, action);
+    if (err) {
+      this.sendTo(playerId, { t: 'error', message: err });
+      return;
+    }
+    this.campaign = next;
+    this.campaign.updatedAt = new Date().toISOString();
+    this.broadcastState();
+  }
+
+  sendTo(playerId: string, m: AnyMsg): void {
+    void beaconSend(playerId, JSON.stringify(m));
+  }
+
+  broadcast(m: AnyMsg): void {
+    void beaconBroadcast(JSON.stringify(m));
+  }
+
+  broadcastState(): void {
+    this.broadcast({ t: 'state', campaign: this.campaign });
+    this.cb.onState(this.campaign);
+  }
+
+  peerList(): PlayerInfo[] {
+    return this.campaign.players;
+  }
+
+  close(): void {
+    this.offEvt?.();
+    this.offEvt = null;
+    void beaconStop();
+  }
+}
+
+/** CLIENT lato giocatore: WebSocket diretto verso il beacon dell'host (ws://ip:porta/ws) */
+export class P2PLanClient {
+  onMessage: (m: any) => void = () => {};
+  onOpen: () => void = () => {};
+  onClose: () => void = () => {};
+  private ws: WebSocket | null = null;
+
+  constructor(private ip: string, private port: number) {}
+
+  connect(): Promise<void> {
+    this.close();
+    return new Promise((resolve, reject) => {
+      const ws = new WebSocket(`ws://${this.ip}:${this.port}/ws`);
+      this.ws = ws;
+      const to = setTimeout(() => reject(new Error(`Timeout connessione a ws://${this.ip}:${this.port}/ws`)), 5000);
+      ws.onopen = () => { clearTimeout(to); this.onOpen(); resolve(); };
+      ws.onerror = () => { clearTimeout(to); reject(new Error(`Impossibile raggiungere l'host ${this.ip}:${this.port} — siete sulla stessa rete?`)); };
+      ws.onclose = () => { this.onClose(); this.ws = null; };
+      ws.onmessage = (ev) => {
+        try { this.onMessage(JSON.parse(String(ev.data))); } catch { /* ignora */ }
+      };
+    });
+  }
+
+  /** entra nella campagna (dopo onOpen) */
+  join(name: string, password: string): void {
+    this.send({ t: 'join', name, password });
+  }
+
+  send(m: AnyMsg): void {
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) this.ws.send(JSON.stringify(m));
+  }
+
+  get open(): boolean {
+    return !!this.ws && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  close(): void {
+    try { this.ws?.close(); } catch { /* ignora */ }
+    this.ws = null;
+  }
+}

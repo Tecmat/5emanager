@@ -17,8 +17,12 @@ export default function DiceRoller() {
     try { localStorage.setItem(MACROS_KEY, JSON.stringify(m)); } catch { /* quota */ }
   };
 
+  const [rolling, setRolling] = useState(false);
+
   const roll = () => {
     const r = rollDice(expr, mode);
+    setRolling(true);
+    window.setTimeout(() => setRolling(false), 380);
     if (!r) {
       setHistory((h) => [{ expr, rolls: [], dropped: [], mod: 0, total: 0, mode }]);
       return;
@@ -36,7 +40,7 @@ export default function DiceRoller() {
           <option value="advantage">{t('dr.advantage', 'Vantaggio')}</option>
           <option value="disadvantage">{t('dr.disadvantage', 'Svantaggio')}</option>
         </select>
-        <button className="primary" onClick={roll}>{t('dr.roll', 'Tira')}</button>
+        <button className={`primary ${rolling ? 'rolling' : ''}`} onClick={roll}>🎲 {t('dr.roll', 'Tira')}</button>
         <button
           title={t('dr.macroAdd', 'Salva espressione come macro')}
           onClick={() => { const e = expr.trim(); if (e && !macros.includes(e)) saveMacros([...macros, e]); }}

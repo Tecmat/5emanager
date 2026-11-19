@@ -274,7 +274,7 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminBroadcast') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -297,6 +297,11 @@ function handleMessage(conn: Conn, raw: string): void {
       if (msg.t === 'adminApproveAccount') approveAccount(msg.username);
       if (msg.t === 'adminRejectAccount') rejectAccount(msg.username);
       if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
+      if (msg.t === 'adminBroadcast') {
+        // messaggio "notice" a tutti i client connessi (utile per avvisare di manutenzioni/aggiornamenti)
+        const notice: ServerMessage = { t: 'notice', message: '[admin] ' + msg.message };
+        for (const c of conns) send(c.ws, notice);
+      }
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
       return;

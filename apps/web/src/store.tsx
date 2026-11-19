@@ -15,15 +15,25 @@ const SHEETS_KEY = 'dnd5e.sheets.v2';
 const LEGACY_CHAR_KEY = 'dnd5e.character.v1';
 export const CUSTOM_KEY = 'dnd5e.custom.v1';
 
+/** id della scheda "di campagna": separata da quella locale, così il multigiocatore non la tocca */
+export function campaignSheetId(campaignId: string): string {
+  return `campagna:${campaignId}`;
+}
+export function isCampaignSheetId(id: string): boolean {
+  return id.startsWith('campagna:');
+}
+
 interface SheetStoreData {
   activeId: string | null;
   sheets: Record<string, Character>;
+  /** nome/ultima connessione delle campagne viste: campaignId -> { name, server? } */
+  campaignMeta?: Record<string, { name: string; server?: string }>;
 }
 
 function migrateSheets(data: SheetStoreData): SheetStoreData {
   const sheets: Record<string, Character> = {};
   for (const [id, c] of Object.entries(data.sheets ?? {})) sheets[id] = migrateCharacter(c);
-  return { activeId: data.activeId ?? null, sheets };
+  return { activeId: data.activeId ?? null, sheets, campaignMeta: data.campaignMeta ?? {} };
 }
 
 /** carica le schede da IndexedDB (fallback localStorage) e migra dalla v1 */
@@ -40,7 +50,7 @@ async function loadSheetsAsync(): Promise<SheetStoreData> {
       return d;
     }
   } catch { /* ignora */ }
-  return { activeId: null, sheets: {} };
+  return { activeId: null, sheets: {}, campaignMeta: {} };
 }
 
 interface Store {
@@ -57,6 +67,12 @@ interface Store {
   selectSheet: (id: string | null) => void;
   deleteSheet: (id: string) => void;
   resetChar: () => void;
+  /** scheda dedicata a una campagna (id 'campagna:<id>'): null se non esiste ancora */
+  getCampaignSheet: (campaignId: string) => Character | null;
+  /** crea/aggiorna la scheda di campagna (copia separata: la locale resta intacta) */
+  setCampaignSheet: (campaignId: string, c: Character | null) => void;
+  campaignMeta: Record<string, { name: string; server?: string }>;
+  setCampaignMeta: (campaignId: string, meta: { name: string; server?: string }) => void;
   reloadCustom: () => void;
   customCount: number;
   /** annulla l'ultima modifica alla scheda attiva (snapshot in memoria, max 30) */
@@ -75,7 +91,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return createSrdRegistry();
   }, []);
 
-  const [data, setData] = useState<SheetStoreData>({ activeId: null, sheets: {} });
+  const [data, setData] = useState<SheetStoreData>({ activeId: null, sheets: {}, campaignMeta: {} });
   const [customCount, setCustomCount] = useState(0);
   const [lang, setLangState] = useState<Lang>(getLang);
 
@@ -170,6 +186,20 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     persist({ ...data, activeId: id });
   };
 
+  const getCampaignSheet = (campaignId: string): Character | null => data.sheets[campaignSheetId(campaignId)] ?? null;
+
+  const setCampaignSheet = (campaignId: string, c: Character | null) => {
+    const id = campaignSheetId(campaignId);
+    const sheets = { ...data.sheets };
+    if (c) sheets[id] = { ...c, id };
+    else delete sheets[id];
+    persist({ ...data, sheets });
+  };
+
+  const setCampaignMeta = (campaignId: string, meta: { name: string; server?: string }) => {
+    persist({ ...data, campaignMeta: { ...(data.campaignMeta ?? {}), [campaignId]: meta } });
+  };
+
   const deleteSheet = (id: string) => {
     const nextSheets = { ...data.sheets };
     delete nextSheets[id];
@@ -194,6 +224,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     selectSheet,
     deleteSheet,
     resetChar: () => { if (data.activeId) deleteSheet(data.activeId); },
+    getCampaignSheet,
+    setCampaignSheet,
+    campaignMeta: data.campaignMeta ?? {},
+    setCampaignMeta,
     reloadCustom: loadCustom,
     customCount,
     undo,

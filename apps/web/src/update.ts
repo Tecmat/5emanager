@@ -215,7 +215,10 @@ const UpdateInstaller = registerPlugin<UpdateInstallerPlugin>('UpdateInstaller')
 
 /**
  * android: scarica l'APK e apre SUBITO il prompt di installazione dentro l'app
- * (plugin UpdateInstaller via FileProvider). Fallback: apre il browser sull'APK.
+ * (plugin UpdateInstaller via FileProvider): l'APK fa da "gestore di pacchetti"
+ * di se stesso, niente browser. Se manca il permesso "installa app sconosciute",
+ * il plugin apre le impostazioni e RITORNA un errore parlante (non silently browser).
+ * Fallback al browser solo se il plugin proprio manca.
  */
 export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: DownloadProgress) => void): Promise<void> {
   if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && info.assetUrl) {
@@ -227,12 +230,17 @@ export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: Down
       }
       try {
         await UpdateInstaller.downloadAndInstall({ url: info.assetUrl });
-        return; // il prompt di installazione di Android è ora aperto
+        return; // il prompt di installazione di Android è ora aperto dentro l'app
       } finally {
         remove?.();
       }
-    } catch {
-      // plugin assente o permiso negato → fallback browser
+    } catch (e) {
+      const m = errMsg(e);
+      if (/installa app|permesso|not implemented|not available/i.test(m)) {
+        // il plugin c'è ma manca il permesso "installa app sconosciute" (ha già aperto le impostazioni)
+        throw new Error('Permesso "Installa app sconosciute" mancante: abilitalo per 5e Manager nelle impostazioni che si sono aperte, poi premi di nuovo "Scarica e installa".');
+      }
+      // plugin proprio assente (build vecchia) → fallback browser
     }
   }
   await openAndroidDownload(info);

@@ -61,3 +61,21 @@ che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codi
 - La campagna P2P vive solo in memoria dell'host: se l'host chiude l'app, la campagna finisce
   (i giocatori ricevono `campaignDeleted`). Le schede restano salvate localmente su ogni dispositivo.
 - La password della campagna P2P è confrontata in memoria dall'host (campagna effimera).
+
+## Host LAN "stile Soul Knight" (v0.1.27+) — niente server, niente codici
+
+Su **AppImage/desktop e APK Android** il dispositivo host può aprire un **beacon LAN** nativo
+(mini server HTTP+WS su `0.0.0.0:3177`):
+
+- **Host**: tab 🌐 Campagna → P2P → "Faccio da host" → pulsante **🖥️ Ospita su questa rete (LAN)**.
+  L'app risponde a `GET /api/info` con `{app:"5emanager", kind:"p2p-host", name, version, port}`
+  e accetta WebSocket su `/ws`. L'host vede le richieste in arrivo con **✅ Accetta / ✖ Rifiuta**.
+- **Giocatori** (stessa WiFi/hotspot): un solo tasto **🔍 Scansiona rete e cerca host** → la scansione
+  della /24 trova gli host P2P e li mostra come `▶ nome (IP LAN)` → **un tap** apre il WebSocket
+  diretto `ws://ip:3177/ws` e si entra (dopo l'accettazione del master).
+- Dal **browser** il beacon non è possibile (il browser non può aprire porte): si usa il server
+  remoto oppure il codice invito WebRTC come prima.
+- Trasporto: WebSocket diretto host↔client, quindi funziona anche dove WebRTC manca (WebKitGTK).
+
+Implementazione nativa: comando Tauri `lan_beacon_*` (axum, `src-tauri/src/lib.rs`) e plugin
+Android `LanBeaconPlugin` (NanoHTTPD-WS, `apps/web/android-overlay/`, patchato in CI da `patch_android.py`).

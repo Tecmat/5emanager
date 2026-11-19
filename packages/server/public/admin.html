@@ -56,6 +56,19 @@
   </div>
 
   <div class="card">
+    <h2>Strumenti admin</h2>
+    <div class="row">
+      <input id="broadcast-msg" placeholder="Messaggio da inviare a tutti i client connessi…" style="flex:1; min-width:260px">
+      <button id="broadcast-btn">📣 Broadcast a tutti</button>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="update-app-btn" class="primary">⬇️ Aggiorna la webapp del server ora</button>
+      <span class="muted">scarica <code>web-dist.zip</code> dall'ultima release GitHub e sostituisce la build servita (con backup automatico) — niente terminale</span>
+    </div>
+    <div id="tools-status" style="margin-top:6px"></div>
+  </div>
+
+  <div class="card">
     <h2>Richieste di registrazione (in attesa)</h2>
     <table>
       <thead><tr><th>Username</th><th>Richiesta il</th><th></th></tr></thead>
@@ -238,6 +251,35 @@ function connect() {
   ws.onclose = () => setStatus('disconnesso', false);
   ws.onerror = () => { err('Connessione a ' + wsurl + ' fallita'); setStatus('errore', false); };
 }
+
+document.getElementById('broadcast-btn').onclick = () => {
+  const m = document.getElementById('broadcast-msg').value.trim();
+  if (!m) return;
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminBroadcast', message: m }));
+  document.getElementById('broadcast-msg').value = '';
+  const st = document.getElementById('tools-status');
+  st.innerHTML = '<span class="ok">📣 messaggio inviato</span>';
+};
+
+document.getElementById('update-app-btn').onclick = async () => {
+  const st = document.getElementById('tools-status');
+  st.innerHTML = '<span class="muted">⬇️ scarico e applico la nuova web-dist.zip…</span>';
+  try {
+    const token = tokenInput.value || '';
+    let r = await fetch('/api/update/apply', { method: 'POST', headers: token ? { 'x-admin-token': token } : {} });
+    if (r.status === 401) {
+      const tok = prompt('Token admin (DND5E_ADMIN_TOKEN):') || '';
+      sessionStorage.setItem('dnd5e.admin.token', tok);
+      tokenInput.value = tok;
+      r = await fetch('/api/update/apply', { method: 'POST', headers: { 'x-admin-token': tok } });
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    st.innerHTML = '<span class="ok">✅ Webapp aggiornata a ' + esc(j.version || 'nuova versione') + ' — ricarica la pagina per usare la build nuova.</span>';
+  } catch (e) {
+    st.innerHTML = '<span class="error">❌ ' + esc(e.message) + '</span>';
+  }
+};
 
 document.getElementById('connect').onclick = connect;
 document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };

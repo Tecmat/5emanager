@@ -21,6 +21,7 @@ export type ClientMessage =
   | { t: 'adminRejectAccount'; username: string }
   | { t: 'adminAccountDetail'; username: string }
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
+  | { t: 'adminBroadcast'; message: string }
   | { t: 'action'; action: ClientAction }
   // discovery P2P: gli host P2P si annunciano qui (relay di codici SDP e, se WebRTC manca, di tutto il traffico)
   | { t: 'p2pAnnounce'; name: string }

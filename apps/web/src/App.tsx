@@ -1,11 +1,12 @@
 import { lazy, Suspense, useEffect, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
-import { useStore } from './store.js';
+import { useStore, isCampaignSheetId } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
 import CreateForm from './CreateForm.js';
 import UpdateButton from './UpdateButton.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
+const HomeTab = lazy(() => import('./HomeTab.js'));
 const Overview = lazy(() => import('./Overview.js'));
 const SpellsTab = lazy(() => import('./SpellsTab.js'));
 const InventoryTab = lazy(() => import('./InventoryTab.js'));
@@ -13,8 +14,8 @@ const CustomTab = lazy(() => import('./CustomTab.js'));
 const CombatTab = lazy(() => import('./CombatTab.js'));
 const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
-type Tab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
-const TAB_ORDER: Tab[] = ['panoramica', 'incantesimi', 'inventario', 'combattimento', 'campagna', 'custom'];
+type Tab = 'home' | 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
+const TAB_ORDER: Tab[] = ['home', 'panoramica', 'incantesimi', 'inventario', 'combattimento', 'campagna', 'custom'];
 
 const LOCK_KEY = 'dnd5e.lock.v1';
 
@@ -33,7 +34,7 @@ function loadLock(): LockRec {
 }
 
 export default function App() {
-  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo } = useStore();
+  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
   const { conn } = useNet();
   const [tab, setTab] = useState<Tab>('panoramica');
   const [theme, setTheme] = useState(() => (document.documentElement.dataset.theme === 'light' ? 'light' : localStorage.getItem('dnd5e-theme') ?? 'dark'));
@@ -63,7 +64,7 @@ export default function App() {
         return;
       }
       if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (/^[1-6]$/.test(e.key)) setTab(TAB_ORDER[Number(e.key) - 1]);
+      if (/^[1-7]$/.test(e.key)) setTab(TAB_ORDER[Number(e.key) - 1]);
       else if (e.key.toLowerCase() === 'e' && char && !viewChar) setEditing((v) => !v);
     };
     window.addEventListener('keydown', onKey);
@@ -115,31 +116,37 @@ export default function App() {
     );
   }
 
-  if (!char || creating) {
+  if (creating) {
     return <CreateForm onCancel={char ? () => setCreating(false) : undefined} />;
   }
+  // senza scheda attiva si apre il menù principale (home)
+  const effTab: Tab = char ? tab : 'home';
 
   return (
     <>
       <header className="top">
         <span className="row">
-          {char.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
-          <h1>⚔️ D&D 5e — {char.name}</h1>
+          {char?.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
+          <h1>⚔️ D&D 5e{char ? ` — ${char.name}` : ''}</h1>
           {viewChar && (
             <>
               <span className="tag custom">👁 {t('app.viewing', 'stai vedendo la scheda di')} {viewLabel} ({t('app.readonly', 'sola lettura')})</span>
               <button onClick={() => setViewChar(null)} title={t('app.mySheetTitle', 'Torna alla tua scheda')}>{t('app.mySheet', '✕ mia scheda')}</button>
             </>
           )}
-          {!viewChar && sheets.length > 1 && (
+          {!viewChar && sheets.length > 1 && char && (
             <select
               value={char.id}
               onChange={(e) => selectSheet(e.target.value)}
-              title={t('app.switcher', 'Cambia scheda personaggio')}
-              style={{ maxWidth: 180 }}
+              title={t('app.switcher', 'Cambia scheda: locali e campagne (separate)')}
+              style={{ maxWidth: 220 }}
             >
               {sheets.map((s) => (
-                <option key={s.id} value={s.id}>{s.name} (liv {totalLevel(s)})</option>
+                <option key={s.id} value={s.id}>
+                  {isCampaignSheetId(s.id)
+                    ? `🗺 ${campaignMeta[s.id.slice('campagna:'.length)]?.name ?? t('app.campaign', 'Campagna')}: ${s.name} (liv ${totalLevel(s)})`
+                    : `${s.name} (liv ${totalLevel(s)})`}
+                </option>
               ))}
             </select>
           )}
@@ -181,6 +188,7 @@ export default function App() {
         <nav className="tabs" aria-label={t('app.tabs', 'Schede')}>
           {(
             [
+              ['home', t('tab.home', '🏠 Home')],
               ['panoramica', t('tab.panoramica', 'Panoramica')],
               ['incantesimi', t('tab.incantesimi', 'Incantesimi')],
               ['inventario', t('tab.inventario', 'Inventario')],
@@ -189,18 +197,19 @@ export default function App() {
               ['custom', t('tab.custom', 'Contenuti custom')],
             ] as [Tab, string][]
           ).map(([id, label], i) => (
-            <button key={id} className={tab === id ? 'active' : ''} onClick={() => setTab(id)} aria-label={`${i + 1} — ${label}`}>
+            <button key={id} className={effTab === id ? 'active' : ''} onClick={() => setTab(id)} aria-label={`${i + 1} — ${label}`}>
               {label}
             </button>
           ))}
         </nav>
         <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
-          {tab === 'panoramica' && <Overview editing={editing} />}
-          {tab === 'incantesimi' && <SpellsTab />}
-          {tab === 'inventario' && <InventoryTab />}
-          {tab === 'combattimento' && <CombatTab />}
-          {tab === 'campagna' && <CampaignTab />}
-          {tab === 'custom' && <CustomTab />}
+          {effTab === 'home' && <HomeTab onCreate={() => setCreating(true)} onOnline={() => setTab('campagna')} />}
+          {effTab === 'panoramica' && char && <Overview editing={editing} />}
+          {effTab === 'incantesimi' && char && <SpellsTab />}
+          {effTab === 'inventario' && char && <InventoryTab />}
+          {effTab === 'combattimento' && char && <CombatTab />}
+          {effTab === 'campagna' && <CampaignTab />}
+          {effTab === 'custom' && <CustomTab />}
         </Suspense>
       </main>
     </>
