@@ -1,0 +1,13 @@
+{
+  "name": "D&D 5e — Gestore Schede",
+  "short_name": "5e Manager",
+  "description": "Gestore di schede D&D 5e: level-up, incantesimi, inventario, combattimento, contenuti custom.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#14161c",
+  "theme_color": "#c9a227",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

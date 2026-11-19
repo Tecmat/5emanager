@@ -1,0 +1,332 @@
+{
+  "id": "cleric",
+  "name": "Chierico",
+  "hitDie": 8,
+  "primaryAbility": [
+    "wis"
+  ],
+  "savingThrows": [
+    "wis",
+    "cha"
+  ],
+  "armorProficiencies": [
+    "light",
+    "medium",
+    "shield"
+  ],
+  "weaponProficiencies": [
+    "simple"
+  ],
+  "toolProficiencies": [],
+  "skillChoices": {
+    "choose": 2,
+    "from": [
+      "history",
+      "insight",
+      "medicine",
+      "persuasion",
+      "religion"
+    ]
+  },
+  "spellcasting": {
+    "ability": "wis",
+    "type": "full",
+    "cantrips": {
+      "1": 3,
+      "2": 3,
+      "3": 3,
+      "4": 4,
+      "5": 4,
+      "6": 4,
+      "7": 4,
+      "8": 4,
+      "9": 4,
+      "10": 5,
+      "11": 5,
+      "12": 5,
+      "13": 5,
+      "14": 5,
+      "15": 5,
+      "16": 5,
+      "17": 5,
+      "18": 6,
+      "19": 6,
+      "20": 6
+    },
+    "spellsKnown": "all",
+    "prepare": true,
+    "slots": {}
+  },
+  "features": {
+    "1": [
+      {
+        "id": "spellcasting",
+        "name": "Lancio di Incantesimi",
+        "description": "Prepari incantesimi dalla lista del chierico (Wis + livello).",
+        "effects": [
+          {
+            "type": "spellcasting",
+            "ability": "wis",
+            "prepare": true
+          }
+        ]
+      },
+      {
+        "id": "channel-divinity",
+        "name": "Canalizzare Divinità",
+        "description": "Effetto del dominio. 1 uso.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "channel-divinity",
+            "name": "Canalizzare Divinità",
+            "uses": 1,
+            "shortRest": true,
+            "longRest": true
+          }
+        ]
+      }
+    ],
+    "2": [
+      {
+        "id": "channel-divinity-2",
+        "name": "Canalizzare Divinità (2)",
+        "description": "2 usi.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "channel-divinity",
+            "name": "Canalizzare Divinità",
+            "uses": 2,
+            "shortRest": true,
+            "longRest": true
+          }
+        ]
+      }
+    ],
+    "3": [
+      {
+        "id": "divine-domain",
+        "name": "Dominio Divino",
+        "description": "Scegli un dominio divino.",
+        "effects": [
+          {
+            "type": "subclass",
+            "options": [
+              "life-domain",
+              "war-domain",
+              "nature-domain"
+            ]
+          }
+        ]
+      }
+    ],
+    "4": [
+      {
+        "id": "asi-4",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "5": [
+      {
+        "id": "destroy-undead-cr1-2",
+        "name": "Scacciare i Non Morti",
+        "description": "Non morti di CR 1/2 o inferiore fuggono.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Scacciare i non morti: CR 1/2 fuggono, distrutti se già fuggono."
+          }
+        ]
+      }
+    ],
+    "6": [
+      {
+        "id": "channel-divinity-3",
+        "name": "Canalizzare Divinità (3)",
+        "description": "3 usi.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "channel-divinity",
+            "name": "Canalizzare Divinità",
+            "uses": 3,
+            "shortRest": true,
+            "longRest": true
+          }
+        ]
+      },
+      {
+        "id": "domain-feature-6",
+        "name": "Privilegio di dominio",
+        "description": "Privilegio del dominio al 6° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio di dominio (6° livello)."
+          }
+        ]
+      }
+    ],
+    "8": [
+      {
+        "id": "asi-8",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      },
+      {
+        "id": "domain-feature-8",
+        "name": "Privilegio di dominio",
+        "description": "Privilegio del dominio all'8° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio di dominio (8° livello)."
+          }
+        ]
+      }
+    ],
+    "10": [
+      {
+        "id": "divine-intervention",
+        "name": "Intervento Divino",
+        "description": "Chiedi aiuto alla divinità. 1 uso ogni 7 giorni.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "divine-intervention",
+            "name": "Intervento Divino",
+            "longRest": true
+          }
+        ]
+      }
+    ],
+    "12": [
+      {
+        "id": "asi-12",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "14": [
+      {
+        "id": "destroy-undead-cr3",
+        "name": "Scacciare i Non Morti (3)",
+        "description": "Non morti di CR 3 o inferiore.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Scacciare i non morti fino a CR 3."
+          }
+        ]
+      }
+    ],
+    "16": [
+      {
+        "id": "asi-16",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "17": [
+      {
+        "id": "domain-feature-17",
+        "name": "Privilegio di dominio",
+        "description": "Privilegio del dominio al 17° livello.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Privilegio di dominio (17° livello)."
+          }
+        ]
+      }
+    ],
+    "18": [
+      {
+        "id": "channel-divinity-4",
+        "name": "Canalizzare Divinità (4)",
+        "description": "4 usi.",
+        "effects": [
+          {
+            "type": "resource",
+            "id": "channel-divinity",
+            "name": "Canalizzare Divinità",
+            "uses": 4,
+            "shortRest": true,
+            "longRest": true
+          }
+        ]
+      }
+    ],
+    "19": [
+      {
+        "id": "asi-19",
+        "name": "Aumento dei punteggi caratteristica",
+        "description": "+2 punti o un talento.",
+        "effects": [
+          {
+            "type": "asi",
+            "points": 2
+          },
+          {
+            "type": "feat"
+          }
+        ]
+      }
+    ],
+    "20": [
+      {
+        "id": "divine-intervention-improved",
+        "name": "Intervento Divino Migliorato",
+        "description": "L'intervento funziona automaticamente.",
+        "effects": [
+          {
+            "type": "custom",
+            "description": "Intervento divino automatico."
+          }
+        ]
+      }
+    ]
+  },
+  "source": "srd",
+  "multiclassPrereq": {
+    "wis": 13
+  }
+}

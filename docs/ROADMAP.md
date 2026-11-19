@@ -1,0 +1,189 @@
+# Roadmap — espansione di 5e Manager
+
+## ✅ P1/P2 completate (v0.1.13, branch vibe/dnd5e-scheda-f0caaa)
+
+- **P1 Upcast del danno**: `upcastExtraDice`/`spellDamagePreview` nel core (parse dell'`higherLevel`, es. +1d6/slot) — anteprima "a slot N°: danno X + Y" in tab Incantesimi e voce `upcast +NdM` nel diario al lancio
+- **P1 XP a tutta la party**: azione `masterAddXpAll` (server + P2P) + bottone ⭐ nel pannello master
+- **P1 Inventario di gruppo + tesoreria condivisa**: `Campaign.groupInventory`/`groupCurrency` con azioni `groupAddItem` (tutti), `groupRemoveItem`/`groupGiveItem`/`groupAddCurrency` (master), card 🎒 in Campagna; migrazione campagne existentes (`migrateCampaign`)
+- **P1 Note di sessione condivise**: `Campaign.notes` + azione `setCampaignNote` (master), card 📝 in Campagna
+- **P1 Reminder TS concentrazione**: `damageCombatant` logga `🎯 TS Cos CD max(10, metà danno)` quando un combattente concentrato subisce danni
+- **P1 Preferiti incantesimi ⭐**: `Character.favoriteSpells` + stella per riga + filtro "solo ⭐" in Incantesimi
+- **P2 Pergamene/oggetti che lanciano**: `InventoryItem.spellId` + `castItemSpell` (1 carica, nessuno slot, niente componenti materiali) + bottone ✨ in Inventario
+- **P2 Template aree in combattimento**: cono/sfera/linea/cubo con misure in ft su griglia 5 ft (SVG `TemplateView`), azioni `setTemplate`/`clearTemplate` (master o turno corrente), in Combattimento locale e live
+- **P2 Generatore casuale master**: `rules/random.ts` + `data-srd/data/random.json` (nomi, incontri e tesori per tier di livello) — card 🎲 in Campagna con "aggiungi nemici al combattimento" e "metti nel gruppo/tesoreria"
+- **P2 Rarità/valore + vendita**: `rarity`/`valueGp` sugli oggetti, filtro per rarità, colonna valore, bottone 💰 vendi (+MO), "Tesoro totale" in Panoramica-inventario (`totalTreasureGp`)
+- **P2 Undo**: snapshot in memoria (max 30) in `store.tsx`, bottone ↩ in header + **Ctrl/Cmd+Z**; shortcuts **1-6** cambiano tab, **E** edit on/off
+- **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello (CustomTab)
+- **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
+- **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab)
+- **P2 Accessibilità**: `:focus-visible`, `prefers-reduced-motion`, aria-label su bottoni icona e tab
+- **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
+- i18n esteso a tutte le nuove UI (IT/EN)
+
+## 💡 Idee nuove (P3 — proposte, da valutare insieme)
+
+- Log dei tiri del combattimento persistente per round (estendere `combat.log` con storico separato)
+- Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
+- Beep/avviso sonoro opzionale al cambio turno (il timer c'è già)
+- Crafting/ricette e compravendita con calcolo del resto
+- Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
+- PWA offline completa (service worker che cachea anche i dati SRD)
+- Notifiche push promemoria sessione (Android/desktop)
+- iOS via Capacitor (stesso codice) — momentaneamente in pausa
+- Sync cloud opzionale (login multi-dispositivo, conflitto last-write)
+- Generatore di dungeon/stanze casuali (tabelle JSON, come il generatore incontri)
+- Schede "pronte" (pregen) da sfogliare e clonare
+- Esportazione campagna intera (log + schede + tesoreria) in un file
+- Statistiche di campagna (danni totali, incantesimi lanciati, round) dal log
+
+## ✅ P3 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
+
+- **P2P semplificato**: codice invito come testo + **QR** + copia/condivisione nativa; flusso host→giocatore→host in 2 passi
+- **Discovery P2P**: gli host si annunciano su un server LAN (`p2pAnnounce`, TTL 90 s) e i giocatori vedono la **lista degli host sulla rete** e si uniscono con un click (il server relay-a solo i codici SDP)
+- Riposo breve con **dadi vita** (`shortRest` in core: PF = tiro + mod Cos per dado, risveglio da 0 PF, cap a PF max) + bottone in Panoramica
+- **Slot equipaggiamento standard** (testa, amuleto, mantello, armatura, guanti, cintura, stivali, 2 anelli, scudo, 2 mani) con validazione: equipaggiare un oggetto libera lo slot (`setEquipped`/`setItemSlot`), warning conflitti (`equipConflicts`), armi in mano libera automatica
+- **Simula il PG fino al 20** (`simulateTo20` in core: ASI automatico, archetipo/stile auto) + test su tutte le classi SRD + bottone 🧪 in tab Custom per validare anche le classi custom
+- **Timer di turno** nel pannello combattimento (avvia/pausa/reset, reset automatico al cambio turno, secondi configurabili)
+- **Tema automatico** dal sistema (`prefers-color-scheme`) se non c'è una scelta salvata
+- Creazione PG migliorata: **stile di combattimento al liv 1** (guerriero) direttamente in creazione
+- **42 archetipi** (3-4 per classe, 8 scuole del mago) in `subclasses-c.json`, selezionabili dal registro
+
+## ✅ P0 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
+
+- Esaurimento 1–6 con effetti automatici (core `rules/exhaustion.ts`: svantaggio prove, velocità, PF max dimezzati, morte a liv 6) + selettore in Panoramica
+- Tiri della morte a click in Panoramica a 0 PF (✓/✗, risveglio a 1 PF, 💀)
+- Bonus attacco incantesimo e CD mostrati in Panoramica per ogni classe lanciante (`spellcastingInfoAll`)
+- Lancio rituale senza slot (🕯 in tab Incantesimi) + consumo componenti materiali dall'inventario (cariche o quantità)
+- Preparazione incantesimi separata per classe (`spellsPreparedByClass`, UI multiclasse)
+- Inventario: ricerca, filtri (tipo/magico/equipaggiato), ordinamento, cariche (−/+ /⟳ /imposta), contenitori annidati con peso ricorsivo anti-ciclo
+- Mini-DSL effetti (`rules/effects.ts`): `+N CA`, `advantage: saves vs magic`, `+1d6 fire damage`, `proficiency: skill stealth`, resistenze, speed, darkvision, max hp — applicato in derived/combat; editor talenti lo usa
+- Editor UI contenuti custom strutturato: nemici (statblock), talenti, razze, archetipi, classi (con anteprima progressione 1–20) + export/import `.5epack`
+- DM screen compatto per il master (PF, CA, percez./intuizione passive, condizioni, esaurimento)
+- Storage: schede e custom su **IndexedDB** (wrapper hand-rolled, zero dipendenze) con fallback/migrazione da localStorage; export/import intera libreria (`.json`)
+- i18n IT/EN base (`i18n.ts`, selettore 🌐 in header, cablato su App + CreateForm)
+
+## ✅ Già implementato (nov 2026)
+
+- **Server multiplayer self-hosted** (`packages/server`, WS + campagne JSON, docs/SERVER.md) — fase 2
+- **Combattimento live con action economy** (azione/bonus/reazione/movimento, attaques vs CA, durate condizioni in round) — core + server + tab Campagna — fasi 1–3
+- **Statblock nemici** (`enemies.json`: goblin, orco, lupo, scheletro, bandito, ogre) + addEnemy dal master
+- Tab "🌐 Campagna": crea/unisciti, carica scheda locale, pannello master, log
+- Tema chiaro/scuro, toggle ispirazione
+- CI GitHub Actions (test/typecheck/build) + release su tag `v*` (web, Tauri, APK)
+
+---
+
+Idee per espandere drasticamente il gestore di schede. Ogni voce indica **dove si innesta**
+nell'architettura attuale: `packages/core` (regole), `packages/data-srd` (dati JSON),
+`apps/web` (UI), `src-tauri` / Capacitor (piattaforme).
+
+Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine · **P2** = visions
+
+---
+
+## 1. Scheda personaggio (core + web)
+
+- **P0** Point-buy / standard array / tiro 4d6-scarta il peggiore in creazione (`CreateForm`, `core/character.ts`)
+- **P0** Inspiration come toggle cliccabile (già in dati, manca il bottone in UI)
+- **P0** **Tiri della morte** (successi/fallimenti con click, reset a 1 PF o stabilizzato) — `core/rules/combat.ts` o nuovo `death-saves.ts`
+- **P0** Livelli di **esaurimento** (1–6) al posto della singola condizione — scala effetti automatici
+- **P0** Multiclasse con **prerequisiti** (es. 13 Int per il mago): warning in `applyLevelUp`
+- **P1** Ritratto/immagine del PG (upload → IndexedDB, non localStorage)
+- ✅ **P1** **Diario di sessione / note con timestamp** (log automatico: XP, level-up, danni subiti)
+- ✅ **P1** Esportazione scheda in **PDF stampabile** (CSS print + `window.print()`)
+- **P1** Background e talenti come entità vere (oggi solo testo) — `data-srd` + selettori
+- ✅ **P2** Cronologia con **undo** (snapshot dello stato prima di ogni azione)
+
+## 2. Incantesimi (core/spells + web)
+
+- **P0** Mostra **bonus attacco incantesimo** e **CD TS incantesimo** (8 + prof + mod) in Panoramica
+- **P0** Preparazione separata **per classe** (multiclasse) invece che globale
+- **P0** **Tracciamento componenti materiali** (consumabili con cariche, es. "diamante worth 500gp")
+- **P0** Ritual casting: lanzio come rituale senza slot (10 min extra)
+- ✅ **P1** Upcast automatico del danno (tabella `higherLevel` numerica, es. `+1d6/slot`) e pokazarlo nel lancio
+- ✅ **P1** Concentration tracker nel tab Combattimento (chi sta concentrando cosa, reminder TS Con)
+- ✅ **P1** Liste incantesimo custom per PG ("i miei preferiti", filtri per scuola/livello già presenti)
+- ✅ **P2** Pergamene e oggetti che lanciano incantesimi (charges) nell'inventario
+
+## 3. Combattimento (core/combat + web)
+
+- **P0** Initiative automatica = 1d20 + mod Des del PG (oggi è un tiro cieco)
+- **P0** **Durata delle condizioni in round** (es. "stordito 2 round") con decremento automatico a ogni turno
+- **P0** Quick-toggles **vantaggio/svantaggio** applicati al prossimo tiro del tira-dado
+- **P1** **Statblock nemici custom** (nome, CA, HP, attaques con dado e bonus) salvabili in `data-srd`-like JSON e riutilizzabili
+- **P1** Log dei tiri del combattimento (history persistente per round)
+- **P1** Tracker PF di tutto il gruppo (party) lato master
+- ✅ **P1** Aree/zone (cono/sfera/linea) con mesures in griglia — toggle "mostratemplate"
+- **P2** Timer di turno, musik/ambient, mappa tattica minimale con token trascinabili
+
+## 4. Inventario (core/inventory + web)
+
+- **P0** **Ricerca e filtri** (per tipo, magico, equipaggiato) + ordinamento colonne
+- **P0** Oggetti **consumabili con cariche/usi** (pozioni, munizioni, batterie di bacchette)
+- **P0** **Contenitori** (zaino dentro zaino) con peso ricorsivo
+- **P1** Slot equipaggiamento standard (testa, amuleto, anelli x2, armatura, scudo, 2 mani...) con validazione equip
+- ✅ **P1** Rarità e valore singamente, filtro per rarità, totale del tesoro
+- ✅ **P2** Crafting/ricette, transactions con PNG (compra/vendi con calcolo resto)
+
+## 5. Contenuti custom — editor avanzato (il cuore della "drastica" espansione)
+
+- **P0** Editor UI completo per **classi** (form strutturato al posto del JSON a mano) + anteprima progressione
+- **P0** Editor per **archetipi, razze, talenti, background, nemici (statblock)**
+- **P0** **Mini-DSL degli effetti** interpretato dal core: `+1 CA`, `advantage: saves vs magic`, `+1d6 fire damage`, `proficiency: skill stealth`... (`core/rules/effects.ts` nuovo, `derived.ts` lo applica)
+- **P1** **Pacchetti custom esportabili/importabili** (un file `.5epack` JSON con tutto: classi, incantesimi, nemici) — share tra giocatori
+- **P1** Validazione "simula il personaggio" (test automatico che un PG custom sale di livello senza errori fino al 20)
+- ✅ **P2** Editor di incantesimi con preview del danno medio e confronto con il baseline SRD
+
+## 6. Campagna / strumenti master (nuovo `packages/campaign`?)
+
+- **P0** **Multi-personaggio**: più schede nella stessa app, switch rápido (party)
+- **P0** **DM screen**: vista compatta con PG, PF, CA, TS passivi, condizioni — per il master
+- ✅ **P1** Inventario di gruppo condiviso + tesoreria di gruppo
+- ✅ **P1** Assegnazione XP di sessione a tutta la party + note di sessione condivise
+- ✅ **P2** Generatore casuale (nomi, incontri, tesori) con tabelle in JSON
+
+## 7. Dati e sync
+
+- **P0** Passare da localStorage a **IndexedDB (Dexie)** — più capiente, query, backup più solidi
+- **P0** **Import/export dell'intera libreria** (tutte le schede + custom) in un file
+- **P1** **Sync cloud opzionale** (Supabase/Firebase) con login, multi-dispositivo, conflitto-last-write
+- **P1** Versionamento schede (snapshot automatici giornalieri)
+- **P2** Import da **D&D Beyond** (parsing del JSON esportato) — solo i tuoi dati, nel rispetto del copyright
+
+## 8. Piattaforme e release
+
+- **P0** CI **GitHub Actions**: su ogni push → test + typecheck + build web; su tag `vX.Y.Z` → build Tauri (Linux/Windows/macOS) + APK Android + allega alla release
+- **P1** Firma/notarizzazione pacchetti desktop (macOS, Windows)
+- **P1** PWA completa offline (già service worker base: migliorare con Workbox)
+- **P2** iOS via Capacitor (stesso codice), notifiche push (promemoria sessione)
+
+## 9. UX e accessibilità (apps/web)
+
+- **P0** **Tema chiaro/scuro** (CSS variables già pronte in `styles.css`)
+- **P0** i18n **IT/EN** (tutti i testi in file `locales/`)
+- ✅ **P1** Scorciatoie da tastiera, comandi rapidi (cmd-K palette)
+- **P1** Animazioni tiro dado, suoni opzionali
+- ✅ **P2** Accessibilità completa (screen reader, contrasto WCAG, riduzione movimento)
+
+## 10. Qualità
+
+- **P1** Test e2e con **Playwright** (flusso: crea PG → XP → level-up → lancia incantesimo)
+- **P1** Copertura core > 90% (oggi 39 test unit)
+- ✅ **P2** Performance: virtualizzazione liste lunghe (grimorio 100+ incantesimi), code-splitting per tab
+
+---
+
+## Quick wins (questa settimana)
+
+1. Toggle inspiration + tiro morte con click (P0)
+2. Bonus/CD incantesimo in Panoramica (P0)
+3. Initiative automatica dal Des (P0)
+4. Tema chiaro (P0)
+5. i18n IT/EN base (P0)
+6. Ricerca in inventario e grimorio (P0)
+
+## Visione
+
+"Il gestore di schede che non ti fa più aprire il manuale": ogni regola in un file JSON
+validato, ogni effetto interpretato dal core, custom pack condivisibili, party sync,
+DM screen — su web, desktop e telefono, offline-first.

@@ -1,0 +1,12 @@
+[
+  { "id": "alert", "name": "Allerta", "description": "+5 all'initiative, non puoi essere colto di sorpresa, niente scambio di initiative con chi non percepisci.", "effects": [{ "type": "custom", "description": "+5 initiative, immunità alla sorpresa." }], "source": "srd" },
+  { "id": "lucky", "name": "Fortunato", "description": "3 punti fortuna: rilancia d20 per attacco, TS o prova.", "effects": [{ "type": "resource", "id": "luck-points", "name": "Punti fortuna", "uses": 3, "longRest": true }], "source": "srd" },
+  { "id": "tough", "name": "Robusto", "description": "+2 PF massimi per livello.", "effects": [{ "type": "custom", "description": "+2 PF per livello." }] },
+  { "id": "sharpshooter", "name": "Tiratore Scelto", "description": "Nessuno svantaggio a lungo raggio, ignori copertura, -5/+10 ai tiri.", "effects": [{ "type": "custom", "description": "Tiri -5/+10 con armi a distanza." }] },
+  { "id": "great-weapon-master", "name": "Maestro delle Armi Pesanti", "description": "Bonus action per attaccare di nuovo dopo un critico o uccisione con arma pesante.", "effects": [{ "type": "custom", "description": "Attacco bonus con arma pesante dopo critico o uccisione." }] },
+  { "id": "mage-slayer", "name": "Cacciamaghi", "description": "Reazione contro incantesimi, vantaggio su TS contro chi ti lancia contro, danni extra.", "effects": [{ "type": "custom", "description": "Vantaggio su TS contro incantatori, reazione d'attacco." }] },
+  { "id": "mobile", "name": "Mobile", "description": "+10 ft velocità, non provochi attacchi d'opportunità, scatto gratis dopo mischia.", "effects": [{ "type": "custom", "description": "+3 m velocità, immune alle opportunità d'attacco quando ti disimpegni." }] },
+  { "id": "resilient", "name": "Resiliente", "description": "+1 a una caratteristica e proficiency nei suoi TS.", "effects": [{ "type": "asi", "points": 1 }, { "type": "proficiency", "kind": "savingThrow", "value": "con" }] },
+  { "id": "grappler", "name": "Lottatore", "description": "Vantaggio contro creature che afferri, velocità dimezzata, scudo humanoide.", "effects": [{ "type": "custom", "description": "Vantaggio sui tiri per afferrare; puoi usare una creatura come scudo." }] },
+  { "id": "sentinel", "name": "Sentinella", "description": "Opportunity attack blocca il movimento, réaction attack, +1 CA con armatura media/pesante.", "effects": [{ "type": "custom", "description": "Sentinella: opportunity attack blocca il bersaglio; reazione d'attacco; CA +1 con armatura media/pesante." }] }
+]

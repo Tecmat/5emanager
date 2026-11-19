@@ -1,0 +1,1950 @@
+[
+ {
+  "id": "eldritch-knight",
+  "classId": "fighter",
+  "name": "Cavaliere Arcano",
+  "features": {
+   "3": [
+    {
+     "id": "eldritch-knight-3",
+     "name": "Legame con l'Arma",
+     "description": "Leva la spada e il grimorio insieme: incantesimi da combattimento e legame con l'arma.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Leva la spada e il grimorio insieme: incantesimi da combattimento e legame con l'arma."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "eldritch-knight-7",
+     "name": "Colpo Arcano",
+     "description": "Colpo Arcano: potenziamento dell'archetipo Cavaliere Arcano al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Colpo Arcano: potenziamento dell'archetipo Cavaliere Arcano al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "eldritch-knight-11",
+     "name": "Attacco Extra Arcano",
+     "description": "Attacco Extra Arcano: potenziamento dell'archetipo Cavaliere Arcano al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Attacco Extra Arcano: potenziamento dell'archetipo Cavaliere Arcano al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "eldritch-knight-15",
+     "name": "Eliminazione Arcana",
+     "description": "Eliminazione Arcana: potenziamento dell'archetipo Cavaliere Arcano al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Eliminazione Arcana: potenziamento dell'archetipo Cavaliere Arcano al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "eldritch-knight-18",
+     "name": "Incantesimo del Cavaliere",
+     "description": "Incantesimo del Cavaliere: potenziamento dell'archetipo Cavaliere Arcano al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Incantesimo del Cavaliere: potenziamento dell'archetipo Cavaliere Arcano al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "psi-warrior",
+  "classId": "fighter",
+  "name": "Guerriero Psionico",
+  "features": {
+   "3": [
+    {
+     "id": "psi-warrior-3",
+     "name": "Dadi Psionici",
+     "description": "Disciplina mentale che potenzia colpi e difese con i poteri psionici.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Disciplina mentale che potenzia colpi e difese con i poteri psionici."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "psi-warrior-7",
+     "name": "Passo Psionico",
+     "description": "Passo Psionico: potenziamento dell'archetipo Guerriero Psionico al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Passo Psionico: potenziamento dell'archetipo Guerriero Psionico al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "psi-warrior-11",
+     "name": "Attacco Psionico Potenziato",
+     "description": "Attacco Psionico Potenziato: potenziamento dell'archetipo Guerriero Psionico al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Attacco Psionico Potenziato: potenziamento dell'archetipo Guerriero Psionico al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "psi-warrior-15",
+     "name": "Difesa Psionica",
+     "description": "Difesa Psionica: potenziamento dell'archetipo Guerriero Psionico al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Difesa Psionica: potenziamento dell'archetipo Guerriero Psionico al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "psi-warrior-18",
+     "name": "Mente Immortale",
+     "description": "Mente Immortale: potenziamento dell'archetipo Guerriero Psionico al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Mente Immortale: potenziamento dell'archetipo Guerriero Psionico al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "totem-warrior",
+  "classId": "barbarian",
+  "name": "Guerriero del Totem",
+  "features": {
+   "3": [
+    {
+     "id": "totem-warrior-3",
+     "name": "Spirito Totemico",
+     "description": "Spirito animale totemico che protegge e potenzia in ira.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Spirito animale totemico che protegge e potenzia in ira."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "totem-warrior-7",
+     "name": "Anima del Totem",
+     "description": "Anima del Totem: potenziamento dell'archetipo Guerriero del Totem al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anima del Totem: potenziamento dell'archetipo Guerriero del Totem al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "totem-warrior-11",
+     "name": "Totem dell'Orso",
+     "description": "Totem dell'Orso: potenziamento dell'archetipo Guerriero del Totem al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Totem dell'Orso: potenziamento dell'archetipo Guerriero del Totem al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "totem-warrior-15",
+     "name": "Totem della Tigre",
+     "description": "Totem della Tigre: potenziamento dell'archetipo Guerriero del Totem al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Totem della Tigre: potenziamento dell'archetipo Guerriero del Totem al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "totem-warrior-18",
+     "name": "Totem dell'Aquila",
+     "description": "Totem dell'Aquila: potenziamento dell'archetipo Guerriero del Totem al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Totem dell'Aquila: potenziamento dell'archetipo Guerriero del Totem al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "ancestral-guardian",
+  "classId": "barbarian",
+  "name": "Guardiano degli Antenati",
+  "features": {
+   "3": [
+    {
+     "id": "ancestral-guardian-3",
+     "name": "Protettori Ancestrali",
+     "description": "Gli spiriti degli antenati emergono per difendere gli alleati.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Gli spiriti degli antenati emergono per difendere gli alleati."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "ancestral-guardian-7",
+     "name": "Vigilanza Ancestrale",
+     "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli Antenati al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli Antenati al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "ancestral-guardian-11",
+     "name": "Riduzione del Danno",
+     "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli Antenati al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli Antenati al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "ancestral-guardian-15",
+     "name": "Consultare gli Antenati",
+     "description": "Consultare gli Antenati: potenziamento dell'archetipo Guardiano degli Antenati al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Consultare gli Antenati: potenziamento dell'archetipo Guardiano degli Antenati al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "ancestral-guardian-18",
+     "name": "Antenati Vendicativi",
+     "description": "Antenati Vendicativi: potenziamento dell'archetipo Guardiano degli Antenati al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Antenati Vendicativi: potenziamento dell'archetipo Guardiano degli Antenati al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "valor",
+  "classId": "bard",
+  "name": "Collegio del Valore",
+  "features": {
+   "3": [
+    {
+     "id": "valor-3",
+     "name": "Competenze Extra",
+     "description": "Bardo guerriero: armature, armi e ispirazione in prima linea.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Bardo guerriero: armature, armi e ispirazione in prima linea."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "valor-7",
+     "name": "Ispirazione da Guerra",
+     "description": "Ispirazione da Guerra: potenziamento dell'archetipo Collegio del Valore al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ispirazione da Guerra: potenziamento dell'archetipo Collegio del Valore al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "valor-11",
+     "name": "Attacco Extra",
+     "description": "Attacco Extra: potenziamento dell'archetipo Collegio del Valore al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Attacco Extra: potenziamento dell'archetipo Collegio del Valore al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "valor-15",
+     "name": "Fonte di Audacia",
+     "description": "Fonte di Audacia: potenziamento dell'archetipo Collegio del Valore al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Fonte di Audacia: potenziamento dell'archetipo Collegio del Valore al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "valor-18",
+     "name": "Audacia Inarrestabile",
+     "description": "Audacia Inarrestabile: potenziamento dell'archetipo Collegio del Valore al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Audacia Inarrestabile: potenziamento dell'archetipo Collegio del Valore al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "glamour",
+  "classId": "bard",
+  "name": "Collegio del Fascino",
+  "features": {
+   "3": [
+    {
+     "id": "glamour-3",
+     "name": "Fascino Sovrumano",
+     "description": "Magia del fascino e della glamour che incanta e protegge gli alleati.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Magia del fascino e della glamour che incanta e protegge gli alleati."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "glamour-7",
+     "name": "Mantello di Ispirazione",
+     "description": "Mantello di Ispirazione: potenziamento dell'archetipo Collegio del Fascino al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Mantello di Ispirazione: potenziamento dell'archetipo Collegio del Fascino al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "glamour-11",
+     "name": "Comando Incantevole",
+     "description": "Comando Incantevole: potenziamento dell'archetipo Collegio del Fascino al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Comando Incantevole: potenziamento dell'archetipo Collegio del Fascino al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "glamour-15",
+     "name": "Fascino Irresistibile",
+     "description": "Fascino Irresistibile: potenziamento dell'archetipo Collegio del Fascino al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Fascino Irresistibile: potenziamento dell'archetipo Collegio del Fascino al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "glamour-18",
+     "name": "La Verità del Fascino",
+     "description": "La Verità del Fascino: potenziamento dell'archetipo Collegio del Fascino al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "La Verità del Fascino: potenziamento dell'archetipo Collegio del Fascino al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "war-domain",
+  "classId": "cleric",
+  "name": "Dominio della Guerra",
+  "features": {
+   "3": [
+    {
+     "id": "war-domain-3",
+     "name": "Bonus Competenza",
+     "description": "Chierico da battaglia: benedizioni che colpiscono con le armi.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Chierico da battaglia: benedizioni che colpiscono con le armi."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "war-domain-7",
+     "name": "Guerra Benedetta",
+     "description": "Guerra Benedetta: potenziamento dell'archetipo Dominio della Guerra al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Guerra Benedetta: potenziamento dell'archetipo Dominio della Guerra al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "war-domain-11",
+     "name": "Attacco Extra del Dominio",
+     "description": "Attacco Extra del Dominio: potenziamento dell'archetipo Dominio della Guerra al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Attacco Extra del Dominio: potenziamento dell'archetipo Dominio della Guerra al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "war-domain-15",
+     "name": "Guidato dalla Guerra",
+     "description": "Guidato dalla Guerra: potenziamento dell'archetipo Dominio della Guerra al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Guidato dalla Guerra: potenziamento dell'archetipo Dominio della Guerra al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "war-domain-18",
+     "name": "Avatar della Guerra",
+     "description": "Avatar della Guerra: potenziamento dell'archetipo Dominio della Guerra al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Avatar della Guerra: potenziamento dell'archetipo Dominio della Guerra al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "nature-domain",
+  "classId": "cleric",
+  "name": "Dominio della Natura",
+  "features": {
+   "3": [
+    {
+     "id": "nature-domain-3",
+     "name": "Bonus Competenza",
+     "description": "Poteri della natura selvaggia al servizio del chierico.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Poteri della natura selvaggia al servizio del chierico."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "nature-domain-7",
+     "name": "Addomesticare la Natura",
+     "description": "Addomesticare la Natura: potenziamento dell'archetipo Dominio della Natura al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Addomesticare la Natura: potenziamento dell'archetipo Dominio della Natura al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "nature-domain-11",
+     "name": "Soppressione dei Poteri della Natura",
+     "description": "Soppressione dei Poteri della Natura: potenziamento dell'archetipo Dominio della Natura al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Soppressione dei Poteri della Natura: potenziamento dell'archetipo Dominio della Natura al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "nature-domain-15",
+     "name": "Sopravvivenza Selvaggia",
+     "description": "Sopravvivenza Selvaggia: potenziamento dell'archetipo Dominio della Natura al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Sopravvivenza Selvaggia: potenziamento dell'archetipo Dominio della Natura al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "nature-domain-18",
+     "name": "Maestro della Natura",
+     "description": "Maestro della Natura: potenziamento dell'archetipo Dominio della Natura al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Maestro della Natura: potenziamento dell'archetipo Dominio della Natura al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "land",
+  "classId": "druid",
+  "name": "Cerchia della Terra",
+  "features": {
+   "3": [
+    {
+     "id": "land-3",
+     "name": "Bonus Cerchia",
+     "description": "La terra stessa risponde al druido della cerchia.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "La terra stessa risponde al druido della cerchia."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "land-6",
+     "name": "Recupero Naturale",
+     "description": "Recupero Naturale: potenziamento dell'archetipo Cerchia della Terra al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Recupero Naturale: potenziamento dell'archetipo Cerchia della Terra al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "land-10",
+     "name": "Immunità al Terreno Difficile",
+     "description": "Immunità al Terreno Difficile: potenziamento dell'archetipo Cerchia della Terra al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Immunità al Terreno Difficile: potenziamento dell'archetipo Cerchia della Terra al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "land-14",
+     "name": "Libertà della Terra",
+     "description": "Libertà della Terra: potenziamento dell'archetipo Cerchia della Terra al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Libertà della Terra: potenziamento dell'archetipo Cerchia della Terra al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "spores",
+  "classId": "druid",
+  "name": "Cerchia delle Spore",
+  "features": {
+   "3": [
+    {
+     "id": "spores-3",
+     "name": "Simbiosi Fungina",
+     "description": "Simbiosi con i funghi: spore che dañan y curan.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Simbiosi con i funghi: spore che dañan y curan."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "spores-6",
+     "name": "Aura di Spore",
+     "description": "Aura di Spore: potenziamento dell'archetipo Cerchia delle Spore al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Aura di Spore: potenziamento dell'archetipo Cerchia delle Spore al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "spores-10",
+     "name": "Spore Simbiotiche",
+     "description": "Spore Simbiotiche: potenziamento dell'archetipo Cerchia delle Spore al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Spore Simbiotiche: potenziamento dell'archetipo Cerchia delle Spore al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "spores-14",
+     "name": "Crescita Fungina",
+     "description": "Crescita Fungina: potenziamento dell'archetipo Cerchia delle Spore al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Crescita Fungina: potenziamento dell'archetipo Cerchia delle Spore al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "shadow",
+  "classId": "monk",
+  "name": "Via dell'Ombra",
+  "features": {
+   "3": [
+    {
+     "id": "shadow-3",
+     "name": "Arti dell'Ombra",
+     "description": "Arti marziali nell'oscurità: colpire e svanire.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Arti marziali nell'oscurità: colpire e svanire."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "shadow-7",
+     "name": "Passo dell'Ombra",
+     "description": "Passo dell'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Passo dell'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "shadow-11",
+     "name": "Anima dell'Ombra",
+     "description": "Anima dell'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anima dell'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "shadow-15",
+     "name": "Colpo d'Ombra",
+     "description": "Colpo d'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Colpo d'Ombra: potenziamento dell'archetipo Via dell'Ombra al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "shadow-18",
+     "name": "Eludere la Morte",
+     "description": "Eludere la Morte: potenziamento dell'archetipo Via dell'Ombra al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Eludere la Morte: potenziamento dell'archetipo Via dell'Ombra al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "four-elements",
+  "classId": "monk",
+  "name": "Via dei Quattro Elementi",
+  "features": {
+   "3": [
+    {
+     "id": "four-elements-3",
+     "name": "Disciplina Elementale",
+     "description": "Manipola gli elementi con le arti marziali.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Manipola gli elementi con le arti marziali."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "four-elements-7",
+     "name": "Sweep del Braccio",
+     "description": "Sweep del Braccio: potenziamento dell'archetipo Via dei Quattro Elementi al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Sweep del Braccio: potenziamento dell'archetipo Via dei Quattro Elementi al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "four-elements-11",
+     "name": "Fiammata del Dito",
+     "description": "Fiammata del Dito: potenziamento dell'archetipo Via dei Quattro Elementi al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Fiammata del Dito: potenziamento dell'archetipo Via dei Quattro Elementi al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "four-elements-15",
+     "name": "Ride del Vento",
+     "description": "Ride del Vento: potenziamento dell'archetipo Via dei Quattro Elementi al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ride del Vento: potenziamento dell'archetipo Via dei Quattro Elementi al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "four-elements-18",
+     "name": "Furia degli Elementi",
+     "description": "Furia degli Elementi: potenziamento dell'archetipo Via dei Quattro Elementi al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Furia degli Elementi: potenziamento dell'archetipo Via dei Quattro Elementi al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "ancients",
+  "classId": "paladin",
+  "name": "Giuramento degli Antenati",
+  "features": {
+   "3": [
+    {
+     "id": "ancients-3",
+     "name": "Aura degli Antenati",
+     "description": "Giuramento di custodire la luce e la vita contro le tenebre.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Giuramento di custodire la luce e la vita contro le tenebre."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "ancients-7",
+     "name": "Immune al Paura",
+     "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli Antenati al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli Antenati al livello 7."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "ancients-15",
+     "name": "Natura Integgerima",
+     "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli Antenati al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli Antenati al livello 15."
+      }
+     ]
+    }
+   ],
+   "20": [
+    {
+     "id": "ancients-20",
+     "name": "Anziano Protettore",
+     "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli Antenati al livello 20.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli Antenati al livello 20."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "vengeance",
+  "classId": "paladin",
+  "name": "Giuramento della Vendetta",
+  "features": {
+   "3": [
+    {
+     "id": "vengeance-3",
+     "name": "Voto di Vendetta",
+     "description": "Giuramento di vendetta contro il male: punire i malvagi.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Giuramento di vendetta contro il male: punire i malvagi."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "vengeance-7",
+     "name": "Ira Inarrestabile",
+     "description": "Ira Inarrestabile: potenziamento dell'archetipo Giuramento della Vendetta al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ira Inarrestabile: potenziamento dell'archetipo Giuramento della Vendetta al livello 7."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "vengeance-15",
+     "name": "Anime Vendicativa",
+     "description": "Anime Vendicativa: potenziamento dell'archetipo Giuramento della Vendetta al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anime Vendicativa: potenziamento dell'archetipo Giuramento della Vendetta al livello 15."
+      }
+     ]
+    }
+   ],
+   "20": [
+    {
+     "id": "vengeance-20",
+     "name": "Vendetta Final",
+     "description": "Vendetta Final: potenziamento dell'archetipo Giuramento della Vendetta al livello 20.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Vendetta Final: potenziamento dell'archetipo Giuramento della Vendetta al livello 20."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "beast-master",
+  "classId": "ranger",
+  "name": "Signore delle Bestie",
+  "features": {
+   "3": [
+    {
+     "id": "beast-master-3",
+     "name": "Compagno Animale",
+     "description": "Un compagno animale combatte al fianco del ranger.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Un compagno animale combatte al fianco del ranger."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "beast-master-7",
+     "name": "Attacco Coordinato",
+     "description": "Attacco Coordinato: potenziamento dell'archetipo Signore delle Bestie al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Attacco Coordinato: potenziamento dell'archetipo Signore delle Bestie al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "beast-master-11",
+     "name": "Bestia Feroce",
+     "description": "Bestia Feroce: potenziamento dell'archetipo Signore delle Bestie al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Bestia Feroce: potenziamento dell'archetipo Signore delle Bestie al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "beast-master-15",
+     "name": "Spirito della Bestia",
+     "description": "Spirito della Bestia: potenziamento dell'archetipo Signore delle Bestie al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Spirito della Bestia: potenziamento dell'archetipo Signore delle Bestie al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "beast-master-18",
+     "name": "Compagno Eterno",
+     "description": "Compagno Eterno: potenziamento dell'archetipo Signore delle Bestie al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Compagno Eterno: potenziamento dell'archetipo Signore delle Bestie al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "gloom-stalker",
+  "classId": "ranger",
+  "name": "Predatore delle Tenebre",
+  "features": {
+   "3": [
+    {
+     "id": "gloom-stalker-3",
+     "name": "Amboscata delle Tenebre",
+     "description": "Cacciatore nelle ombre: invisibile e letale nell'oscurità.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Cacciatore nelle ombre: invisibile e letale nell'oscurità."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "gloom-stalker-7",
+     "name": "Senso dell'Oscurità",
+     "description": "Senso dell'Oscurità: potenziamento dell'archetipo Predatore delle Tenebre al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Senso dell'Oscurità: potenziamento dell'archetipo Predatore delle Tenebre al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "gloom-stalker-11",
+     "name": "Invisibilità Umbral",
+     "description": "Invisibilità Umbral: potenziamento dell'archetipo Predatore delle Tenebre al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Invisibilità Umbral: potenziamento dell'archetipo Predatore delle Tenebre al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "gloom-stalker-15",
+     "name": "Colpo dell'Ombra",
+     "description": "Colpo dell'Ombra: potenziamento dell'archetipo Predatore delle Tenebre al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Colpo dell'Ombra: potenziamento dell'archetipo Predatore delle Tenebre al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "gloom-stalker-18",
+     "name": "Ultima Preda",
+     "description": "Ultima Preda: potenziamento dell'archetipo Predatore delle Tenebre al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ultima Preda: potenziamento dell'archetipo Predatore delle Tenebre al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "assassin",
+  "classId": "rogue",
+  "name": "Assassino",
+  "features": {
+   "3": [
+    {
+     "id": "assassin-3",
+     "name": "Attacco di Sorpresa",
+     "description": "Morte silenziosa: colpire prima che il nemico reagisca.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Morte silenziosa: colpire prima che il nemico reagisca."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "assassin-7",
+     "name": "Assassinare",
+     "description": "Assassinare: potenziamento dell'archetipo Assassino al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Assassinare: potenziamento dell'archetipo Assassino al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "assassin-11",
+     "name": "Veleno Naturale",
+     "description": "Veleno Naturale: potenziamento dell'archetipo Assassino al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Veleno Naturale: potenziamento dell'archetipo Assassino al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "assassin-15",
+     "name": "Eludere",
+     "description": "Eludere: potenziamento dell'archetipo Assassino al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Eludere: potenziamento dell'archetipo Assassino al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "assassin-18",
+     "name": "Morte in Piedi",
+     "description": "Morte in Piedi: potenziamento dell'archetipo Assassino al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Morte in Piedi: potenziamento dell'archetipo Assassino al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "arcane-trickster",
+  "classId": "rogue",
+  "name": "Furfante Arcano",
+  "features": {
+   "3": [
+    {
+     "id": "arcane-trickster-3",
+     "name": "Trucco Arcano",
+     "description": "Ladro che ruba con le mani e con la magia.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ladro che ruba con le mani e con la magia."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "arcane-trickster-7",
+     "name": "Mano Magica",
+     "description": "Mano Magica: potenziamento dell'archetipo Furfante Arcano al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Mano Magica: potenziamento dell'archetipo Furfante Arcano al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "arcane-trickster-11",
+     "name": "Legerdemain Potenziato",
+     "description": "Legerdemain Potenziato: potenziamento dell'archetipo Furfante Arcano al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Legerdemain Potenziato: potenziamento dell'archetipo Furfante Arcano al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "arcane-trickster-15",
+     "name": "Versatile",
+     "description": "Versatile: potenziamento dell'archetipo Furfante Arcano al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Versatile: potenziamento dell'archetipo Furfante Arcano al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "arcane-trickster-18",
+     "name": "Ladro Arcano",
+     "description": "Ladro Arcano: potenziamento dell'archetipo Furfante Arcano al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ladro Arcano: potenziamento dell'archetipo Furfante Arcano al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "wild-magic",
+  "classId": "sorcerer",
+  "name": "Magia Selvaggia",
+  "features": {
+   "3": [
+    {
+     "id": "wild-magic-3",
+     "name": "Surge di Magia Selvaggia",
+     "description": "Potere magico incontrollato che esplode in effetti casuali.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Potere magico incontrollato che esplode in effetti casuali."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "wild-magic-7",
+     "name": "Tides of Chaos",
+     "description": "Tides of Chaos: potenziamento dell'archetipo Magia Selvaggia al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Tides of Chaos: potenziamento dell'archetipo Magia Selvaggia al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "wild-magic-11",
+     "name": "Bend Luck",
+     "description": "Bend Luck: potenziamento dell'archetipo Magia Selvaggia al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Bend Luck: potenziamento dell'archetipo Magia Selvaggia al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "wild-magic-15",
+     "name": "Sfera Selvaggia",
+     "description": "Sfera Selvaggia: potenziamento dell'archetipo Magia Selvaggia al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Sfera Selvaggia: potenziamento dell'archetipo Magia Selvaggia al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "wild-magic-18",
+     "name": "Magia Incontrollabile",
+     "description": "Magia Incontrollabile: potenziamento dell'archetipo Magia Selvaggia al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Magia Incontrollabile: potenziamento dell'archetipo Magia Selvaggia al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "divine-soul",
+  "classId": "sorcerer",
+  "name": "Anima Divina",
+  "features": {
+   "3": [
+    {
+     "id": "divine-soul-3",
+     "name": "Energie Divine",
+     "description": "Potere sacro innestato nell'anima del stregone.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Potere sacro innestato nell'anima del stregone."
+      }
+     ]
+    }
+   ],
+   "7": [
+    {
+     "id": "divine-soul-7",
+     "name": "Ali Angeliche",
+     "description": "Ali Angeliche: potenziamento dell'archetipo Anima Divina al livello 7.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ali Angeliche: potenziamento dell'archetipo Anima Divina al livello 7."
+      }
+     ]
+    }
+   ],
+   "11": [
+    {
+     "id": "divine-soul-11",
+     "name": "Curare Ferite Divine",
+     "description": "Curare Ferite Divine: potenziamento dell'archetipo Anima Divina al livello 11.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Curare Ferite Divine: potenziamento dell'archetipo Anima Divina al livello 11."
+      }
+     ]
+    }
+   ],
+   "15": [
+    {
+     "id": "divine-soul-15",
+     "name": "Volo Divino",
+     "description": "Volo Divino: potenziamento dell'archetipo Anima Divina al livello 15.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Volo Divino: potenziamento dell'archetipo Anima Divina al livello 15."
+      }
+     ]
+    }
+   ],
+   "18": [
+    {
+     "id": "divine-soul-18",
+     "name": "Anima Radiosa",
+     "description": "Anima Radiosa: potenziamento dell'archetipo Anima Divina al livello 18.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anima Radiosa: potenziamento dell'archetipo Anima Divina al livello 18."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "archfey",
+  "classId": "warlock",
+  "name": "Patto con l'Archifata",
+  "features": {
+   "3": [
+    {
+     "id": "archfey-3",
+     "name": "Fascino Fatato",
+     "description": "Un patto con il reame fatato: fascino e inganni.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Un patto con il reame fatato: fascino e inganni."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "archfey-6",
+     "name": "Ira della Corte",
+     "description": "Ira della Corte: potenziamento dell'archetipo Patto con l'Archifata al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Ira della Corte: potenziamento dell'archetipo Patto con l'Archifata al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "archfey-10",
+     "name": "Guardia Fatata",
+     "description": "Guardia Fatata: potenziamento dell'archetipo Patto con l'Archifata al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Guardia Fatata: potenziamento dell'archetipo Patto con l'Archifata al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "archfey-14",
+     "name": "Oscurità e Luce Fatata",
+     "description": "Oscurità e Luce Fatata: potenziamento dell'archetipo Patto con l'Archifata al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Oscurità e Luce Fatata: potenziamento dell'archetipo Patto con l'Archifata al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "great-old-one",
+  "classId": "warlock",
+  "name": "Patto con il Grande Antico",
+  "features": {
+   "3": [
+    {
+     "id": "great-old-one-3",
+     "name": "Sussurro Alien",
+     "description": "Un patto con entità aliene: mente che implode.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Un patto con entità aliene: mente che implode."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "great-old-one-6",
+     "name": "Mente Telepatica",
+     "description": "Mente Telepatica: potenziamento dell'archetipo Patto con il Grande Antico al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Mente Telepatica: potenziamento dell'archetipo Patto con il Grande Antico al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "great-old-one-10",
+     "name": "Creazione Thrall",
+     "description": "Creazione Thrall: potenziamento dell'archetipo Patto con il Grande Antico al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Creazione Thrall: potenziamento dell'archetipo Patto con il Grande Antico al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "great-old-one-14",
+     "name": "Pensieri Alien",
+     "description": "Pensieri Alien: potenziamento dell'archetipo Patto con il Grande Antico al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Pensieri Alien: potenziamento dell'archetipo Patto con il Grande Antico al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "abjuration",
+  "classId": "wizard",
+  "name": "Scuola dell'Abiurazione",
+  "features": {
+   "2": [
+    {
+     "id": "abjuration-2",
+     "name": "Salvaguardia Arcana",
+     "description": "Magia difensiva che protegge e blocca.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Magia difensiva che protegge e blocca."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "abjuration-6",
+     "name": "Proiettile Protettivo",
+     "description": "Proiettile Protettivo: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Proiettile Protettivo: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "abjuration-10",
+     "name": "Muro di Forza Arcano",
+     "description": "Muro di Forza Arcano: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Muro di Forza Arcano: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "abjuration-14",
+     "name": "Resistenza del Mago",
+     "description": "Resistenza del Mago: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Resistenza del Mago: potenziamento dell'archetipo Scuola dell'Abiurazione al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "conjuration",
+  "classId": "wizard",
+  "name": "Scuola della Congiurazione",
+  "features": {
+   "2": [
+    {
+     "id": "conjuration-2",
+     "name": "Coniurazione Minore",
+     "description": "Evocare creature e oggetti dal nulla.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Evocare creature e oggetti dal nulla."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "conjuration-6",
+     "name": "Trasporto Congiurato",
+     "description": "Trasporto Congiurato: potenziamento dell'archetipo Scuola della Congiurazione al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Trasporto Congiurato: potenziamento dell'archetipo Scuola della Congiurazione al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "conjuration-10",
+     "name": "Benign Transposition",
+     "description": "Benign Transposition: potenziamento dell'archetipo Scuola della Congiurazione al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Benign Transposition: potenziamento dell'archetipo Scuola della Congiurazione al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "conjuration-14",
+     "name": "Congiurazione Potenziata",
+     "description": "Congiurazione Potenziata: potenziamento dell'archetipo Scuola della Congiurazione al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Congiurazione Potenziata: potenziamento dell'archetipo Scuola della Congiurazione al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "divination",
+  "classId": "wizard",
+  "name": "Scuola della Divinazione",
+  "features": {
+   "2": [
+    {
+     "id": "divination-2",
+     "name": "Portento",
+     "description": "Vedere il futuro e il passato.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Vedere il futuro e il passato."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "divination-6",
+     "name": "Chiaroveggenza Arcana",
+     "description": "Chiaroveggenza Arcana: potenziamento dell'archetipo Scuola della Divinazione al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Chiaroveggenza Arcana: potenziamento dell'archetipo Scuola della Divinazione al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "divination-10",
+     "name": "Terzo Occhio",
+     "description": "Terzo Occhio: potenziamento dell'archetipo Scuola della Divinazione al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Terzo Occhio: potenziamento dell'archetipo Scuola della Divinazione al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "divination-14",
+     "name": "Divinazione Potenziata",
+     "description": "Divinazione Potenziata: potenziamento dell'archetipo Scuola della Divinazione al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Divinazione Potenziata: potenziamento dell'archetipo Scuola della Divinazione al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "enchantment",
+  "classId": "wizard",
+  "name": "Scuola dell'Incantamento",
+  "features": {
+   "2": [
+    {
+     "id": "enchantment-2",
+     "name": "Ipnosi",
+     "description": "Controllare le menti altrui.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Controllare le menti altrui."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "enchantment-6",
+     "name": "Comando Incantato",
+     "description": "Comando Incantato: potenziamento dell'archetipo Scuola dell'Incantamento al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Comando Incantato: potenziamento dell'archetipo Scuola dell'Incantamento al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "enchantment-10",
+     "name": "Mantello dell'Incantatore",
+     "description": "Mantello dell'Incantatore: potenziamento dell'archetipo Scuola dell'Incantamento al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Mantello dell'Incantatore: potenziamento dell'archetipo Scuola dell'Incantamento al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "enchantment-14",
+     "name": "Alterare Memoria",
+     "description": "Alterare Memoria: potenziamento dell'archetipo Scuola dell'Incantamento al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Alterare Memoria: potenziamento dell'archetipo Scuola dell'Incantamento al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "illusion",
+  "classId": "wizard",
+  "name": "Scuola dell'Illusione",
+  "features": {
+   "2": [
+    {
+     "id": "illusion-2",
+     "name": "Trucco Migliorato",
+     "description": "Illusioni che ingannano i sensi.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Illusioni che ingannano i sensi."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "illusion-6",
+     "name": "Illusione Invisibile",
+     "description": "Illusione Invisibile: potenziamento dell'archetipo Scuola dell'Illusione al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Illusione Invisibile: potenziamento dell'archetipo Scuola dell'Illusione al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "illusion-10",
+     "name": "Illusioni Reali",
+     "description": "Illusioni Reali: potenziamento dell'archetipo Scuola dell'Illusione al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Illusioni Reali: potenziamento dell'archetipo Scuola dell'Illusione al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "illusion-14",
+     "name": "Malleabilità Illusoria",
+     "description": "Malleabilità Illusoria: potenziamento dell'archetipo Scuola dell'Illusione al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Malleabilità Illusoria: potenziamento dell'archetipo Scuola dell'Illusione al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "necromancy",
+  "classId": "wizard",
+  "name": "Scuola della Necromanzia",
+  "features": {
+   "2": [
+    {
+     "id": "necromancy-2",
+     "name": "Grim Harvest",
+     "description": "Manipolare la vita e la morte.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Manipolare la vita e la morte."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "necromancy-6",
+     "name": "Morti Viventi",
+     "description": "Morti Viventi: potenziamento dell'archetipo Scuola della Necromanzia al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Morti Viventi: potenziamento dell'archetipo Scuola della Necromanzia al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "necromancy-10",
+     "name": "Siphon Vita",
+     "description": "Siphon Vita: potenziamento dell'archetipo Scuola della Necromanzia al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Siphon Vita: potenziamento dell'archetipo Scuola della Necromanzia al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "necromancy-14",
+     "name": "Anima dei Morti",
+     "description": "Anima dei Morti: potenziamento dell'archetipo Scuola della Necromanzia al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Anima dei Morti: potenziamento dell'archetipo Scuola della Necromanzia al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ },
+ {
+  "id": "transmutation",
+  "classId": "wizard",
+  "name": "Scuola della Trasmutazione",
+  "features": {
+   "2": [
+    {
+     "id": "transmutation-2",
+     "name": "Trasmutazione Minore",
+     "description": "Trasformare materia e corpo.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Trasformare materia e corpo."
+      }
+     ]
+    }
+   ],
+   "6": [
+    {
+     "id": "transmutation-6",
+     "name": "Pietra del Trasmutatore",
+     "description": "Pietra del Trasmutatore: potenziamento dell'archetipo Scuola della Trasmutazione al livello 6.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Pietra del Trasmutatore: potenziamento dell'archetipo Scuola della Trasmutazione al livello 6."
+      }
+     ]
+    }
+   ],
+   "10": [
+    {
+     "id": "transmutation-10",
+     "name": "Trasformazione Chimica",
+     "description": "Trasformazione Chimica: potenziamento dell'archetipo Scuola della Trasmutazione al livello 10.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Trasformazione Chimica: potenziamento dell'archetipo Scuola della Trasmutazione al livello 10."
+      }
+     ]
+    }
+   ],
+   "14": [
+    {
+     "id": "transmutation-14",
+     "name": "Trasformazione del Maestro",
+     "description": "Trasformazione del Maestro: potenziamento dell'archetipo Scuola della Trasmutazione al livello 14.",
+     "effects": [
+      {
+       "type": "custom",
+       "description": "Trasformazione del Maestro: potenziamento dell'archetipo Scuola della Trasmutazione al livello 14."
+      }
+     ]
+    }
+   ]
+  },
+  "source": "srd"
+ }
+]

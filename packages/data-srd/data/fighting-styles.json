@@ -1,0 +1,8 @@
+[
+  { "id": "archery", "name": "Tiro con l'Arco", "description": "+2 ai tiri per colpire con armi a distanza." },
+  { "id": "defense", "name": "Difesa", "description": "+1 alla CA mentre indossi un'armatura." },
+  { "id": "dueling", "name": "Duello", "description": "+2 ai danni con arma a una mano se l'altra mano è libera." },
+  { "id": "great-weapon-fighting", "name": "Combattimento con Armi Pesanti", "description": "Rilancia 1 e 2 ai danni con arma a due mani." },
+  { "id": "protection", "name": "Protezione", "description": "Reazione: imponi svantaggio a un attacco contro un alleato a 1,5 m." },
+  { "id": "two-weapon-fighting", "name": "Combattimento con Due Armi", "description": "AggiungI il modificatore ai danni dell'attacco bonus con la seconda arma." }
+]

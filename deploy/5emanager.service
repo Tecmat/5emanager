@@ -1,0 +1,22 @@
+[Unit]
+Description=5e Manager server (web + websocket)
+After=network.target
+
+[Service]
+Type=simple
+User=5eapp
+WorkingDirectory=/opt/5emanager/app
+Environment=PORT=3001
+Environment=HOST=0.0.0.0
+Environment=DND5E_DATA_DIR=/var/lib/5emanager/data
+# decommenta e imposta un token per proteggere il pannello admin su /admin:
+# Environment=DND5E_ADMIN_TOKEN=cambia-questo-token
+# token GitHub (PAT fine-grained, lettura sul repo) per il check-update con repo PRIVATO
+# (endpoint /api/update e /api/update/asset?name=... usati da web app e APK Android):
+# Environment=GITHUB_TOKEN=github_pat_...
+ExecStart=/usr/bin/npx tsx packages/server/src/index.ts
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

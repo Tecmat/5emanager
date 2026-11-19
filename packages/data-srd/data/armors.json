@@ -1,0 +1,15 @@
+[
+  { "id": "padded", "name": "Armatura Imbottita", "category": "light", "ac": 11, "weight": 8, "cost": { "value": 5, "unit": "gp" }, "source": "srd" },
+  { "id": "leather", "name": "Cuoio", "category": "light", "ac": 11, "weight": 10, "cost": { "value": 10, "unit": "gp" }, "source": "srd" },
+  { "id": "studded-leather", "name": "Cuoio Borchiato", "category": "light", "ac": 12, "weight": 13, "cost": { "value": 45, "unit": "gp" }, "source": "srd" },
+  { "id": "hide", "name": "Pelle", "category": "medium", "ac": 12, "maxDex": 2, "weight": 12, "cost": { "value": 10, "unit": "gp" }, "source": "srd" },
+  { "id": "chain-shirt", "name": "Camicia di Maglia", "category": "medium", "ac": 13, "maxDex": 2, "weight": 20, "cost": { "value": 50, "unit": "gp" }, "source": "srd" },
+  { "id": "scale-mail", "name": "Mailla", "category": "medium", "ac": 14, "maxDex": 2, "stealthDisadvantage": true, "weight": 45, "cost": { "value": 50, "unit": "gp" }, "source": "srd" },
+  { "id": "breastplate", "name": "Corazza", "category": "medium", "ac": 14, "maxDex": 2, "weight": 20, "cost": { "value": 400, "unit": "gp" }, "source": "srd" },
+  { "id": "half-plate", "name": "Mezza Armatura", "category": "medium", "ac": 15, "maxDex": 2, "stealthDisadvantage": true, "weight": 40, "cost": { "value": 750, "unit": "gp" }, "source": "srd" },
+  { "id": "ring-mail", "name": "Armatura ad Anelli", "category": "heavy", "ac": 14, "stealthDisadvantage": true, "weight": 40, "cost": { "value": 30, "unit": "gp" }, "source": "srd" },
+  { "id": "chain-mail", "name": "Cotta di Maglia", "category": "heavy", "ac": 16, "strengthRequirement": 13, "stealthDisadvantage": true, "weight": 55, "cost": { "value": 75, "unit": "gp" }, "source": "srd" },
+  { "id": "splint", "name": "Splint", "category": "heavy", "ac": 17, "strengthRequirement": 15, "stealthDisadvantage": true, "weight": 60, "cost": { "value": 200, "unit": "gp" }, "source": "srd" },
+  { "id": "plate", "name": "Armatura a Piastre", "category": "heavy", "ac": 18, "strengthRequirement": 15, "stealthDisadvantage": true, "weight": 65, "cost": { "value": 1500, "unit": "gp" }, "source": "srd" },
+  { "id": "shield", "name": "Scudo", "category": "shield", "ac": 2, "weight": 6, "cost": { "value": 10, "unit": "gp" }, "source": "srd" }
+]

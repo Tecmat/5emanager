@@ -1,0 +1,35 @@
+{
+  "name": "@dnd5e/web",
+  "version": "0.1.25",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "node scripts/write-version.mjs && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "build:android": "vite build && cap sync",
+    "android:open": "cap open android"
+  },
+  "dependencies": {
+    "@capacitor/browser": "^7",
+    "@capacitor/camera": "^7",
+    "@dnd5e/core": "*",
+    "@dnd5e/data-srd": "*",
+    "@tauri-apps/api": "^2",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "4.7.0",
+    "typescript": "5.9.3",
+    "vite": "^7.3.8",
+    "@capacitor/core": "^7",
+    "@capacitor/cli": "^7",
+    "@capacitor/android": "^7",
+    "@capacitor/ios": "^7"
+  }
+}

@@ -1,0 +1,170 @@
+name: Release
+
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - run: cd apps/web/dist && zip -rq ../../../web-dist.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: web-dist
+          path: apps/web/dist
+      # zip della web app: usato da /api/update/apply per l'auto-aggiornamento del server
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: web-dist.zip
+
+  desktop:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - run: sudo apt-get update && sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev librsvg2-dev
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - run: npm run tauri:build
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-bundles
+          path: src-tauri/target/release/bundle
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/rpm/*.rpm
+            src-tauri/target/release/bundle/appimage/*.AppImage
+
+  desktop-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: rustup target add x86_64-pc-windows-msvc
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      # exe nudo (le risorse web sono embedded nel binario) → zip portatile, niente installatore
+      # (su Windows i bundle validi sono solo msi/nsis: disattivo il bundling via --config)
+      - shell: pwsh
+        run: |
+          npm run tauri:build -- --target x86_64-pc-windows-msvc --config '{"bundle":{"active":false}}'
+          if ($LASTEXITCODE -ne 0) { throw "tauri build fallito" }
+          $exe = Get-ChildItem -Recurse src-tauri/target -Filter '*.exe' | Where-Object { $_.FullName -match 'release' -and $_.Name -notmatch 'build|rustc|\.dll' } | Select-Object -First 1
+          if (-not $exe) { throw "exe non trovato" }
+          Compress-Archive -Path "$($exe.DirectoryName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\5e.Manager-windows-portable.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-portable
+          path: 5e.Manager-windows-portable.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: 5e.Manager-windows-portable.zip
+
+  desktop-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - shell: bash
+        run: |
+          npm run tauri:build -- --target aarch64-apple-darwin --bundles app
+          cd src-tauri/target/aarch64-apple-darwin/release/bundle/macos
+          zip -rq "$GITHUB_WORKSPACE/5e.Manager-macos-arm64.zip" "5e Manager.app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: 5e.Manager-macos-arm64.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: 5e.Manager-macos-arm64.zip
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - run: cd apps/web && npx cap add ios && npx cap sync
+      # Info.plist: descrizione uso fotocamera (scansione QR)
+      - run: python3 apps/web/ios-overlay/patch_ios.py apps/web/ios
+      # il progetto iOS usa CocoaPods: senza pod install il modulo Capacitor non si risolve
+      - run: sudo gem install cocoapods --no-document
+      - run: cd apps/web/ios/App && pod install
+      # IPA unsigned (per sideload con AltStore/Sideloadly, che firmano on-device)
+      - shell: bash
+        run: |
+          cd apps/web/ios/App
+          # risolve le dipendenze SwiftPM (Capacitor) prima del build
+          xcodebuild -workspace App.xcworkspace -scheme App -destination 'generic/platform=iOS' -resolvePackageDependencies
+          xcodebuild -workspace App.xcworkspace -scheme App -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' build
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          zip -rq "$GITHUB_WORKSPACE/app-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: app-unsigned.ipa
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: app-unsigned.ipa
+
+  android:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Android SDK (preinstallato sul runner)
+        env:
+          ANDROID_HOME: /usr/local/lib/android/sdk
+        run: |
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - run: cd apps/web && npx cap add android && npx cap sync
+      # overlay: plugin UpdateInstaller (download+installa APK in-app) + FileProvider + permessi
+      - run: python3 apps/web/android-overlay/patch_android.py apps/web/android
+      - run: cd apps/web/android && ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: apps/web/android/app/build/outputs/apk/debug/app-debug.apk

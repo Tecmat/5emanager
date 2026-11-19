@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5e Manager — Admin server</title>
+<style>
+  :root { --bg:#14161c; --panel:#1d2029; --panel2:#262a36; --border:#333947; --text:#e8e6e0; --muted:#9a97a3; --accent:#e0b34c; --danger:#b04040; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; }
+  h1 { font-size:17px; margin:0; color:var(--accent); }
+  main { max-width:1000px; margin:0 auto; padding:16px; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
+  .card h2 { margin:0 0 8px; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; }
+  input, button { font:inherit; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; }
+  button { cursor:pointer; }
+  button:hover { border-color:var(--accent); }
+  button.danger { border-color:var(--danger); color:#e08080; }
+  button.primary { background:var(--accent); color:#14161c; font-weight:600; border-color:var(--accent); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th { color:var(--muted); text-align:left; font-size:11px; text-transform:uppercase; padding:4px 8px; border-bottom:1px solid var(--border); }
+  td { padding:6px 8px; border-bottom:1px solid var(--border); }
+  .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+  .muted { color:var(--muted); font-size:12px; }
+  .error { color:#e08080; font-size:12px; margin-top:6px; white-space:pre-line; }
+  .ok { color:#7fc97f; font-size:12px; }
+  .tag { display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:20px; padding:0 8px; font-size:11px; }
+  code { background:var(--panel2); padding:1px 5px; border-radius:4px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛠 5e Manager — Admin server</h1>
+  <span class="row">
+    <span id="status" class="tag">disconnesso</span>
+    <button id="refresh">🔄 Aggiorna</button>
+  </span>
+</header>
+<main>
+  <div class="card">
+    <h2>Connessione</h2>
+    <div class="row">
+      <input id="token" type="password" placeholder="Token admin (se DND5E_ADMIN_TOKEN è impostato)" style="width:320px">
+      <button id="connect" class="primary">Connetti</button>
+    </div>
+    <div class="muted" style="margin-top:6px">
+      Server: <code id="wsurl"></code> — se il server non ha <code>DND5E_ADMIN_TOKEN</code> qualsiasi token va bene (pensato per LAN; non esporlo su Internet pubblico).
+    </div>
+    <div id="err" class="error"></div>
+  </div>
+
+  <div class="card">
+    <h2>Server</h2>
+    <div id="serverinfo" class="muted">—</div>
+  </div>
+
+  <div class="card">
+    <h2>Richieste di registrazione (in attesa)</h2>
+    <table>
+      <thead><tr><th>Username</th><th>Richiesta il</th><th></th></tr></thead>
+      <tbody id="pending"></tbody>
+    </table>
+    <div id="pending-empty" class="muted">Nessuna richiesta in attesa.</div>
+  </div>
+
+  <div class="card">
+    <h2>Campagne</h2>
+    <div class="row" style="margin-bottom:8px">
+      <input id="newcamp-name" placeholder="Nome nuova campagna" style="width:220px">
+      <input id="newcamp-pw" type="password" placeholder="Password campagna" style="width:160px">
+      <button id="newcamp">＋ Crea campagna</button>
+    </div>
+    <table>
+      <thead><tr><th>ID</th><th>Nome</th><th>Giocatori</th><th>Combattimento</th><th>Creata</th><th>Aggiornata</th><th></th></tr></thead>
+      <tbody id="campaigns"></tbody>
+    </table>
+    <div id="campaigns-empty" class="muted">Nessuna campagna salvata.</div>
+  </div>
+
+  <div class="card">
+    <h2>Account</h2>
+    <table>
+      <thead><tr><th>Username</th><th>Schede in libreria</th><th>Creato</th><th></th></tr></thead>
+      <tbody id="accounts"></tbody>
+    </table>
+    <div id="accounts-empty" class="muted">Nessun account registrato.</div>
+  </div>
+
+  <div class="card" id="account-detail-card" style="display:none">
+    <h2>Schede dell'account <span id="ad-user"></span></h2>
+    <table>
+      <thead><tr><th>Nome</th><th>Livello</th><th>Aggiornata</th><th></th></tr></thead>
+      <tbody id="ad-chars"></tbody>
+    </table>
+    <div class="row" style="margin-top:8px"><button id="ad-close">Chiudi</button></div>
+  </div>
+</main>
+<script>
+const wsurl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;
+document.getElementById('wsurl').textContent = wsurl;
+let ws = null;
+const tokenInput = document.getElementById('token');
+tokenInput.value = sessionStorage.getItem('dnd5e.admin.token') || '';
+
+function setStatus(t, ok) {
+  const el = document.getElementById('status');
+  el.textContent = t;
+  el.style.color = ok ? '#7fc97f' : '#e08080';
+}
+function err(m) { document.getElementById('err').textContent = m; }
+
+function fmtDate(iso) { try { return new Date(iso).toLocaleString('it-IT'); } catch { return iso; } }
+
+function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function render(state) {
+  // info server
+  const si = document.getElementById('serverinfo');
+  if (state.server) {
+    const s = state.server;
+    const up = Math.floor(s.uptimeSec / 3600) + 'h ' + Math.floor((s.uptimeSec % 3600) / 60) + 'm';
+    si.innerHTML = 'Avviato: <b>' + fmtDate(s.startedAt) + '</b> · uptime <b>' + up + '</b> · campagne <b>' + s.campaigns + '</b> · account <b>' + s.accounts + '</b> · richieste in attesa <b>' + s.pending + '</b>' +
+      (s.lan.length ? '<br>LAN: ' + s.lan.map((a) => '<code>' + esc(a) + '</code>').join(' ') : '');
+  }
+  // richieste in attesa
+  const pt = document.getElementById('pending');
+  pt.innerHTML = '';
+  document.getElementById('pending-empty').style.display = (state.pending || []).length ? 'none' : 'block';
+  for (const p of state.pending || []) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><b>' + esc(p.username) + '</b></td><td class="muted">' + fmtDate(p.requestedAt) + '</td>';
+    const td = document.createElement('td');
+    td.className = 'row';
+    const ok = document.createElement('button');
+    ok.className = 'primary';
+    ok.textContent = '✓ Approva';
+    ok.onclick = () => ws.send(JSON.stringify({ t: 'adminApproveAccount', username: p.username }));
+    const no = document.createElement('button');
+    no.className = 'danger';
+    no.textContent = '✗ Rifiuta';
+    no.onclick = () => { if (confirm('Rifiutare la richiesta di ' + p.username + '?')) ws.send(JSON.stringify({ t: 'adminRejectAccount', username: p.username })); };
+    td.appendChild(ok);
+    td.appendChild(no);
+    tr.appendChild(td);
+    pt.appendChild(tr);
+  }
+  const ct = document.getElementById('campaigns');
+  ct.innerHTML = '';
+  document.getElementById('campaigns-empty').style.display = state.campaigns.length ? 'none' : 'block';
+  for (const c of state.campaigns) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><code>' + esc(c.id) + '</code></td><td>' + esc(c.name) + '</td><td>' + c.players + '</td>' +
+      '<td>' + (c.inCombat ? '⚔️ in corso' : '—') + '</td><td class="muted">' + fmtDate(c.createdAt) + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
+    const td = document.createElement('td');
+    td.className = 'row';
+    const edit = document.createElement('button');
+    edit.textContent = '✏️ Modifica';
+    edit.onclick = () => {
+      const name = prompt('Nuovo nome (vuoto = invariato):', c.name);
+      if (name === null) return;
+      const pw = prompt('Nuova password (vuoto = invariata):');
+      if (pw === null) return;
+      ws.send(JSON.stringify({ t: 'adminUpdateCampaign', id: c.id, name: name || undefined, password: pw || undefined }));
+    };
+    const btn = document.createElement('button');
+    btn.className = 'danger';
+    btn.textContent = 'Elimina';
+    btn.onclick = () => {
+      if (confirm('Eliminare la campagna "' + c.name + '" (' + c.id + ') dal disco?')) ws.send(JSON.stringify({ t: 'adminDeleteCampaign', id: c.id }));
+    };
+    td.appendChild(edit);
+    td.appendChild(btn);
+    tr.appendChild(td);
+    ct.appendChild(tr);
+  }
+  const at = document.getElementById('accounts');
+  at.innerHTML = '';
+  document.getElementById('accounts-empty').style.display = state.accounts.length ? 'none' : 'block';
+  for (const a of state.accounts) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + a.characters + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
+    const td = document.createElement('td');
+    td.className = 'row';
+    const sheets = document.createElement('button');
+    sheets.textContent = '📄 Schede';
+    sheets.onclick = () => ws.send(JSON.stringify({ t: 'adminAccountDetail', username: a.username }));
+    const btn = document.createElement('button');
+    btn.className = 'danger';
+    btn.textContent = 'Elimina';
+    btn.onclick = () => {
+      if (confirm('Eliminare l\'account "' + a.username + '" e tutte le sue schede?')) ws.send(JSON.stringify({ t: 'adminDeleteAccount', username: a.username }));
+    };
+    td.appendChild(sheets);
+    td.appendChild(btn);
+    tr.appendChild(td);
+    at.appendChild(tr);
+  }
+}
+
+function renderAccountDetail(m) {
+  document.getElementById('account-detail-card').style.display = 'block';
+  document.getElementById('ad-user').textContent = m.username;
+  const tb = document.getElementById('ad-chars');
+  tb.innerHTML = '';
+  for (const c of m.characters) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td>' + esc(c.name) + '</td><td>' + c.level + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
+    const td = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'danger';
+    btn.textContent = 'Elimina scheda';
+    btn.onclick = () => { if (confirm('Eliminare la scheda "' + c.name + '"?')) ws.send(JSON.stringify({ t: 'adminDeleteCharacter', username: m.username, characterId: c.id })); };
+    td.appendChild(btn);
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  }
+  document.getElementById('account-detail-card').scrollIntoView({ behavior: 'smooth' });
+}
+
+function connect() {
+  err('');
+  const token = tokenInput.value;
+  sessionStorage.setItem('dnd5e.admin.token', token);
+  if (ws) ws.close();
+  ws = new WebSocket(wsurl);
+  ws.onopen = () => {
+    setStatus('connesso', true);
+    ws.send(JSON.stringify({ t: 'adminAuth', token }));
+    ws.send(JSON.stringify({ t: 'adminList' }));
+  };
+  ws.onmessage = (e) => {
+    const m = JSON.parse(e.data);
+    if (m.t === 'adminState') render(m);
+    else if (m.t === 'adminAccount') renderAccountDetail(m);
+    else if (m.t === 'error') { err(m.message); setStatus('errore', false); }
+  };
+  ws.onclose = () => setStatus('disconnesso', false);
+  ws.onerror = () => { err('Connessione a ' + wsurl + ' fallita'); setStatus('errore', false); };
+}
+
+document.getElementById('connect').onclick = connect;
+document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };
+document.getElementById('ad-close').onclick = () => { document.getElementById('account-detail-card').style.display = 'none'; };
+document.getElementById('newcamp').onclick = () => {
+  const name = document.getElementById('newcamp-name').value.trim();
+  const pw = document.getElementById('newcamp-pw').value;
+  if (!name) { err('Inserisci il nome della campagna'); return; }
+  if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminCreateCampaign', name, password: pw }));
+  document.getElementById('newcamp-name').value = '';
+  document.getElementById('newcamp-pw').value = '';
+};
+connect();
+</script>
+</body>
+</html>

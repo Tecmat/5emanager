@@ -1,0 +1,8 @@
+[
+  { "id": "goblin", "name": "Goblin", "hp": 7, "ac": 15, "speed": 30, "cr": "1/4", "attacks": [{ "name": "Scimitarra", "bonus": 4, "dice": "1d6+2", "type": "taglio" }, { "name": "Arco corto", "bonus": 4, "dice": "1d6+2", "type": "perforante" }], "source": "srd" },
+  { "id": "orc", "name": "Orco", "hp": 15, "ac": 13, "speed": 30, "cr": "1/2", "attacks": [{ "name": "Ascia bipenne", "bonus": 5, "dice": "1d12+3", "type": "taglio" }, { "name": "Giavellotto", "bonus": 5, "dice": "1d8+3", "type": "perforante" }], "source": "srd" },
+  { "id": "wolf", "name": "Lupo", "hp": 11, "ac": 13, "speed": 40, "cr": "1/4", "attacks": [{ "name": "Morso", "bonus": 4, "dice": "2d4+2", "type": "perforante" }], "source": "srd" },
+  { "id": "skeleton", "name": "Scheletro", "hp": 13, "ac": 13, "speed": 30, "cr": "1/4", "attacks": [{ "name": "Spada corta", "bonus": 4, "dice": "1d6+2", "type": "perforante" }, { "name": "Arco corto", "bonus": 4, "dice": "1d6+2", "type": "perforante" }], "source": "srd" },
+  { "id": "bandit", "name": "Bandito", "hp": 11, "ac": 12, "speed": 30, "cr": "1/8", "attacks": [{ "name": "Scimitarra", "bonus": 3, "dice": "1d6+1", "type": "taglio" }, { "name": "Arco corto", "bonus": 3, "dice": "1d6+1", "type": "perforante" }], "source": "srd" },
+  { "id": "ogre", "name": "Ogre", "hp": 59, "ac": 11, "speed": 40, "cr": "2", "attacks": [{ "name": "Clava", "bonus": 6, "dice": "2d8+4", "type": "contundente" }, { "name": "Giavellotto", "bonus": 6, "dice": "1d10+4", "type": "perforante" }], "source": "srd" }
+]
