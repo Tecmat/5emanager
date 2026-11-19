@@ -62,18 +62,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @dnd5e/web
-      # bundle "app" (exe + risorse) → zip portatile, niente installatore
+      # exe nudo (le risorse web sono embedded nel binario) → zip portatile, niente installatore
+      # (su Windows i bundle validi sono solo msi/nsis: disattivo il bundling via --config)
       - shell: pwsh
         run: |
-          npm run tauri:build -- --target x86_64-pc-windows-msi --bundles app
+          npm run tauri:build -- --target x86_64-pc-windows-msi --config '{"bundle":{"active":false}}'
           if ($LASTEXITCODE -ne 0) { throw "tauri build fallito" }
-          $bundle = Get-ChildItem -Recurse -Directory src-tauri/target | Where-Object { $_.Name -eq 'app' } | Select-Object -First 1
-          if (-not $bundle) {
-            $exe = Get-ChildItem -Recurse src-tauri/target -Filter '*.exe' | Where-Object { $_.FullName -match 'release' } | Select-Object -First 1
-            if ($exe) { $bundle = $exe.Directory }
-          }
-          if (-not $bundle) { throw "bundle app non trovato" }
-          Compress-Archive -Path "$($bundle.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\5e.Manager-windows-portable.zip"
+          $exe = Get-ChildItem -Recurse src-tauri/target -Filter '*.exe' | Where-Object { $_.FullName -match 'release' -and $_.Name -notmatch 'build|rustc|\.dll' } | Select-Object -First 1
+          if (-not $exe) { throw "exe non trovato" }
+          Compress-Archive -Path "$($exe.DirectoryName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\5e.Manager-windows-portable.zip"
       - uses: actions/upload-artifact@v4
         with:
           name: desktop-windows-portable
@@ -122,10 +119,11 @@ jobs:
       - shell: bash
         run: |
           cd apps/web/ios/App
+          # risolve le dipendenze SwiftPM (Capacitor) prima del build
+          xcodebuild -scheme App -destination 'generic/platform=iOS' -resolvePackageDependencies
           xcodebuild -scheme App -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' build
           mkdir -p Payload
           cp -R build/Build/Products/Release-iphoneos/App.app Payload/
-          cd Payload/..
           zip -rq "$GITHUB_WORKSPACE/app-unsigned.ipa" Payload
       - uses: actions/upload-artifact@v4
         with:
