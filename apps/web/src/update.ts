@@ -1,4 +1,4 @@
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { isNewerVersion, parseAssetUrlsFromExpandedAssets, parseLatestTagFromAtom } from '@dnd5e/core';
 
 /**
@@ -204,6 +204,56 @@ export async function applyWebUpdate(): Promise<void> {
 export async function openAndroidDownload(info: UpdateInfo): Promise<void> {
   const { Browser } = await import('@capacitor/browser');
   await Browser.open({ url: info.assetUrl ?? info.pageUrl, presentationStyle: 'fullscreen' });
+}
+
+interface UpdateInstallerPlugin {
+  downloadAndInstall(opts: { url: string }): Promise<void>;
+  addListener(eventName: 'update-progress', cb: (p: DownloadProgress) => void): Promise<{ remove: () => Promise<void> }>;
+}
+// plugin nativo custom (patchato in CI in apps/web/android-overlay): se manca, si fa fallback al browser
+const UpdateInstaller = registerPlugin<UpdateInstallerPlugin>('UpdateInstaller');
+
+/**
+ * android: scarica l'APK e apre SUBITO il prompt di installazione dentro l'app
+ * (plugin UpdateInstaller via FileProvider). Fallback: apre il browser sull'APK.
+ */
+export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: DownloadProgress) => void): Promise<void> {
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android' && info.assetUrl) {
+    try {
+      let remove: (() => void) | undefined;
+      if (onProgress) {
+        const l = await UpdateInstaller.addListener('update-progress', onProgress);
+        remove = () => void l.remove();
+      }
+      try {
+        await UpdateInstaller.downloadAndInstall({ url: info.assetUrl });
+        return; // il prompt di installazione di Android è ora aperto
+      } finally {
+        remove?.();
+      }
+    } catch {
+      // plugin assente o permiso negato → fallback browser
+    }
+  }
+  await openAndroidDownload(info);
+}
+
+/**
+ * web servita dal server 5emanager: POST /api/update/apply → il server scarica web-dist.zip
+ * dall'ultima release e sostituisce la build servita (con backup). Poi basta ricaricare.
+ * Se DND5E_ADMIN_TOKEN è impostato, viene chiesto il token.
+ */
+export async function applyServerUpdate(): Promise<{ ok: boolean; error?: string }> {
+  const origin = serverOrigin() ?? (/^https?:$/.test(location.protocol) ? location.origin : null);
+  if (!origin) return { ok: false, error: 'nessun server individuato' };
+  let r = await fetch(`${origin}/api/update/apply`, { method: 'POST' });
+  if (r.status === 401) {
+    const tok = window.prompt('Token admin del server (DND5E_ADMIN_TOKEN), lascia vuoto se non impostato:') ?? '';
+    r = await fetch(`${origin}/api/update/apply`, { method: 'POST', headers: { 'x-admin-token': tok } });
+  }
+  const j = (await r.json().catch(() => ({}))) as { error?: string };
+  if (!r.ok) return { ok: false, error: j.error ?? `HTTP ${r.status}` };
+  return { ok: true };
 }
 
 export interface DownloadProgress { received: number; total: number }

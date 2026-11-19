@@ -18,10 +18,15 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run build -w @dnd5e/web
+      - run: cd apps/web/dist && zip -rq ../../../web-dist.zip .
       - uses: actions/upload-artifact@v4
         with:
           name: web-dist
           path: apps/web/dist
+      # zip della web app: usato da /api/update/apply per l'auto-aggiornamento del server
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: web-dist.zip
 
   desktop:
     runs-on: ubuntu-latest
@@ -47,6 +52,84 @@ jobs:
             src-tauri/target/release/bundle/rpm/*.rpm
             src-tauri/target/release/bundle/appimage/*.AppImage
 
+  desktop-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      # bundle "app" (exe + risorse) → zip portatile, niente installatore
+      - shell: pwsh
+        run: |
+          npm run tauri:build -- --target x86_64-pc-windows-msi --bundles app
+          $bundle = Get-ChildItem -Recurse -Directory src-tauri/target | Where-Object { $_.Name -eq 'app' } | Select-Object -First 1
+          if (-not $bundle) { throw "bundle app non trovato" }
+          Compress-Archive -Path "$($bundle.FullName)\*" -DestinationPath "$env:GITHUB_WORKSPACE\5e.Manager-windows-portable.zip"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-windows-portable
+          path: 5e.Manager-windows-portable.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: 5e.Manager-windows-portable.zip
+
+  desktop-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - shell: bash
+        run: |
+          npm run tauri:build -- --target aarch64-apple-darwin --bundles app
+          cd src-tauri/target/aarch64-apple-darwin/release/bundle/macos
+          zip -rq "$GITHUB_WORKSPACE/5e.Manager-macos-arm64.zip" "5e Manager.app"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop-macos
+          path: 5e.Manager-macos-arm64.zip
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: 5e.Manager-macos-arm64.zip
+
+  ios:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build -w @dnd5e/web
+      - run: cd apps/web && npx cap add ios && npx cap sync
+      # Info.plist: descrizione uso fotocamera (scansione QR)
+      - run: python3 apps/web/ios-overlay/patch_ios.py apps/web/ios
+      # IPA unsigned (per sideload con AltStore/Sideloadly, che firmano on-device)
+      - shell: bash
+        run: |
+          cd apps/web/ios/App
+          xcodebuild -scheme App -configuration Release -destination 'generic/platform=iOS' -derivedDataPath build CODE_SIGNING_ALLOWED=NO CODE_SIGN_IDENTITY='' build
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/App.app Payload/
+          cd Payload/..
+          zip -rq "$GITHUB_WORKSPACE/app-unsigned.ipa" Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ios-ipa
+          path: app-unsigned.ipa
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: app-unsigned.ipa
+
   android:
     runs-on: ubuntu-latest
     steps:
@@ -68,6 +151,8 @@ jobs:
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       - run: cd apps/web && npx cap add android && npx cap sync
+      # overlay: plugin UpdateInstaller (download+installa APK in-app) + FileProvider + permessi
+      - run: python3 apps/web/android-overlay/patch_android.py apps/web/android
       - run: cd apps/web/android && ./gradlew assembleDebug
       - uses: actions/upload-artifact@v4
         with:

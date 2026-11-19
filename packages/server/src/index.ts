@@ -63,7 +63,8 @@ const MIME: Record<string, string> = {
 function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
   // check-update lato server (funziona anche con repo privato se GITHUB_TOKEN è impostato)
-  if (rawPath === '/api/update' || rawPath === '/api/update/asset') {
+  // /api/update/apply aggiorna la web app servita da questo server (POST, niente terminale)
+  if (rawPath === '/api/update' || rawPath === '/api/update/asset' || rawPath === '/api/update/apply') {
     void handleUpdateApi(req, res);
     return;
   }

@@ -1,14 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
 import {
+  applyAndroidUpdate,
   applyDesktopUpdate,
+  applyServerUpdate,
   applyWebUpdate,
   checkSwUpdate,
   checkUpdate,
   detectPlatform,
   downloadDesktopUpdate,
   errMsg,
-  openAndroidDownload,
   type DownloadProgress,
   type UpdateInfo,
 } from './update.js';
@@ -57,12 +58,24 @@ export default function UpdateButton() {
     setMsg('');
     try {
       if (platform === 'web') {
+        // la web app servita dal server si aggiorna da sola: POST /api/update/apply + reload
         setStatus('downloading');
-        setMsg(t('up.applying', 'Applico l\'aggiornamento…'));
-        await applyWebUpdate();
+        setMsg(t('up.applyingServer', 'Aggiorno il server…'));
+        const r = await applyServerUpdate();
+        if (r.ok) {
+          setMsg(t('up.serverUpdated', "Server aggiornato — ricarico l'app…"));
+          await applyWebUpdate();
+        } else {
+          setMsg(tf('up.serverFail', 'Auto-update del server non riuscito ({e}) — provo a ricaricare la pagina…', { e: r.error ?? '' }));
+          setStatus('ready');
+          await applyWebUpdate();
+        }
       } else if (platform === 'android') {
-        await openAndroidDownload(info);
-        setMsg(t('up.androidHint', 'APK in download: al termine tocca il file scaricato per installare la nuova versione.'));
+        // APK scaricato e prompt di installazione aperto direttamente dentro l'app
+        setStatus('downloading');
+        setProgress(null);
+        await applyAndroidUpdate(info, setProgress);
+        setMsg(t('up.apkInstalling', 'APK scaricato: conferma il prompt di installazione di Android.'));
         setStatus('ready');
       } else {
         if (!info.assetUrl) {
@@ -156,9 +169,8 @@ export default function UpdateButton() {
           )}
           {status === 'ready' && info?.available && (
             <div className="row" style={{ marginTop: 8 }}>
-              {platform === 'web' && swAvail && <button className="primary" onClick={apply}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
-              {platform === 'web' && !swAvail && <button onClick={apply}>{t('up.reload', '🔄 Ricarica pagina')}</button>}
-              {platform === 'android' && <button className="primary" onClick={apply} disabled={!info.assetUrl}>{t('up.downloadApk', '⬇️ Scarica APK')}</button>}
+              {platform === 'web' && <button className="primary" onClick={apply} disabled={busy}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
+              {platform === 'android' && <button className="primary" onClick={apply} disabled={busy || !info.assetUrl}>{t('up.downloadInstallApk', '⬇️ Scarica e installa APK')}</button>}
               {platform === 'desktop' && (
                 <>
                   <button className="primary" onClick={apply} disabled={busy}>

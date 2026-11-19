@@ -4,13 +4,20 @@ L'app controlla da sola se esiste una release più recente su GitHub (`Tecmat/5e
 e permette di aggiornare **senza sair dall'app**, con il bottone 🔄 in alto a destra (cerca automaticamente
 all'avvio; il pallino arancione segnala che c'è una nuova versione).
 
-## Web app / PWA (server self-hosted)
+## Web app / PWA (server self-hosted) — si aggiorna da sola, senza terminale
 
 - La build scrive `public/version.json` (`{ version, build }`) → servito come `/version.json`.
-- Al caricamento l'app confronta `/version.json` del server con la versione locale salvata e chiede
-  l'aggiornamento del **service worker** (`registration.update()` + `SKIP_WAITING` + reload).
-- Dopo aver deployato una nuova build sul server (`git pull && npm ci && npm run build -w @dnd5e/web`),
-  i client vedono il banner "Nuova versione disponibile" al prossimo caricamento → **🔄 Aggiorna ora**.
+- Ogni release pubblica anche **`web-dist.zip`** (asset della release GitHub).
+- Il server espone **`POST /api/update/apply`**: scarica `web-dist.zip` dall'ultima release
+  (con `GITHUB_TOKEN` se il repo è privato), fa backup di `dist/` in `dist.bak`, lo scompatta
+  e ripristina il backup in caso di errore. Se `DND5E_ADMIN_TOKEN` è impostato, serve
+  l'header `x-admin-token` (l'app lo chiede con un prompt).
+- Dal pannello 🔄 della web app: **🔄 Aggiorna ora** → `POST /api/update/apply` → reload con
+  service worker (`registration.update()` + `SKIP_WAITING`). Niente `git pull`/`npm run build`
+  da terminale. Requisito: il processo del server deve poter scrivere in `apps/web/dist`
+  (l'utente `5eapp` deve essere proprietario della cartella dell'app).
+- Se l'endpoint non risponde (server vecchio), resta il fallback: confronto `/version.json` +
+  reload del service worker dopo il redeploy manuale.
 
 ## Desktop (AppImage, Tauri)
 
@@ -22,12 +29,29 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
   permesso anche a processo in corso), lo rende eseguibile e riavvia l'app. Non ritorna mai.
 - Se la cartella dell'AppImage non è scrivibile, il download fallisce con un messaggio chiaro.
 
-## Android (APK, Capacitor)
+## Android (APK, Capacitor) — installa dentro l'app
 
-- Il check confronta l'ultima release GitHub con la versione della build (`/version.json` nel bundle).
-- **⬇️ Scarica APK** apre il browser di sistema (`@capacitor/browser`) direttamente sull'asset `.apk`
-  della release: al termine del download basta toccare il file per installare (come per qualsiasi
-  sideload APK).
+- Il check confronta l'ultima release GitHub (o `/api/update` del server LAN) con la versione del bundle.
+- **⬇️ Scarica e installa APK**: il plugin nativo `UpdateInstaller` (in `apps/web/android-overlay`,
+  patchato in CI nel progetto generato da Capacitor) scarica l'APK in cache con barra di progresso
+  e apre **subito il prompt di installazione di Android** (FileProvider + `ACTION_VIEW`).
+  Se manca il permesso "installa app sconosciute", apre le impostazioni dell'app.
+- Fallback se il plugin manca: apre il browser sull'APK (`@capacitor/browser`).
+- L'asset APK si scarica via `browser_download_url` (repo pubblico) o via proxy
+  `/api/update/asset?name=app-debug.apk` del server (repo privato).
+
+## iOS (IPA per sideload)
+
+- La CI (macos-latest) builda `app-unsigned.ipa` (senza firma Apple): installalo con
+  **AltStore** o **Sideloadly**, che firmano on-device con un Apple ID free.
+- WebRTC su WKWebView iOS è supportato → P2P diretto e discovery funzionano. Fotocamera QR:
+  `NSCameraUsageDescription` aggiunto via patch (`apps/web/ios-overlay/patch_ios.py`).
+
+## Windows / macOS (portable)
+
+- Release con `5e.Manager-windows-portable.zip` (bundle `app` Tauri zippato, niente installatore)
+  e `5e.Manager-macos-arm64.zip` (`.app` zippato). Self-update su Windows/macOS: il check 🔄
+  funziona (confronto release), il reemplazo automatico è implementato per Linux/AppImage.
 
 ## Repo GitHub privato
 
