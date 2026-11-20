@@ -195,3 +195,8 @@ header.top button, .tabs button, .big-btn { display: inline-flex; align-items: c
 .candy-icon { vertical-align: middle; margin-right: 2px; }
 button .candy-icon, .tag .candy-icon { margin-right: 5px; }
 .segmented .seg { display: inline-flex; align-items: center; gap: 6px; }
+
+/* Android con barra di stato trasparente: rispetta le safe-area (niente tasti sotto l'orologio) */
+header.top { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
+main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+.modal-bg { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }

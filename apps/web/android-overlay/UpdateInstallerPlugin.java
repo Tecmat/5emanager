@@ -4,13 +4,11 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
-import androidx.activity.result.ActivityResult;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
-import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -27,20 +25,43 @@ import java.net.URL;
 @CapacitorPlugin(name = "UpdateInstaller")
 public class UpdateInstallerPlugin extends Plugin {
 
-    /** url della richiesta in sospeso: quando l'utente torna dalle impostazioni col permesso concesso, il download riparte da solo */
+    /** richiesta in sospeso: quando l'utente torna dalle impostazioni (handleOnResume), se il permesso c'è il download riparte da solo */
+    private PluginCall pendingCall;
     private String pendingUrl;
 
-    /** callback di startActivityForResult: al ritorno dalle impostazioni, se il permesso c'è, retry automatico */
-    @ActivityCallback
-    private void onInstallPermissionResult(PluginCall call, ActivityResult result) {
+    /** alcuni OEM (Samsung/One UI) non mandano il result dell'activity: al resume ricontrollo il permesso */
+    @Override
+    protected void handleOnResume() {
+        super.handleOnResume();
+        PluginCall call = pendingCall;
         String url = pendingUrl;
-        pendingUrl = null;
         if (call == null || url == null) return;
+        pendingCall = null;
+        pendingUrl = null;
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
                 || getContext().getPackageManager().canRequestPackageInstalls()) {
-            doDownloadAndInstall(call, url); // permesso ora concesso: riparto da solo
+            doDownloadAndInstall(call, url); // permesso ora concesso: retry automatico
         } else {
-            call.reject("Permesso 'installa app sconosciute' non concesso: abilitalo dalle impostazioni e riprova");
+            call.reject("Permesso 'installa app sconosciute' non concesso: Impostazioni → App → 5e Manager → 'Installa app sconosciute' → attiva, poi riprova");
+        }
+    }
+
+    /** apre la schermata del permesso "installa app sconosciute" (con fallback alla pagina dell'app) */
+    private void openInstallPermissionSettings() {
+        Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                Uri.parse("package:" + getContext().getPackageName()));
+        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            getContext().startActivity(i);
+            return;
+        } catch (Exception ignored) {
+        }
+        try {
+            Intent d = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getContext().getPackageName()));
+            d.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getContext().startActivity(d);
+        } catch (Exception ignored) {
         }
     }
 
@@ -67,13 +88,12 @@ public class UpdateInstallerPlugin extends Plugin {
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
                 && !getContext().getPackageManager().canRequestPackageInstalls()) {
-            // apro le impostazioni del permesso: al ritorno (onInstallPermissionResult) il download riparte da solo
+            // apro le impostazioni del permesso: al ritorno (handleOnResume) il download riparte da solo
+            pendingCall = call;
             pendingUrl = url;
             notifyListeners("needsInstallPermission", new JSObject());
-            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                    Uri.parse("package:" + getContext().getPackageName()));
-            startActivityForResult(call, settings, "onInstallPermissionResult");
-            return;
+            openInstallPermissionSettings();
+            return; // la call resta in sospeso finché l'utente non torna
         }
         doDownloadAndInstall(call, url);
     }
