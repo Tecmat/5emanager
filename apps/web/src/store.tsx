@@ -33,7 +33,14 @@ interface SheetStoreData {
 function migrateSheets(data: SheetStoreData): SheetStoreData {
   const sheets: Record<string, Character> = {};
   for (const [id, c] of Object.entries(data.sheets ?? {})) sheets[id] = migrateCharacter(c);
-  return { activeId: data.activeId ?? null, sheets, campaignMeta: data.campaignMeta ?? {} };
+  // se la scheda attiva manca (o non è mai stata impostata), seleziona la più recente:
+  // così le tab di scheda non restano mai bloccate a vuoto
+  let activeId = data.activeId ?? null;
+  if (!activeId || !sheets[activeId]) {
+    const rest = Object.values(sheets).sort((a, b) => (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''));
+    activeId = rest[0]?.id ?? null;
+  }
+  return { activeId, sheets, campaignMeta: data.campaignMeta ?? {} };
 }
 
 /** carica le schede da IndexedDB (fallback localStorage) e migra dalla v1 */

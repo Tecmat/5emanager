@@ -159,6 +159,11 @@ export default function UpdateButton() {
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                 {pct !== null ? `${pct}%` : '…'} {progress ? `(${fmtBytes(progress.received)}${progress.total ? ` / ${fmtBytes(progress.total)}` : ''})` : ''}
               </div>
+              {platform === 'android' && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {t('up.androidSettingsHint', 'Se si sono aperte le Impostazioni: concedi "Installa app sconosciute" a 5e Manager — al ritorno il download e l\'installazione ripartono da soli.')}
+                </div>
+              )}
             </div>
           )}
           {msg && <div className={status === 'error' ? 'error' : 'ok'} style={{ marginTop: 8, fontSize: 12, whiteSpace: 'pre-line' }}>{msg}</div>}

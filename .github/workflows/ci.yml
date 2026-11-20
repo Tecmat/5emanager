@@ -18,3 +18,12 @@ jobs:
       - run: npm test
       - run: npm run typecheck
       - run: npm run build -w @dnd5e/web
+
+  docker:
+    # verifica che l'immagine del server si buildi (Dockerfile + compose)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -f docker/Dockerfile -t 5emanager-server:ci .
+      - run: docker run --rm -d -p 3999:3001 -e DND5E_DATA_DIR=/tmp/dnd5e-data 5emanager-server:ci
+      - run: sleep 8 && curl -fsS http://127.0.0.1:3999/api/info

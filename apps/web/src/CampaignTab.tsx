@@ -175,6 +175,27 @@ export default function CampaignTab() {
     setHosts([]);
   };
 
+  /** cambio modalità server<->p2p "pulito": ferma discovery/timer e azzera gli stati residui */
+  const switchNetMode = (m: 'server' | 'p2p') => {
+    if (m === netMode) return;
+    stopDiscovery();
+    setHosts([]);
+    setLanServers([]);
+    setLanP2pHosts([]);
+    setPendingJoins([]);
+    setDiscMsg('');
+    setHostNotice('');
+    setInvite(null);
+    setJoinerAnswer('');
+    setInviteInput('');
+    setMyAnswer('');
+    setScanProg(null);
+    setError('');
+    setScanning(false);
+    if (m === 'p2p' && !url.trim()) setUrl(autoDiscWsUrl());
+    setNetMode(m);
+  };
+
   /** host: annunciati su un server LAN così i giocatori ti trovano nella lista */
   const startAnnounce = async (wsUrl?: string) => {
     setError('');
@@ -231,7 +252,13 @@ export default function CampaignTab() {
 
   const startP2PHost = async () => {
     setError('');
-    // senza WebRTC (es. AppImage WebKitGTK) si usa il trasporto relay sul server LAN
+    // su app nativa (AppImage/desktop/APK) il beacon LAN è il trasporto migliore:
+    // WebSocket diretto, funziona anche senza WebRTC (WebKitGTK) e senza server
+    if (lanBeaconSupported()) {
+      await startLanHost();
+      return;
+    }
+    // senza WebRTC (browser/vecchie build) si usa il trasporto relay sul server LAN
     if (!webrtcSupported()) {
       const u = url.trim() || autoDiscWsUrl();
       if (!u) {
@@ -553,14 +580,19 @@ export default function CampaignTab() {
         <div className="grid" style={{ maxWidth: 560 }}>
           <div className="card">
             <h3>{t('cg.p2pTitle', '📡 Campagna P2P — senza server')}</h3>
-            {!webrtcSupported() && (
+            {!webrtcSupported() && !lanBeaconSupported() && (
               <div className="error" style={{ marginBottom: 8 }}>
-                ⚠️ {t('cg.p2pNoWebrtc', 'WebRTC non supportato su questo dispositivo (es. AppImage su WebKitGTK): il P2P usa il trasporto relay sul server LAN — assicurati di aver impostato il ws:// del server.')}
+                ⚠️ {t('cg.p2pNoWebrtc', 'WebRTC non supportato su questo dispositivo: il P2P usa il trasporto relay sul server LAN — assicurati di aver impostato il ws:// del server.')}
+              </div>
+            )}
+            {!webrtcSupported() && lanBeaconSupported() && (
+              <div className="ok" style={{ marginBottom: 8 }}>
+                🖥️ {t('cg.p2pLanNative', 'Su questa app il P2P usa il beacon LAN (WebSocket diretto): premi "Avvia host" — gli altri ti trovano con "Scansiona rete" e entrano con un tap.')}
               </div>
             )}
             <div className="row" style={{ marginBottom: 8 }}>
-              <button onClick={() => setNetMode('server')}>{t('cg.remoteServer', '🌐 Server remoto')}</button>
-              <button className="primary">{t('cg.p2pHost', '📡 P2P (host sul mio dispositivo)')}</button>
+              <button onClick={() => switchNetMode('server')}>{t('cg.remoteServer', '🌐 Server remoto')}</button>
+              <span className="tag custom">📡 {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}</span>
             </div>
             <div className="row" style={{ marginBottom: 8 }}>
               <button className={p2pSub === 'host' ? 'primary' : ''} onClick={() => setP2pSub('host')}>{t('cg.host', 'Faccio da host')}</button>
@@ -706,9 +738,14 @@ export default function CampaignTab() {
                   )}
                 </div>
                 )}
-                {!webrtcSupported() && (
+                {!webrtcSupported() && !lanBeaconSupported() && (
                   <div className="muted" style={{ marginTop: 12 }}>
                     {t('cg.p2pRelayHint', 'Su questo dispositivo il P2P funziona solo via server LAN (relay): usa "🔍 Cerca host sulla rete" qui sopra. Il codice manuale serve solo con WebRTC (browser Chrome/Firefox).')}
+                  </div>
+                )}
+                {!webrtcSupported() && lanBeaconSupported() && (
+                  <div className="muted" style={{ marginTop: 12 }}>
+                    {t('cg.p2pLanHint', 'Su questa app entri con un tap sugli host LAN trovati qui sopra (WebSocket diretto, niente codici). Il codice manuale serve solo con WebRTC (browser).')}
                   </div>
                 )}
               </>
@@ -724,7 +761,7 @@ export default function CampaignTab() {
           <h3>{t('cg.server', '🌐 Server')}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             <span className="tag custom">server remoto</span>
-            <button onClick={() => setNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (WebRTC), senza server">{t('cg.orP2p', '📡 oppure P2P')}</button>
+            <button onClick={() => switchNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito">{t('cg.orP2p', '📡 oppure P2P')}</button>
           </div>
           <label>{t('cg.wsUrl', 'Server WebSocket')}</label>
           <div className="row">

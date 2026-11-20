@@ -1,0 +1,31 @@
+# 5e Manager — server in Docker, modalità HTTP/LAN (rete locale, VPS senza dominio, test)
+#
+#   cd docker
+#   cp .env.example .env        # opzionale: token admin e porta
+#   docker compose up -d --build
+#
+# Poi apri http://<ip-del-server>:3001 (web app) e usa ws://<ip-del-server>:3001 per il multiplayer.
+# Pannello admin: http://<ip-del-server>:3001/admin
+# Per esporlo su Internet con HTTPS: docker-compose.nginx.yml (certificati in ./certs)
+# Dati persistenti (campagne, account, schede in libreria): ./data
+
+services:
+  5emanager:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: 5emanager-server:latest
+    container_name: 5emanager-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      PORT: "3001"
+      HOST: 0.0.0.0
+      DND5E_DATA_DIR: /data
+      DND5E_STATIC_DIR: /app/apps/web/dist
+      # token admin del pannello /admin (vuoto = senza token, ok solo in LAN fidata)
+      DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # opzionale (repo privato): GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - ./data:/data

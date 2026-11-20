@@ -4,6 +4,8 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.core.content.FileProvider;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
@@ -24,6 +26,28 @@ import java.net.URL;
  */
 @CapacitorPlugin(name = "UpdateInstaller")
 public class UpdateInstallerPlugin extends Plugin {
+
+    /** richiesta in sospeso: quando l'utente torna dalle impostazioni col permesso concesso, il download riparte da solo */
+    private PluginCall pendingCall;
+    private String pendingUrl;
+    private ActivityResultLauncher<Intent> settingsLauncher;
+
+    @Override
+    public void load() {
+        settingsLauncher = registerForActivityResult(new ActivityResultContracts.StartActivityForResult(), result -> {
+            PluginCall call = pendingCall;
+            String url = pendingUrl;
+            pendingCall = null;
+            pendingUrl = null;
+            if (call == null || url == null) return;
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                    || getContext().getPackageManager().canRequestPackageInstalls()) {
+                doDownloadAndInstall(call, url); // permesso ora concesso: retry automatico
+            } else {
+                call.reject("Permesso 'installa app sconosciute' non concesso: abilitalo dalle impostazioni e riprova");
+            }
+        });
+    }
 
     /** apre le impostazioni di sistema dell'app (per concedere fotocamera/installazione) */
     @PluginMethod
@@ -46,18 +70,29 @@ public class UpdateInstallerPlugin extends Plugin {
             call.reject("url mancante");
             return;
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
+                && !getContext().getPackageManager().canRequestPackageInstalls()) {
+            // apro le impostazioni del permesso: al ritorno il download riparte in automatico (vedi load())
+            pendingCall = call;
+            pendingUrl = url;
+            notifyListeners("needsInstallPermission", new JSObject());
+            Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
+                    Uri.parse("package:" + getContext().getPackageName()));
+            settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (settingsLauncher != null) {
+                settingsLauncher.launch(settings);
+            } else {
+                getContext().startActivity(settings);
+                call.reject("Permesso 'installa app sconosciute' mancante: concedilo dalle impostazioni aperte e riprova");
+            }
+            return;
+        }
+        doDownloadAndInstall(call, url);
+    }
+
+    private void doDownloadAndInstall(PluginCall call, String url) {
         new Thread(() -> {
             try {
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O
-                        && !getContext().getPackageManager().canRequestPackageInstalls()) {
-                    notifyListeners("needsInstallPermission", new JSObject());
-                    Intent settings = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
-                            Uri.parse("package:" + getContext().getPackageName()));
-                    settings.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-                    getContext().startActivity(settings);
-                    call.reject("Permesso 'installa app sconosciute' non concesso: abilitalo dalle impostazioni e riprova");
-                    return;
-                }
                 File dir = new File(getContext().getCacheDir(), "updates");
                 dir.mkdirs();
                 File out = new File(dir, "update.apk");

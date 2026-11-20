@@ -1,0 +1,55 @@
+# 5e Manager — server in Docker + nginx come reverse proxy HTTPS (tu gestisci certificati e proxy)
+#
+#   cd docker
+#   cp .env.example .env
+#   # modifica .env: DND5E_DOMAIN=dnd.tuosito.it, DND5E_ADMIN_TOKEN=<token-sicuro>
+#   mkdir -p certs data
+#   # metti i certificati in docker/certs/fullchain.pem e docker/certs/privkey.pem
+#   # (es. certbot certonly --webroot -w docker/certbot-webroot -d dnd.tuosito.it e copia i file)
+#   docker compose -f docker-compose.nginx.yml up -d --build
+#
+# Risultato: https://dnd.tuosito.it (web app + /admin) e wss://dnd.tuosito.it (multiplayer WS).
+
+services:
+  5emanager:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: 5emanager-server:latest
+    container_name: 5emanager-server
+    restart: unless-stopped
+    expose:
+      - "3001" # niente porta pubblica: parla solo con nginx
+    environment:
+      PORT: "3001"
+      HOST: 0.0.0.0
+      DND5E_DATA_DIR: /data
+      DND5E_STATIC_DIR: /app/apps/web/dist
+      DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - ./data:/data
+    networks:
+      - dnd
+
+  nginx:
+    image: nginx:alpine
+    container_name: 5emanager-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      # dominio pubblico (record A -> IP del server); l'immagine nginx lo sostituisce nel template
+      DND5E_DOMAIN: ${DND5E_DOMAIN:?imposta DND5E_DOMAIN nel .env, es. dnd.tuosito.it}
+    volumes:
+      - ./nginx/default.conf.template:/etc/nginx/templates/default.conf.template:ro
+      - ./certs:/etc/nginx/certs:ro
+      - ./certbot-webroot:/var/www/certbot:ro # per i rinnovi ACME di Let's Encrypt
+    depends_on:
+      - 5emanager
+    networks:
+      - dnd
+
+networks:
+  dnd:

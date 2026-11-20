@@ -16,6 +16,8 @@ const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
 type Tab = 'home' | 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
 const TAB_ORDER: Tab[] = ['home', 'panoramica', 'incantesimi', 'inventario', 'combattimento', 'campagna', 'custom'];
+/** tab contestuali alla scheda attiva: visibili solo se esiste una scheda */
+const SHEET_TABS: Tab[] = ['panoramica', 'incantesimi', 'inventario'];
 
 const LOCK_KEY = 'dnd5e.lock.v1';
 
@@ -195,22 +197,32 @@ export default function App() {
               ['combattimento', t('tab.combattimento', '⚔️ Combattimento')],
               ['campagna', t('tab.campagna', '🌐 Campagna')],
               ['custom', t('tab.custom', 'Contenuti custom')],
+              // tab di scheda: mostrate solo se c'è una scheda attiva (le altre sono sempre accessibili)
             ] as [Tab, string][]
-          ).map(([id, label], i) => (
-            <button
-              key={id}
-              className={effTab === id ? 'active' : ''}
-              disabled={!char && id !== 'home'}
-              onClick={() => setTab(id)}
-              aria-label={`${i + 1} — ${label}`}
-              title={!char && id !== 'home' ? t('app.needSheet', 'Crea o apri una scheda dalla Home prima') : undefined}
-            >
-              {label}
-            </button>
-          ))}
+          ).filter(([id]) => !!char || !SHEET_TABS.includes(id))
+            .map(([id, label], i) => (
+              <button
+                key={id}
+                className={effTab === id ? 'active' : ''}
+                onClick={() => setTab(id)}
+                aria-label={`${i + 1} — ${label}`}
+              >
+                {label}
+              </button>
+            ))}
         </nav>
         <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
-          {effTab === 'home' && <HomeTab onCreate={() => setCreating(true)} onOnline={() => setTab('campagna')} />}
+          {effTab === 'home' && (
+            <HomeTab
+              onCreate={() => setCreating(true)}
+              onOnline={() => {
+                // senza schede non ha senso connettersi: proponi di crearne una
+                if (sheets.length === 0) {
+                  if (window.confirm(t('home.needSheetOnline', 'Non hai ancora nessuna scheda: vuoi crearne una ora prima di connetterti online?'))) setCreating(true);
+                } else setTab('campagna');
+              }}
+            />
+          )}
           {effTab === 'panoramica' && char && <Overview editing={editing} />}
           {effTab === 'incantesimi' && char && <SpellsTab />}
           {effTab === 'inventario' && char && <InventoryTab />}
