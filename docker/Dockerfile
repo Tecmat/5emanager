@@ -13,7 +13,7 @@
 FROM node:22-alpine AS build
 WORKDIR /app
 # manifest dei workspace (necessari a npm ci), poi sorgenti complete
-COPY package.json package-lock.json ./
+COPY package.json package-lock.json tsconfig.base.json ./
 COPY packages/core/package.json packages/core/
 COPY packages/data-srd/package.json packages/data-srd/
 COPY packages/server/package.json packages/server/
