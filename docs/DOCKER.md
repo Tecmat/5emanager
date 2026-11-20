@@ -6,11 +6,14 @@ volume `docker/data` (campagne, account, schede degli utenti).
 
 ## 1) LAN / HTTP (rete locale, test, VPS senza dominio)
 
+C'è già un **`docker/.env` precompilato** committato: basta
+
 ```bash
 cd docker
-cp .env.example .env          # opzionale: imposta DND5E_ADMIN_TOKEN e PORT
 docker compose up -d --build
 ```
+
+(se vuoi modificarlo: `PORT`, `DND5E_ADMIN_TOKEN`; il file `.env.example` resta come riferimento)
 
 - Web app: `http://<ip-server>:3001`
 - Multiplayer (dalle app): `ws://<ip-server>:3001` — le app lo trovano da sole con "🔍 Scansiona rete"
@@ -21,8 +24,7 @@ docker compose up -d --build
 
 ```bash
 cd docker
-cp .env.example .env
-# modifica .env: DND5E_DOMAIN=dnd.tuosito.it  e  DND5E_ADMIN_TOKEN=<token-sicuro>
+# .env è già precompilato: modifica solo DND5E_DOMAIN (es. dnd.tuosito.it) e DND5E_ADMIN_TOKEN
 mkdir -p certs data certbot-webroot
 # certificati (esempio con certbot/acme):
 #   certbot certonly --webroot -w docker/certbot-webroot -d dnd.tuosito.it
