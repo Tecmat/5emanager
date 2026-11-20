@@ -58,8 +58,8 @@ public class LanBeaconPlugin extends Plugin {
         }
 
         @Override
-        protected void onMessage(String message) {
-            plugin.emit("msg", id, message);
+        protected void onMessage(NanoWSD.WebSocketFrame message) {
+            plugin.emit("msg", id, message.getTextPayload());
         }
 
         @Override
@@ -133,7 +133,12 @@ public class LanBeaconPlugin extends Plugin {
         if (name == null || name.trim().isEmpty()) name = "Host 5e Manager";
         final int p = port;
         final String n = name.trim();
-        final String version = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionName;
+        String ver = "0.0.0";
+        try {
+            ver = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionName;
+        } catch (Exception ignored) {
+        }
+        final String version = ver;
         new Thread(() -> {
             try {
                 stopServerSync();

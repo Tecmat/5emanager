@@ -1,4 +1,4 @@
-use futures_util::StreamExt;
+use futures_util::{SinkExt, StreamExt};
 use serde::Serialize;
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};
@@ -48,7 +48,7 @@ fn lan_emit(app: &tauri::AppHandle, parts: &[&str]) {
 }
 
 async fn beacon_info(
-    tauri::State(state): tauri::State<Arc<BeaconState>>,
+    axum::extract::State(state): axum::extract::State<Arc<BeaconState>>,
 ) -> axum::Json<serde_json::Value> {
     axum::Json(serde_json::json!({
         "app": "5emanager",
@@ -61,7 +61,7 @@ async fn beacon_info(
 
 async fn beacon_ws(
     ws: axum::extract::ws::WebSocketUpgrade,
-    tauri::State(state): tauri::State<Arc<BeaconState>>,
+    axum::extract::State(state): axum::extract::State<Arc<BeaconState>>,
 ) -> axum::response::Response {
     ws.on_upgrade(move |socket| beacon_socket(socket, state))
 }
