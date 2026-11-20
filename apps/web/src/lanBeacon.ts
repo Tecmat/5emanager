@@ -36,11 +36,15 @@ export function onLanEvt(cb: (e: LanEvt) => void): () => void {
   return () => window.removeEventListener('lan-evt', h);
 }
 
-/** true se questo dispositivo puo' fare da host LAN (app nativa desktop o Android) */
+/** true se questo dispositivo puo' fare da host LAN (app nativa desktop o Android col plugin LanBeacon) */
 export function lanBeaconSupported(): boolean {
   if ((window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__) return true;
   try {
-    return Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android';
+    return (
+      Capacitor.isNativePlatform() &&
+      Capacitor.getPlatform() === 'android' &&
+      Capacitor.isPluginAvailable('LanBeacon')
+    );
   } catch {
     return false;
   }

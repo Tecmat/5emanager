@@ -410,6 +410,7 @@ const STR: Record<Lang, Record<string, string>> = {
     'home.liv': 'liv',
     'home.active': 'attiva',
     'app.campaign': 'Campagna',
+    'app.needSheet': 'Crea o apri una scheda dalla Home prima',
     // ---- timer turno ----
     'cg.timerTitle': 'Timer del turno (locale)',
     'cg.timerSec': 'Secondi per turno',
@@ -1043,6 +1044,7 @@ const STR: Record<Lang, Record<string, string>> = {
     'home.liv': 'lvl',
     'home.active': 'active',
     'app.campaign': 'Campaign',
+    'app.needSheet': 'Create or open a sheet from Home first',
     // ---- turn timer ----
     'cg.timerTitle': 'Turn timer (local)',
     'cg.timerSec': 'Seconds per turn',

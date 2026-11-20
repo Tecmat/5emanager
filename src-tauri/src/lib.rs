@@ -77,7 +77,7 @@ async fn beacon_socket(socket: axum::extract::ws::WebSocket, state: Arc<BeaconSt
     let id2 = id.clone();
     // lettura: client -> JS
     tokio::spawn(async move {
-        while let Some(Ok(msg)) = rx.recv().await {
+        while let Some(Ok(msg)) = rx.next().await {
             match msg {
                 Message::Text(t) => lan_emit(&st2.app, &["msg", &id2, t.as_str()]),
                 Message::Close(_) => break,

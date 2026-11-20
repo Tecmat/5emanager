@@ -197,7 +197,14 @@ export default function App() {
               ['custom', t('tab.custom', 'Contenuti custom')],
             ] as [Tab, string][]
           ).map(([id, label], i) => (
-            <button key={id} className={effTab === id ? 'active' : ''} onClick={() => setTab(id)} aria-label={`${i + 1} — ${label}`}>
+            <button
+              key={id}
+              className={effTab === id ? 'active' : ''}
+              disabled={!char && id !== 'home'}
+              onClick={() => setTab(id)}
+              aria-label={`${i + 1} — ${label}`}
+              title={!char && id !== 'home' ? t('app.needSheet', 'Crea o apri una scheda dalla Home prima') : undefined}
+            >
               {label}
             </button>
           ))}
