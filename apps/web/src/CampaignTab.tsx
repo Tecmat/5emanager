@@ -27,7 +27,8 @@ import { useStore } from './store.js';
 import { useNet } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
-import { errMsg } from './update.js';
+import { detectPlatform, errMsg } from './update.js';
+import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
 import { LAN_BEACON_PORT, beaconStart, lanBeaconSupported } from './lanBeacon.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
@@ -64,13 +65,19 @@ async function shareText(s: string): Promise<boolean> {
   return false;
 }
 
-/** trova da solo il ws:// del server LAN: URL salvato (se non localhost) oppure l'origin della pagina */
+/**
+ * trova da solo il ws:// del server LAN: URL salvato (se non localhost) oppure l'origin della
+ * pagina SOLO in web. Su app nativa (APK servita da https://localhost) ws://localhost non esiste:
+ * si lascia vuoto e si usa la scansione della rete.
+ */
 function autoDiscWsUrl(): string {
   try {
     const saved = localStorage.getItem('dnd5e.net.url') ?? '';
-    if (/^wss?:\/\/.+/.test(saved) && !/127\.0\.0\.1|localhost/.test(saved)) return saved;
-    if (/^https?:$/.test(location.protocol) && location.host) return `ws://${location.host}`;
-    return saved;
+    if (/^wss?:\/\/.+/.test(saved) && !isLocalhostHost(new URL(saved).host)) return saved;
+    if (detectPlatform() === 'web' && /^https?:$/.test(location.protocol) && location.host) {
+      return `ws://${location.host}`;
+    }
+    return '';
   } catch {
     return '';
   }
@@ -393,7 +400,13 @@ export default function CampaignTab() {
     finally {
       setScanning(false);
     }
-    await searchHosts();
+    // cerca la lista host sul server SOLO se abbiamo un URL valido (mai ws://localhost su app nativa)
+    const u = url.trim() || autoDiscWsUrl();
+    if (u) {
+      await searchHosts();
+    } else {
+      setDiscMsg(t('cg.p2pNoServerScan', 'Nessun server 5emanager trovato in rete — se cerchi una campagna P2P diretta usa gli host LAN qui sotto (tap per entrare), oppure inserisci il ws:// del server remoto a mano.'));
+    }
   };
 
   /** giocatore: un tasto solo — trova il server LAN da solo e lista gli host (auto-refresh 8 s) */
@@ -403,9 +416,14 @@ export default function CampaignTab() {
     setDiscMsg('');
     setHosts([]);
     const u = url.trim() || autoDiscWsUrl();
-    if (!u) {
+    // su app nativa (APK) ws://localhost non esiste: non provarci nemmeno
+    let localhostOnNative = false;
+    try {
+      localhostOnNative = detectPlatform() !== 'web' && !!u && isLocalhostHost(new URL(u).host);
+    } catch { /* url malformato: si prova lo stesso */ }
+    if (!u || localhostOnNative) {
       setDiscBusy(false);
-      setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://192.168.1.10:3001)'));
+      setError(t('cg.p2pNoServer', 'Nessun server individuato: premi "Scansiona rete e cerca host" (trova server e host P2P diretti in LAN) oppure inserisci il ws:// del server remoto (es. wss://dnd.tuosito.it)'));
       return;
     }
     setUrl(u);

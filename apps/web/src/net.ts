@@ -1,3 +1,5 @@
+import { Capacitor } from '@capacitor/core';
+
 export type Handler = (msg: any) => void;
 
 export class NetClient {
@@ -51,7 +53,22 @@ export class NetClient {
   }
 }
 
+/** true se l'host di location e' "locale" (localhost, 127.0.0.1, ::1, *.localhost es. tauri.localhost) */
+export function isLocalhostHost(host: string): boolean {
+  return /(^|\.)localhost$|^127\.0\.0\.1$|^\[?::1\]?$/.test(host.trim().toLowerCase());
+}
+
+/**
+ * URL WS di default: in web usa l'origin della pagina (il server che serve l'app).
+ * Su app nativa (APK: location = https://localhost) NON ha senso ws://localhost:
+ * si lascia vuoto e si usa la scansione LAN / l'URL salvato o inserito a mano.
+ */
 export const defaultWsUrl = (): string => {
-  if (typeof location !== 'undefined' && location.port !== '5173' && location.host) return `ws://${location.host}`;
+  if (typeof location !== 'undefined' && location.host && location.port !== '5173' && !isLocalhostHost(location.host)) {
+    return `ws://${location.host}`;
+  }
+  try {
+    if (Capacitor.isNativePlatform()) return '';
+  } catch { /* non nativo */ }
   return 'ws://127.0.0.1:3001';
 };
