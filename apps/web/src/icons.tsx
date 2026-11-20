@@ -22,7 +22,16 @@ export type IconName =
   | 'check'
   | 'back'
   | 'book'
-  | 'bell';
+  | 'bell'
+  | 'monitor'
+  | 'radar'
+  | 'play'
+  | 'users'
+  | 'qr'
+  | 'dice'
+  | 'key'
+  | 'door'
+  | 'signal';
 
 const PATHS: Record<IconName, ReactElement> = {
   home: (
@@ -179,9 +188,149 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
     </>
   ),
+  monitor: (
+    <>
+      <rect x="3" y="4" width="18" height="12" rx="2" />
+      <path d="M9 20h6" />
+      <path d="M12 16v4" />
+    </>
+  ),
+  radar: (
+    <>
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="4.5" />
+      <path d="M12 12 18.5 5.5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+    </>
+  ),
+  play: <path d="M7 4.5v15l13-7.5-13-7.5Z" />,
+  users: (
+    <>
+      <circle cx="9" cy="8" r="3.5" />
+      <path d="M2.5 20c1-3.5 12-3.5 13 0" />
+      <path d="M16 5a3.5 3.5 0 0 1 0 7" />
+      <path d="M17.5 16.5c2 .8 3 2 3.5 3.5" />
+    </>
+  ),
+  qr: (
+    <>
+      <rect x="3" y="3" width="7" height="7" rx="1" />
+      <rect x="14" y="3" width="7" height="7" rx="1" />
+      <rect x="3" y="14" width="7" height="7" rx="1" />
+      <path d="M14 14h3v3h-3z" />
+      <path d="M21 14v3" />
+      <path d="M14 21h3" />
+      <path d="M21 21h.01" />
+    </>
+  ),
+  dice: (
+    <>
+      <rect x="3" y="3" width="18" height="18" rx="4" />
+      <circle cx="8.5" cy="8.5" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="8.5" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="8.5" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+      <circle cx="15.5" cy="15.5" r="1.3" fill="currentColor" stroke="none" />
+    </>
+  ),
+  key: (
+    <>
+      <circle cx="8" cy="15" r="4.5" />
+      <path d="m11 12 9-9" />
+      <path d="m16 7 3 3" />
+      <path d="m13.5 9.5 2.5 2.5" />
+    </>
+  ),
+  door: (
+    <>
+      <path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16" />
+      <path d="M2 21h20" />
+      <circle cx="12.5" cy="12" r="1" fill="currentColor" stroke="none" />
+    </>
+  ),
+  signal: (
+    <>
+      <path d="M5.5 10.5a9 9 0 0 1 13 0" />
+      <path d="M8.5 13.5a5 5 0 0 1 7 0" />
+      <circle cx="12" cy="17.5" r="1.6" fill="currentColor" stroke="none" />
+      <path d="M2.5 7.5a13.5 13.5 0 0 1 19 0" />
+    </>
+  ),
 };
 
-export default function Icon({ name, size = 16, className = '' }: { name: IconName; size?: number; className?: string }) {
+/** gradienti "candy" (stile KDE/Breeze colorato) per icona: tile arrotondato colorato + glifo bianco */
+const CANDY: Partial<Record<IconName, [string, string]>> = {
+  home: ['#f7b731', '#fc5c65'],
+  user: ['#a29bfe', '#6c5ce7'],
+  wand: ['#a29bfe', '#6c5ce7'],
+  bag: ['#fd9644', '#e17055'],
+  swords: ['#e17055', '#d63031'],
+  map: ['#00b894', '#00cec9'],
+  flask: ['#00b894', '#55efc4'],
+  globe: ['#0984e3', '#74b9ff'],
+  plus: ['#00b894', '#55efc4'],
+  pencil: ['#fdcb6e', '#e17055'],
+  undo: ['#636e72', '#b2bec3'],
+  moon: ['#6c5ce7', '#a29bfe'],
+  sun: ['#fdcb6e', '#f39c12'],
+  lock: ['#636e72', '#2d3436'],
+  eye: ['#0984e3', '#74b9ff'],
+  x: ['#d63031', '#e17055'],
+  wifi: ['#0984e3', '#74b9ff'],
+  offline: ['#636e72', '#b2bec3'],
+  check: ['#00b894', '#55efc4'],
+  back: ['#636e72', '#b2bec3'],
+  book: ['#e17055', '#fdcb6e'],
+  bell: ['#fdcb6e', '#f39c12'],
+  monitor: ['#6c5ce7', '#a29bfe'],
+  radar: ['#00cec9', '#0984e3'],
+  play: ['#00b894', '#55efc4'],
+  users: ['#0984e3', '#6c5ce7'],
+  qr: ['#2d3436', '#636e72'],
+  dice: ['#d63031', '#fd9644'],
+  key: ['#e17055', '#fdcb6e'],
+  door: ['#00b894', '#00cec9'],
+  signal: ['#a29bfe', '#e84393'],
+};
+
+export default function Icon({ name, size = 16, className = '', candy = false }: { name: IconName; size?: number; className?: string; candy?: boolean }) {
+  const paths = PATHS[name];
+  if (candy) {
+    const g = CANDY[name] ?? ['#636e72', '#b2bec3'];
+    const pad = Math.max(2, Math.round(size * 0.18));
+    const box = size + pad * 2;
+    return (
+      <span
+        className={`candy-icon${className ? ` ${className}` : ''}`}
+        style={{
+          display: 'inline-flex',
+          width: box,
+          height: box,
+          borderRadius: Math.round(box * 0.3),
+          background: `linear-gradient(135deg, ${g[0]}, ${g[1]})`,
+          boxShadow: '0 1px 4px rgba(0,0,0,.35)',
+          alignItems: 'center',
+          justifyContent: 'center',
+          flex: 'none',
+        }}
+        aria-hidden="true"
+      >
+        <svg
+          width={size}
+          height={size}
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="#fff"
+          strokeWidth={2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          focusable="false"
+        >
+          {paths}
+        </svg>
+      </span>
+    );
+  }
   return (
     <svg
       className={`icon${className ? ` ${className}` : ''}`}
@@ -196,7 +345,7 @@ export default function Icon({ name, size = 16, className = '' }: { name: IconNa
       aria-hidden="true"
       focusable="false"
     >
-      {PATHS[name]}
+      {paths}
     </svg>
   );
 }

@@ -1,4 +1,5 @@
 import { Capacitor, registerPlugin } from '@capacitor/core';
+import { localIpViaWebRTC } from '@dnd5e/core';
 
 /**
  * Bridge verso il "beacon LAN" nativo (Tauri desktop / APK Android): il dispositivo
@@ -55,6 +56,8 @@ interface LanBeaconPlugin {
   send(opts: { clientId: string; msg: string }): Promise<void>;
   broadcast(opts: { msg: string }): Promise<{ sent?: number }>;
   stop(): Promise<void>;
+  /** IP IPv4 locale del dispositivo (interfacce di rete) — serve quando WebRTC manca (WebKitGTK) */
+  localIp(): Promise<{ ip?: string }>;
 }
 // plugin nativo custom (patchato in CI in apps/web/android-overlay/LanBeaconPlugin.java)
 const LanBeacon = registerPlugin<LanBeaconPlugin>('LanBeacon');
@@ -88,6 +91,26 @@ export async function beaconBroadcast(msg: string): Promise<number> {
   }
   const r = await LanBeacon.broadcast({ msg });
   return r.sent ?? 0;
+}
+
+/**
+ * IP locale del dispositivo: prima il trucco ICE WebRTC, poi (su app native, es. AppImage
+ * su WebKitGTK dove RTCPeerConnection manca) la lettura nativa delle interfacce di rete.
+ */
+export async function detectLocalIp(): Promise<string | null> {
+  const viaRtc = await localIpViaWebRTC(1200);
+  if (viaRtc) return viaRtc;
+  try {
+    if (await isTauri()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const ip = (await invoke('lan_local_ip')) as string | null;
+      if (ip) return ip;
+    } else if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      const r = await LanBeacon.localIp();
+      if (r.ip) return r.ip;
+    }
+  } catch { /* ignora */ }
+  return null;
 }
 
 export async function beaconStop(): Promise<void> {

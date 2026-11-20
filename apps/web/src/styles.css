@@ -189,3 +189,9 @@ header.top button, .tabs button, .big-btn { display: inline-flex; align-items: c
 .tabs .back { color: var(--muted); font-weight: 500; }
 .tabs .back:hover { color: var(--accent); }
 .tab-sep { align-self: stretch; width: 1px; background: var(--border); margin: 8px 3px; }
+
+/* icone: allineamento + icone "candy" (tile colorata stile KDE) */
+.icon { vertical-align: -3px; flex: none; }
+.candy-icon { vertical-align: middle; margin-right: 2px; }
+button .candy-icon, .tag .candy-icon { margin-right: 5px; }
+.segmented .seg { display: inline-flex; align-items: center; gap: 6px; }

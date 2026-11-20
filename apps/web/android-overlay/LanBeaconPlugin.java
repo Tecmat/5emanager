@@ -200,6 +200,31 @@ public class LanBeaconPlugin extends Plugin {
         call.resolve();
     }
 
+    /** IP IPv4 locale (site-local) del dispositivo: per la scansione LAN quando WebRTC manca */
+    @PluginMethod
+    public void localIp(PluginCall call) {
+        try {
+            java.util.Enumeration<java.net.NetworkInterface> nis = java.net.NetworkInterface.getNetworkInterfaces();
+            while (nis != null && nis.hasMoreElements()) {
+                java.net.NetworkInterface ni = nis.nextElement();
+                if (!ni.isUp() || ni.isLoopback()) continue;
+                java.util.Enumeration<java.net.InetAddress> addrs = ni.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    java.net.InetAddress a = addrs.nextElement();
+                    if (a instanceof java.net.Inet4Address && a.isSiteLocalAddress() && !a.isLoopbackAddress()) {
+                        JSObject r = new JSObject();
+                        r.put("ip", a.getHostAddress());
+                        call.resolve(r);
+                        return;
+                    }
+                }
+            }
+            call.reject("nessun IP LAN trovato (WiFi attiva?)");
+        } catch (Exception e) {
+            call.reject("localIp: " + e.getMessage());
+        }
+    }
+
     private void stopServerSync() {
         if (server != null) {
             try {

@@ -1,5 +1,5 @@
-import { hostsInSubnet, localIpViaWebRTC } from '@dnd5e/core';
-import { LAN_BEACON_PORT } from './lanBeacon.js';
+import { hostsInSubnet } from '@dnd5e/core';
+import { LAN_BEACON_PORT, detectLocalIp } from './lanBeacon.js';
 
 /**
  * Scansione automatica della rete locale: trova server 5emanager (porta 3001) e
@@ -46,7 +46,8 @@ async function probe(ip: string, port: number, timeoutMs = 600): Promise<LanPeer
  * (con nome e IP). onProgress(d, t) conta gli IP sondati.
  */
 export async function scanLanPeers(onProgress?: (done: number, total: number) => void): Promise<LanPeer[]> {
-  const myIp = await localIpViaWebRTC(1200);
+  // su AppImage (WebKitGTK, niente WebRTC) si usa l'IP nativo: la scansione funziona comunque
+  const myIp = await detectLocalIp();
   if (!myIp) return [];
   const hosts = hostsInSubnet(myIp, 24);
   const found: LanPeer[] = [];

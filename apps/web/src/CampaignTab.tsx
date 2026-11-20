@@ -12,7 +12,6 @@ import {
   speedOf,
   totalLevel,
   currencyToCopper,
-  localIpViaWebRTC,
   rollEncounter,
   rollTreasure,
   randomName,
@@ -30,7 +29,8 @@ import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
-import { LAN_BEACON_PORT, beaconStart, lanBeaconSupported } from './lanBeacon.js';
+import { LAN_BEACON_PORT, beaconStart, detectLocalIp, lanBeaconSupported } from './lanBeacon.js';
+import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
 
@@ -329,7 +329,7 @@ export default function CampaignTab() {
       setP2PTransport((m: any) => {
         if (m?.t === 'action') host.applyAction(host.masterId, m.action);
       });
-      const ip = await localIpViaWebRTC(1200);
+      const ip = await detectLocalIp();
       setBeaconInfo({ ip: ip ?? '0.0.0.0', port: LAN_BEACON_PORT });
       setHostNotice(tf('cg.lanBeaconOn', '📡 In onda su questa rete: ws://{ip}:{port} — i giocatori ti vedono con "Scansiona rete" e entrano con un tap.', { ip: ip ?? '?', port: LAN_BEACON_PORT }));
     } catch (e) {
@@ -608,13 +608,21 @@ export default function CampaignTab() {
                 🖥️ {t('cg.p2pLanNative', 'Su questa app il P2P usa il beacon LAN (WebSocket diretto): premi "Avvia host" — gli altri ti trovano con "Scansiona rete" e entrano con un tap.')}
               </div>
             )}
-            <div className="row" style={{ marginBottom: 8 }}>
-              <button onClick={() => switchNetMode('server')}>{t('cg.remoteServer', '🌐 Server remoto')}</button>
-              <span className="tag custom">📡 {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}</span>
+            <div className="segmented" style={{ marginBottom: 8 }}>
+              <button className={`seg ${(netMode as string) === 'server' ? 'active' : ''}`} onClick={() => switchNetMode('server')}>
+                <Icon name="globe" candy size={15} /> {t('cg.remoteServer', 'Server remoto')}
+              </button>
+              <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')}>
+                <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
+              </button>
             </div>
-            <div className="row" style={{ marginBottom: 8 }}>
-              <button className={p2pSub === 'host' ? 'primary' : ''} onClick={() => setP2pSub('host')}>{t('cg.host', 'Faccio da host')}</button>
-              <button className={p2pSub === 'join' ? 'primary' : ''} onClick={() => setP2pSub('join')}>{t('cg.joinHost', 'Mi unisco a un host')}</button>
+            <div className="segmented" style={{ marginBottom: 8 }}>
+              <button className={`seg ${p2pSub === 'host' ? 'active' : ''}`} onClick={() => setP2pSub('host')}>
+                <Icon name="monitor" candy size={15} /> {t('cg.host', 'Faccio da host')}
+              </button>
+              <button className={`seg ${p2pSub === 'join' ? 'active' : ''}`} onClick={() => setP2pSub('join')}>
+                <Icon name="door" candy size={15} /> {t('cg.joinHost', 'Mi unisco a un host')}
+              </button>
             </div>
             {p2pSub === 'host' && (
               <>
@@ -648,7 +656,7 @@ export default function CampaignTab() {
                   <button className="primary" onClick={startP2PHost}>{t('cg.startHost', 'Avvia host P2P')}</button>
                   {lanBeaconSupported() && (
                     <button className="primary" onClick={startLanHost} title={t('cg.hostLanTitle', 'Questo dispositivo diventa la campagna: gli altri sulla stessa rete ti trovano con un tasto e si uniscono con un tap')}>
-                      🖥️ {t('cg.hostLan', 'Ospita su questa rete (LAN)')}
+                      <Icon name="monitor" candy size={15} /> {t('cg.hostLan', 'Ospita su questa rete (LAN)')}
                     </button>
                   )}
                 </div>
@@ -669,11 +677,12 @@ export default function CampaignTab() {
                   <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>{t('cg.p2pFindHostsHint', "Un tasto: scansiona la rete locale, trova i server 5emanager e gli host che annunciano la campagna — niente IP da scrivere.")}</div>
                   <div className="row" style={{ marginTop: 6 }}>
                     <button className="primary" onClick={scanAndSearch} disabled={discBusy || scanning}>
+                      <Icon name="radar" candy size={15} />
                       {scanning
-                        ? tf('cg.p2pScanning', 'Scansiono la rete… {d}/{t}', { d: scanProg?.d ?? 0, t: scanProg?.t ?? 0 })
+                        ? tf('cg.p2pScanning', ' Scansiono la rete… {d}/{t}', { d: scanProg?.d ?? 0, t: scanProg?.t ?? 0 })
                         : discBusy
                           ? t('cg.p2pSearching', 'Cerco…')
-                          : t('cg.p2pScanNet', '🔍 Scansiona rete e cerca host')}
+                          : t('cg.p2pScanNet', 'Scansiona rete e cerca host')}
                     </button>
                     {discState === 'on' && <button title={t('cg.p2pRefreshHosts', 'Aggiorna lista host')} onClick={() => discRef.current?.list()}>↻</button>}
                   </div>
@@ -688,7 +697,7 @@ export default function CampaignTab() {
                           title={t('cg.p2pUseServer', 'Usa questo server per la lista host')}
                           onClick={() => { setUrl(`ws://${s.ip}:${s.port}`); void searchHosts(); }}
                         >
-                          🖥 {s.name ?? 'server'} ({s.ip})
+                          <Icon name="globe" size={12} /> {s.name ?? 'server'} ({s.ip})
                         </button>
                       ))}
                     </div>
@@ -703,7 +712,7 @@ export default function CampaignTab() {
                           style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }}
                           onClick={() => void joinLanPeer(p)}
                         >
-                          ▶ {p.name ?? 'host'} ({p.ip})
+                          <Icon name="play" candy size={13} /> {p.name ?? 'host'} ({p.ip})
                         </button>
                       ))}
                     </div>
@@ -723,7 +732,7 @@ export default function CampaignTab() {
                       <span className="muted">{tf('cg.p2pHostsFound', '{n} host trovato/i:', { n: hosts.length })}</span>
                       {hosts.map((h) => (
                         <button key={h.id} className="tag custom" style={{ cursor: 'pointer', fontSize: 13, padding: '4px 10px' }} onClick={() => joinDiscoveredHost(h.id, h.name)}>
-                          ▶ {h.name}{h.ip ? ` (${h.ip})` : ''}
+                          <Icon name="play" size={11} /> {h.name}{h.ip ? ` (${h.ip})` : ''}
                         </button>
                       ))}
                     </div>
@@ -779,7 +788,7 @@ export default function CampaignTab() {
           <h3>{t('cg.server', '🌐 Server')}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             <span className="tag custom">server remoto</span>
-            <button onClick={() => switchNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito">{t('cg.orP2p', '📡 oppure P2P')}</button>
+            <button onClick={() => switchNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito"><Icon name="signal" size={14} /> {t('cg.orP2p', 'oppure P2P')}</button>
           </div>
           <label>{t('cg.wsUrl', 'Server WebSocket')}</label>
           <div className="row">
@@ -977,7 +986,7 @@ export default function CampaignTab() {
               <b>{t('cg.p2pPending', 'Richieste di unione in attesa:')}</b>
               {pendingJoins.map((pj) => (
                 <div key={pj.from} className="row" style={{ marginTop: 4 }}>
-                  <span className="tag custom">🙋 {pj.name}</span>
+                  <span className="tag custom"><Icon name="users" size={12} /> {pj.name}</span>
                   <button
                     className="primary"
                     onClick={() => {
@@ -986,7 +995,7 @@ export default function CampaignTab() {
                       setHostNotice('✅ ' + t('cg.p2pPlayerConnected', 'Giocatore collegato!'));
                     }}
                   >
-                    {t('cg.p2pAccept', '✅ Accetta')}
+                    <Icon name="check" candy size={13} /> {t('cg.p2pAccept', 'Accetta')}
                   </button>
                   <button
                     className="danger"
@@ -995,7 +1004,7 @@ export default function CampaignTab() {
                       setPendingJoins((p) => p.filter((x) => x.from !== pj.from));
                     }}
                   >
-                    {t('cg.p2pReject', '✖ Rifiuta')}
+                    <Icon name="x" candy size={13} /> {t('cg.p2pReject', 'Rifiuta')}
                   </button>
                 </div>
               ))}

@@ -182,6 +182,15 @@ async fn lan_beacon_stop() -> Result<(), String> {
     Ok(())
 }
 
+/// IP IPv4 locale del dispositivo (trucco UdpSocket: nessun pacchetto viene davvero inviato).
+/// Serve alla scansione LAN quando WebRTC manca (WebKitGTK dell'AppImage).
+#[tauri::command]
+fn lan_local_ip() -> Option<String> {
+    let s = std::net::UdpSocket::bind("0.0.0.0:0").ok()?;
+    s.connect("8.8.8.8:80").ok()?;
+    Some(s.local_addr().ok()?.ip().to_string())
+}
+
 #[derive(Serialize, Clone)]
 #[serde(rename_all = "camelCase")]
 struct UpdateInfo {
@@ -571,7 +580,8 @@ pub fn run() {
             lan_beacon_start,
             lan_beacon_send,
             lan_beacon_broadcast,
-            lan_beacon_stop
+            lan_beacon_stop,
+            lan_local_ip
         ])
         .setup(|app| {
             let _ = app.handle().emit("app-ready", ());
