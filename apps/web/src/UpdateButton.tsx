@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
+import Icon from './icons.js';
 import {
   applyAndroidUpdate,
   applyDesktopUpdate,
@@ -116,7 +117,7 @@ export default function UpdateButton() {
         aria-label={t('up.title', 'Aggiornamenti dell\'app')}
         style={{ position: 'relative' }}
       >
-        🔄
+        <Icon name="bell" size={15} />
         {info?.available && <span style={{ position: 'absolute', top: 2, right: 2, width: 8, height: 8, borderRadius: '50%', background: 'var(--accent2)' }} />}
       </button>
       {open && (
@@ -128,7 +129,7 @@ export default function UpdateButton() {
             boxShadow: '0 8px 30px rgba(0,0,0,.45)',
           }}
         >
-          <h3 style={{ marginTop: 0 }}>🔄 {t('up.title', 'Aggiornamenti')}</h3>
+          <h3 style={{ marginTop: 0 }}><Icon name="bell" size={14} /> {t('up.title', 'Aggiornamenti')}</h3>
           <div className="muted" style={{ fontSize: 12 }}>
             {tf('up.current', 'versione attuale: v{ v } · piattaforma: { p }', { v: info?.current ?? '…', p: platform })}
           </div>

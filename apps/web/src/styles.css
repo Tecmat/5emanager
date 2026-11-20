@@ -176,3 +176,16 @@ header.top { backdrop-filter: blur(6px); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.
   100% { transform: rotate(0deg) scale(1); }
 }
 .rolling { animation: diceShake 0.35s ease; }
+
+/* ---- icone SVG al posto delle emoji (header, menu, home) ---- */
+.icon { flex: none; vertical-align: -0.2em; }
+header.top button, .tabs button, .big-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.tag { display: inline-flex; align-items: center; gap: 4px; }
+.status { display: inline-flex; align-items: center; gap: 5px; }
+.home-title { margin: 0 0 4px; font-size: 22px; display: flex; align-items: center; justify-content: center; gap: 9px; }
+.home-h { display: flex; align-items: center; gap: 7px; }
+.tabs button .icon { opacity: 0.85; }
+.tabs button.active .icon { opacity: 1; }
+.tabs .back { color: var(--muted); font-weight: 500; }
+.tabs .back:hover { color: var(--accent); }
+.tab-sep { align-self: stretch; width: 1px; background: var(--border); margin: 8px 3px; }

@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
 import { useStore, isCampaignSheetId } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
 import CreateForm from './CreateForm.js';
 import UpdateButton from './UpdateButton.js';
+import Icon, { type IconName } from './icons.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
 const HomeTab = lazy(() => import('./HomeTab.js'));
@@ -14,10 +15,21 @@ const CustomTab = lazy(() => import('./CustomTab.js'));
 const CombatTab = lazy(() => import('./CombatTab.js'));
 const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
-type Tab = 'home' | 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento' | 'campagna' | 'custom';
-const TAB_ORDER: Tab[] = ['home', 'panoramica', 'incantesimi', 'inventario', 'combattimento', 'campagna', 'custom'];
-/** tab contestuali alla scheda attiva: visibili solo se esiste una scheda */
-const SHEET_TABS: Tab[] = ['panoramica', 'incantesimi', 'inventario'];
+/** pagine principali del menu: sempre accessibili */
+type Page = 'home' | 'campagna' | 'custom' | 'scheda';
+/** tab interne alla pagina scheda (visibile solo con una scheda attiva) */
+type SheetTab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento';
+const MAIN_PAGES: { id: Exclude<Page, 'scheda'>; icon: IconName; key: string; fb: string }[] = [
+  { id: 'home', icon: 'home', key: 'tab.home', fb: 'Home' },
+  { id: 'campagna', icon: 'map', key: 'tab.campagna', fb: 'Campagna' },
+  { id: 'custom', icon: 'flask', key: 'tab.custom', fb: 'Contenuti custom' },
+];
+const SHEET_TABS: { id: SheetTab; icon: IconName; key: string; fb: string }[] = [
+  { id: 'panoramica', icon: 'user', key: 'tab.panoramica', fb: 'Panoramica' },
+  { id: 'incantesimi', icon: 'wand', key: 'tab.incantesimi', fb: 'Incantesimi' },
+  { id: 'inventario', icon: 'bag', key: 'tab.inventario', fb: 'Inventario' },
+  { id: 'combattimento', icon: 'swords', key: 'tab.combattimento', fb: 'Combattimento' },
+];
 
 const LOCK_KEY = 'dnd5e.lock.v1';
 
@@ -38,7 +50,9 @@ function loadLock(): LockRec {
 export default function App() {
   const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
   const { conn } = useNet();
-  const [tab, setTab] = useState<Tab>('panoramica');
+  // page null = auto: pagina scheda se c'è una scheda attiva, altrimenti home
+  const [page, setPage] = useState<Page | null>(null);
+  const [sheetTab, setSheetTab] = useState<SheetTab>('panoramica');
   const [theme, setTheme] = useState(() => (document.documentElement.dataset.theme === 'light' ? 'light' : localStorage.getItem('dnd5e-theme') ?? 'dark'));
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -47,16 +61,32 @@ export default function App() {
   const [lockPw, setLockPw] = useState('');
   const [lockErr, setLockErr] = useState('');
 
+  const createdRef = useRef(false);
+  useEffect(() => {
+    if (creating) createdRef.current = true;
+    else if (char && createdRef.current) {
+      // dopo la creazione di una scheda si apre direttamente la sua pagina
+      createdRef.current = false;
+      setPage('scheda');
+    }
+  }, [creating, char]);
+
   useEffect(() => {
     if (char) setCreating(false);
   }, [char]);
 
   // in modalità vista (master che guarda un giocatore) si apre la panoramica;esco dalla campagna -> torno alla mia scheda
   useEffect(() => {
-    if (viewChar) setTab('panoramica');
+    if (viewChar) {
+      setPage('scheda');
+      setSheetTab('panoramica');
+    }
   }, [viewChar]);
 
-  // scorciatoie da tastiera: 1-6 cambiano tab, "e" edit on/off, Ctrl/Cmd+Z annulla
+  // pagina effettiva: senza scheda attiva la pagina scheda non esiste -> home
+  const effPage: Page = page === 'scheda' && !char ? 'home' : page ?? (char ? 'scheda' : 'home');
+
+  // scorciatoie da tastiera: 1-3 pagine del menu / 1-4 tab della pagina scheda, "e" edit on/off, Ctrl/Cmd+Z annulla
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
@@ -66,12 +96,18 @@ export default function App() {
         return;
       }
       if (typing || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (/^[1-7]$/.test(e.key)) setTab(TAB_ORDER[Number(e.key) - 1]);
-      else if (e.key.toLowerCase() === 'e' && char && !viewChar) setEditing((v) => !v);
+      if (/^[1-9]$/.test(e.key)) {
+        const n = Number(e.key);
+        if (effPage === 'scheda') {
+          if (n <= SHEET_TABS.length) setSheetTab(SHEET_TABS[n - 1].id);
+        } else if (n <= MAIN_PAGES.length) {
+          setPage(MAIN_PAGES[n - 1].id);
+        }
+      } else if (e.key.toLowerCase() === 'e' && char && !viewChar) setEditing((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [char, viewChar, undo]);
+  }, [char, viewChar, undo, effPage]);
   useEffect(() => {
     if (conn.phase !== 'online' && viewChar) setViewChar(null);
   }, [conn.phase, viewChar, setViewChar]);
@@ -99,7 +135,7 @@ export default function App() {
     return (
       <main>
         <div className="card" style={{ maxWidth: 360, margin: '80px auto' }}>
-          <h3>{t('app.lockTitle', '🔐 App bloccata')}</h3>
+          <h3><Icon name="lock" size={15} /> {t('app.lockTitle', 'App bloccata')}</h3>
           <div className="muted" style={{ marginBottom: 8 }}>{t('app.lockDesc', 'Inserisci la password locale per aprire le tue schede.')}</div>
           <input
             type="password"
@@ -121,39 +157,37 @@ export default function App() {
   if (creating) {
     return <CreateForm onCancel={char ? () => setCreating(false) : undefined} />;
   }
-  // senza scheda attiva si apre il menù principale (home)
-  const effTab: Tab = char ? tab : 'home';
 
   return (
     <>
       <header className="top">
         <span className="row">
           {char?.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
-          <h1>⚔️ D&D 5e{char ? ` — ${char.name}` : ''}</h1>
+          <h1><Icon name="swords" size={19} /> D&D 5e{char ? ` — ${char.name}` : ''}</h1>
           {viewChar && (
             <>
-              <span className="tag custom">👁 {t('app.viewing', 'stai vedendo la scheda di')} {viewLabel} ({t('app.readonly', 'sola lettura')})</span>
-              <button onClick={() => setViewChar(null)} title={t('app.mySheetTitle', 'Torna alla tua scheda')}>{t('app.mySheet', '✕ mia scheda')}</button>
+              <span className="tag custom"><Icon name="eye" size={12} /> {t('app.viewing', 'stai vedendo la scheda di')} {viewLabel} ({t('app.readonly', 'sola lettura')})</span>
+              <button onClick={() => setViewChar(null)} title={t('app.mySheetTitle', 'Torna alla tua scheda')}><Icon name="x" size={13} /> {t('app.mySheet', 'mia scheda')}</button>
             </>
           )}
           {!viewChar && sheets.length > 1 && char && (
             <select
               value={char.id}
-              onChange={(e) => selectSheet(e.target.value)}
+              onChange={(e) => { selectSheet(e.target.value); setPage('scheda'); }}
               title={t('app.switcher', 'Cambia scheda: locali e campagne (separate)')}
               style={{ maxWidth: 220 }}
             >
               {sheets.map((s) => (
                 <option key={s.id} value={s.id}>
                   {isCampaignSheetId(s.id)
-                    ? `🗺 ${campaignMeta[s.id.slice('campagna:'.length)]?.name ?? t('app.campaign', 'Campagna')}: ${s.name} (liv ${totalLevel(s)})`
+                    ? `${campaignMeta[s.id.slice('campagna:'.length)]?.name ?? t('app.campaign', 'Campagna')}: ${s.name} (liv ${totalLevel(s)})`
                     : `${s.name} (liv ${totalLevel(s)})`}
                 </option>
               ))}
             </select>
           )}
           {!viewChar && (
-            <button onClick={() => setCreating(true)} title={t('cf.title', 'Crea un nuovo personaggio')}>{t('app.new', '＋ Nuovo')}</button>
+            <button onClick={() => setCreating(true)} title={t('cf.title', 'Crea un nuovo personaggio')}><Icon name="plus" size={14} /> {t('app.new', 'Nuovo')}</button>
           )}
           {!viewChar && (
             <button
@@ -162,74 +196,88 @@ export default function App() {
               title={editing ? t('app.editDoneTitle', 'Chiudi la modalità modifica') : t('app.editTitle', 'Modifica la scheda (campi editabili)')}
               aria-label={t('app.edit', 'Modifica')}
             >
-              ✏️ {editing ? t('app.editDone', 'Fatto') : t('app.edit', 'Modifica')}
+              <Icon name="pencil" size={14} /> {editing ? t('app.editDone', 'Fatto') : t('app.edit', 'Modifica')}
             </button>
           )}
           {!viewChar && canUndo && (
             <button onClick={undo} title={t('app.undoTitle', "Annulla l'ultima modifica (Ctrl+Z)")} aria-label={t('app.undo', 'Annulla')}>
-              ↩ {t('app.undo', 'Annulla')}
+              <Icon name="undo" size={14} /> {t('app.undo', 'Annulla')}
             </button>
           )}
         </span>
         <span className="row">
-          <span className="muted" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
-            {conn.phase === 'online' ? `🟢 ${conn.campaign.name}` : t('app.offline', '⚪ offline')}
+          <span className="muted status" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
+            {conn.phase === 'online' ? <><Icon name="wifi" size={13} /> {conn.campaign.name}</> : <><Icon name="offline" size={13} /> {t('app.offline', 'offline')}</>}
           </span>
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
-          <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN">🌐 {lang.toUpperCase()}</button>
-          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? '🌙' : '☀️'}</button>
+          <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN"><Icon name="globe" size={14} /> {lang.toUpperCase()}</button>
+          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? <Icon name="moon" size={14} /> : <Icon name="sun" size={14} />}</button>
           <UpdateButton />
         </span>
       </header>
       <main>
         {viewChar && (
           <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent2)' }}>
-            {t('app.viewBanner1', '👁 Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in 🌐 Campagna (azioni 🔒). Torna alla tua scheda con ✕ in alto.')}
+            <Icon name="eye" size={13} /> {t('app.viewBanner1', 'Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in Campagna (azioni). Torna alla tua scheda con "mia scheda" in alto.')}
           </div>
         )}
-        <nav className="tabs" aria-label={t('app.tabs', 'Schede')}>
-          {(
-            [
-              ['home', t('tab.home', '🏠 Home')],
-              ['panoramica', t('tab.panoramica', 'Panoramica')],
-              ['incantesimi', t('tab.incantesimi', 'Incantesimi')],
-              ['inventario', t('tab.inventario', 'Inventario')],
-              ['combattimento', t('tab.combattimento', '⚔️ Combattimento')],
-              ['campagna', t('tab.campagna', '🌐 Campagna')],
-              ['custom', t('tab.custom', 'Contenuti custom')],
-              // tab di scheda: mostrate solo se c'è una scheda attiva (le altre sono sempre accessibili)
-            ] as [Tab, string][]
-          ).filter(([id]) => !!char || !SHEET_TABS.includes(id))
-            .map(([id, label], i) => (
-              <button
-                key={id}
-                className={effTab === id ? 'active' : ''}
-                onClick={() => setTab(id)}
-                aria-label={`${i + 1} — ${label}`}
-              >
-                {label}
+        {effPage === 'scheda' && char ? (
+          <>
+            <nav className="tabs" aria-label={t('app.sheetTabs', 'Scheda')}>
+              <button className="back" onClick={() => setPage('home')} title={t('nav.allSheetsTitle', 'Torna a tutte le schede (Home)')}>
+                <Icon name="back" size={15} /> {t('tab.home', 'Home')}
               </button>
-            ))}
-        </nav>
-        <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
-          {effTab === 'home' && (
-            <HomeTab
-              onCreate={() => setCreating(true)}
-              onOnline={() => {
-                // senza schede non ha senso connettersi: proponi di crearne una
-                if (sheets.length === 0) {
-                  if (window.confirm(t('home.needSheetOnline', 'Non hai ancora nessuna scheda: vuoi crearne una ora prima di connetterti online?'))) setCreating(true);
-                } else setTab('campagna');
-              }}
-            />
-          )}
-          {effTab === 'panoramica' && char && <Overview editing={editing} />}
-          {effTab === 'incantesimi' && char && <SpellsTab />}
-          {effTab === 'inventario' && char && <InventoryTab />}
-          {effTab === 'combattimento' && char && <CombatTab />}
-          {effTab === 'campagna' && <CampaignTab />}
-          {effTab === 'custom' && <CustomTab />}
-        </Suspense>
+              <span className="tab-sep" aria-hidden="true" />
+              {SHEET_TABS.map((tb, i) => (
+                <button
+                  key={tb.id}
+                  className={sheetTab === tb.id ? 'active' : ''}
+                  onClick={() => setSheetTab(tb.id)}
+                  aria-label={`${i + 1} — ${t(tb.key, tb.fb)}`}
+                >
+                  <Icon name={tb.icon} size={15} /> {t(tb.key, tb.fb)}
+                </button>
+              ))}
+            </nav>
+            <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
+              {sheetTab === 'panoramica' && <Overview editing={editing} />}
+              {sheetTab === 'incantesimi' && <SpellsTab />}
+              {sheetTab === 'inventario' && <InventoryTab />}
+              {sheetTab === 'combattimento' && <CombatTab />}
+            </Suspense>
+          </>
+        ) : (
+          <>
+            <nav className="tabs" aria-label={t('app.tabs', 'Menu principale')}>
+              {MAIN_PAGES.map((p, i) => (
+                <button
+                  key={p.id}
+                  className={effPage === p.id ? 'active' : ''}
+                  onClick={() => setPage(p.id)}
+                  aria-label={`${i + 1} — ${t(p.key, p.fb)}`}
+                >
+                  <Icon name={p.icon} size={15} /> {t(p.key, p.fb)}
+                </button>
+              ))}
+            </nav>
+            <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
+              {effPage === 'home' && (
+                <HomeTab
+                  onCreate={() => setCreating(true)}
+                  onOnline={() => {
+                    // senza schede non ha senso connettersi: proponi di crearne una
+                    if (sheets.length === 0) {
+                      if (window.confirm(t('home.needSheetOnline', 'Non hai ancora nessuna scheda: vuoi crearne una ora prima di connetterti online?'))) setCreating(true);
+                    } else setPage('campagna');
+                  }}
+                  onOpenSheet={(id) => { selectSheet(id); setPage('scheda'); }}
+                />
+              )}
+              {effPage === 'campagna' && <CampaignTab />}
+              {effPage === 'custom' && <CustomTab />}
+            </Suspense>
+          </>
+        )}
       </main>
     </>
   );
