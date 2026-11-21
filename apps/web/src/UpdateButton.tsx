@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
+import { installPermissionGranted, openInstallPermissionSettings } from './permissions.js';
 import Icon from './icons.js';
 import {
   applyAndroidUpdate,
@@ -30,7 +31,14 @@ export default function UpdateButton() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [downloaded, setDownloaded] = useState(false);
   const [msg, setMsg] = useState('');
+  const [installPerm, setInstallPerm] = useState<boolean | null>(null);
   const platform = detectPlatform();
+
+  // Android: il permesso "installa app sconosciute" serve per installare l'APK dall'app
+  useEffect(() => {
+    if (platform === 'android') void installPermissionGranted().then(setInstallPerm);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [platform]);
 
   const run = async () => {
     setStatus('checking');
@@ -171,6 +179,12 @@ export default function UpdateButton() {
           {status === 'error' && /404|privat/i.test(msg) && (
             <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>
               {t('up.privateHint', 'Sembra che il repo sia privato: sul server imposta GITHUB_TOKEN (vedi docs/UPDATE.md e docs/DEPLOY_DEBIAN.md); sul desktop basta `gh auth login` o la env GITHUB_TOKEN. La web app usa /api/update del server.')}
+            </div>
+          )}
+          {platform === 'android' && info?.available && installPerm === false && (
+            <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
+              {t('up.installPermHint', 'Per installare l\'APK dentro l\'app serve il permesso speciale "Installa app sconosciute" (una volta sola):')}{' '}
+              <button onClick={() => void openInstallPermissionSettings()}>{t('up.enableInstallPerm', '🔓 Abilita ora')}</button>
             </div>
           )}
           {status === 'ready' && info?.available && (

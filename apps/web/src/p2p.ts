@@ -67,6 +67,8 @@ interface HostCallbacks {
   onPeerLeft: (playerId: string) => void;
   /** relay: una richiesta di join è in attesa di essere accettata dal master */
   onJoinPending?: (req: { from: string; name: string }) => void;
+  /** la campagna è stata eliminata: disconnetti tutti i peer e l'host stesso */
+  onCampaignDeleted?: (id: string) => void;
 }
 
 type AnyMsg = Record<string, any>;
@@ -76,6 +78,7 @@ export class P2PHost {
   reg: Registry;
   private peers = new Map<string, RTCDataChannel>(); // playerId -> channel
   private pending = new Map<string, RTCPeerConnection>(); // inviteKey -> pc in attesa di answer
+  private pcs = new Set<RTCPeerConnection>(); // tutte le pc (per chiudere tutto su deleteCampaign)
   private cb: HostCallbacks;
   private nextInvite = 0;
 
@@ -111,8 +114,9 @@ export class P2PHost {
     if (!webrtcSupported()) throw new Error(NO_WEBRTC);
     const key = 'inv-' + this.nextInvite++;
     const pc = new RTCPeerConnection();
+    this.pcs.add(pc);
     const ch = pc.createDataChannel('game');
-    this.attachChannel(key, ch);
+    this.attachChannel(key, ch, pc);
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
     await waitIce(pc);
@@ -136,7 +140,7 @@ export class P2PHost {
     return this.pending.size;
   }
 
-  private attachChannel(key: string, ch: RTCDataChannel) {
+  private attachChannel(key: string, ch: RTCDataChannel, pc?: RTCPeerConnection) {
     ch.onmessage = (ev) => {
       let msg: AnyMsg;
       try { msg = JSON.parse(ev.data); } catch { return; }
@@ -144,6 +148,7 @@ export class P2PHost {
       this.handlePeerMessage(ch, playerId, msg);
     };
     ch.onclose = () => {
+      if (pc) this.pcs.delete(pc);
       const playerId = [...this.peers.entries()].find(([, c]) => c === ch)?.[0];
       if (playerId) {
         this.peers.delete(playerId);
@@ -186,6 +191,12 @@ export class P2PHost {
   applyAction(playerId: string, action: ClientAction): void {
     if (action.kind === 'deleteCampaign') {
       this.broadcast({ t: 'campaignDeleted', id: this.campaign.id });
+      // tutti giù insieme: chiudi canali e peer connection, poi avvisa l'UI dell'host
+      for (const ch of this.peers.values()) { try { ch.close(); } catch { /* ignora */ } }
+      for (const pc of this.pcs) { try { pc.close(); } catch { /* ignora */ } }
+      this.peers.clear();
+      this.pcs.clear();
+      this.cb.onCampaignDeleted?.(this.campaign.id);
       return;
     }
     const [next, err] = applyCampaignAction(this.campaign, playerId, this.reg, action);
@@ -428,7 +439,9 @@ export class P2PRelayHost {
 
   applyAction(playerId: string, action: ClientAction): void {
     if (action.kind === 'deleteCampaign') {
+      // i peer ricevono campaignDeleted e chiudono da soli il loro socket; avvisa anche l'UI dell'host
       this.broadcast({ t: 'campaignDeleted', id: this.campaign.id });
+      this.cb.onCampaignDeleted?.(this.campaign.id);
       return;
     }
     const [next, err] = applyCampaignAction(this.campaign, playerId, this.reg, action);
@@ -600,6 +613,9 @@ export class P2PLanHost {
   applyAction(playerId: string, action: ClientAction): void {
     if (action.kind === 'deleteCampaign') {
       this.broadcast({ t: 'campaignDeleted', id: this.campaign.id });
+      // dai tempo al messaggio di arrivare ai giocatori, poi chiudi il beacon (tutti i loro socket)
+      setTimeout(() => { void beaconStop(); }, 400);
+      this.cb.onCampaignDeleted?.(this.campaign.id);
       return;
     }
     const [next, err] = applyCampaignAction(this.campaign, playerId, this.reg, action);

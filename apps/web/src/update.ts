@@ -148,7 +148,8 @@ async function checkViaJsdelivr(): Promise<UpdateInfo> {
   const latest = String(j.version ?? '').replace(/^v/i, '');
   if (!latest) throw new Error('jsdelivr: version mancante');
   const platform = detectPlatform();
-  const assetName = platform === 'android' ? 'app-debug.apk' : platform === 'desktop' ? `5e.Manager_${latest}_amd64.AppImage` : undefined;
+  // asset come pubblicato dal workflow release.yml: l'APK si chiama app.apk (non app-debug.apk)
+  const assetName = platform === 'android' ? 'app.apk' : platform === 'desktop' ? `5e.Manager_${latest}_amd64.AppImage` : undefined;
   const current = await getCurrentVersion();
   return {
     platform,

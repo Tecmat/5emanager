@@ -149,6 +149,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'campaignDeleted') {
       setConn({ phase: 'offline' });
       setError('La campagna è stata eliminata (dal master o dall\'admin).');
+      // tutti giù insieme: chiudi anche il socket verso il server
+      try { netRef.current?.close(); } catch { /* ignora */ }
+      netRef.current = null;
     } else if (m.t === 'notice') {
       setNotice(m.message);
     } else if (m.t === 'error') {

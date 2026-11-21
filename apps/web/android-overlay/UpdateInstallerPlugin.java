@@ -60,7 +60,7 @@ public class UpdateInstallerPlugin extends Plugin {
     }
 
     /** apre la schermata del permesso "installa app sconosciute" (con fallback alla pagina dell'app) */
-    private void openInstallPermissionSettings() {
+    private void goToInstallPermissionSettings() {
         Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                 Uri.parse("package:" + getContext().getPackageName()));
         try {
@@ -72,6 +72,26 @@ public class UpdateInstallerPlugin extends Plugin {
             startFromActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
                     Uri.parse("package:" + getContext().getPackageName())));
         } catch (Exception ignored) {
+        }
+    }
+
+    /** true se l'app può già aprire prompt di installazione APK ("installa app sconosciute") */
+    @PluginMethod
+    public void hasInstallPermission(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("granted", Build.VERSION.SDK_INT < Build.VERSION_CODES.O
+                || getContext().getPackageManager().canRequestPackageInstalls());
+        call.resolve(r);
+    }
+
+    /** apre subito la schermata del permesso "installa app sconosciute" (usato dall'UI all'avvio/dall'update) */
+    @PluginMethod
+    public void openInstallPermissionSettings(PluginCall call) {
+        try {
+            goToInstallPermissionSettings();
+            call.resolve();
+        } catch (Exception e) {
+            call.reject("impossibile aprire le impostazioni del permesso: " + e.getMessage());
         }
     }
 
@@ -100,7 +120,7 @@ public class UpdateInstallerPlugin extends Plugin {
             pendingCall = call;
             pendingUrl = url;
             notifyListeners("needsInstallPermission", new JSObject());
-            openInstallPermissionSettings();
+            goToInstallPermissionSettings();
             return; // la call resta in sospeso finché l'utente non torna
         }
         doDownloadAndInstall(call, url);

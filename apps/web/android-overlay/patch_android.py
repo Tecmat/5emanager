@@ -55,6 +55,29 @@ if "uses-feature" not in s:
         s,
         count=1,
     )
+# 1c) deep link: il QR "5ELAN:ws://..." / "5EP2P1:..." scansionato con la fotocamera di
+# sistema apre direttamente l'app (intent-filter VIEW/BROWSABLE sugli scheme, activity launcher)
+if "5elan" not in s:
+    deep = (
+        "\n            <intent-filter>\n"
+        '                <action android:name="android.intent.action.VIEW" />\n'
+        '                <category android:name="android.intent.category.DEFAULT" />\n'
+        '                <category android:name="android.intent.category.BROWSABLE" />\n'
+        '                <data android:scheme="5elan" />\n'
+        '                <data android:scheme="5ELAN" />\n'
+        '                <data android:scheme="5ep2p1" />\n'
+        '                <data android:scheme="5EP2P1" />\n'
+        "            </intent-filter>"
+    )
+    idx = s.find("android.intent.category.LAUNCHER")
+    end = s.find("</intent-filter>", idx) if idx >= 0 else -1
+    if end >= 0:
+        pos = end + len("</intent-filter>")
+        s = s[:pos] + deep + s[pos:]
+    else:
+        m = re.search(r"(<activity[^>]*>)", s)
+        if m:
+            s = s[: m.end()] + deep + s[m.end():]
 manifest.write_text(s)
 
 # 1b) icone app (d20 "candy"): launcher legacy in tutte le density + adaptive icon v26
@@ -108,6 +131,25 @@ for dep in [
             g = g.replace("dependencies {", "dependencies {\n    " + dep, 1)
         else:
             g += "\ndependencies {\n    " + dep + "\n}\n"
+
+# 2c) versionName/versionCode = versione dell'app (apps/web/package.json): le impostazioni
+# di sistema Android devono mostrare la build corretta (non il default "1.0" del template)
+import json as _json
+_web_pkg = _json.loads((overlay.parent / "package.json").read_text())
+_ver = str(_web_pkg.get("version", "0.1.0"))
+try:
+    _parts = _ver.split(".")
+    _vcode = int(_parts[0]) * 10000 + int(_parts[1]) * 100 + int(_parts[2] if len(_parts) > 2 else 0)
+except Exception:
+    _vcode = 1
+if "versionCode" in g:
+    g = re.sub(r"versionCode\s*=?\s*\d+", f"versionCode {_vcode}", g, count=1)
+elif "defaultConfig" in g:
+    g = re.sub(r"(defaultConfig\s*\{)", r"\1\n        versionCode " + str(_vcode), g, count=1)
+if "versionName" in g:
+    g = re.sub(r'versionName\s+"[^"]*"', f'versionName "{_ver}"', g, count=1)
+elif "defaultConfig" in g:
+    g = re.sub(r"(defaultConfig\s*\{)", r'\1\n        versionName "' + _ver + '"', g, count=1)
 gradle.write_text(g)
 
 # 3) registra i plugin in MainActivity
@@ -135,4 +177,4 @@ for pl in plugins:
             )
 ma.write_text(t)
 
-print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi")
+print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi + deep-link 5elan/5ep2p1 + version " + _ver)
