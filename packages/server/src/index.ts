@@ -25,18 +25,24 @@ import {
 } from './campaign.js';
 import {
   accountCharacters,
+  accountRole,
+  accountSavedP2PCampaigns,
   approveAccount,
   createSession,
   deleteAccount,
   deleteAccountCharacter,
+  deleteAccountP2PCampaign,
   getAccount,
   listPending,
   loadAccountsFile,
   loginAccount,
   requestAccount,
+  resetAccountPassword,
   rejectAccount,
   saveAccountCharacter,
+  saveAccountP2PCampaign,
   sessionUsername,
+  setAccountRole,
 } from './accounts.js';
 import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
@@ -203,6 +209,7 @@ function sendAdminState(ws: WebSocket): void {
     campaigns: listCampaignsDetailed(),
     accounts: accounts.map((a) => ({
       username: a.username,
+      role: accountRole(a.username) ?? 'user',
       characters: Object.keys(a.characters).length,
       createdAt: a.createdAt,
     })),
@@ -254,6 +261,8 @@ function handleMessage(conn: Conn, raw: string): void {
     }
     // relay della richiesta con nome/password: in modalità relay (senza WebRTC) l'host risponde direttamente via p2pData
     p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    // ack al giocatore: la richiesta è arrivata ed è stata inoltrata all'host
+    send(conn.ws, { t: 'p2pJoinSent' });
     return;
   }
   if (msg.t === 'p2pAnnounceCode') {
@@ -288,6 +297,7 @@ function handleMessage(conn: Conn, raw: string): void {
     // risolvi il codice in hostId per il client (serve al trasporto relay) e relay la richiesta
     send(conn.ws, { t: 'p2pCodeHost', hostId: host.id, name: p2pHosts.get(host.id)?.name });
     p2pRelay(conn, host.id, { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    send(conn.ws, { t: 'p2pJoinSent' });
     return;
   }
   if (msg.t === 'p2pData') {
@@ -320,7 +330,9 @@ function handleMessage(conn: Conn, raw: string): void {
     try {
       const acc = loginAccount(msg.username.trim(), msg.password);
       conn.token = createSession(acc.username);
-      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username) });
+      // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
+      if (accountRole(acc.username) === 'admin') conn.admin = true;
+      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username) });
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -337,7 +349,7 @@ function handleMessage(conn: Conn, raw: string): void {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminBroadcast') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminResetPassword' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -361,6 +373,38 @@ function handleMessage(conn: Conn, raw: string): void {
       if (msg.t === 'adminApproveAccount') approveAccount(msg.username);
       if (msg.t === 'adminRejectAccount') rejectAccount(msg.username);
       if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
+      if (msg.t === 'adminSetRole') setAccountRole(msg.username, msg.role === 'admin' ? 'admin' : 'user');
+      if (msg.t === 'adminResetPassword') resetAccountPassword(msg.username, msg.password);
+      if (msg.t === 'adminCampaignDetail') {
+        const c = campaigns.get(msg.id) ?? loadCampaign(msg.id);
+        if (!c) throw new Error('Campagna non trovata: ' + msg.id);
+        send(conn.ws, {
+          t: 'adminCampaign',
+          id: c.id,
+          name: c.name,
+          players: c.players,
+          characters: Object.keys(c.characters).length,
+          inCombat: !!c.combat,
+          createdAt: c.createdAt,
+          updatedAt: c.updatedAt,
+        });
+      }
+      if (msg.t === 'adminKickPlayer') {
+        const c = campaigns.get(msg.campaignId) ?? loadCampaign(msg.campaignId);
+        if (!c) throw new Error('Campagna non trovata: ' + msg.campaignId);
+        const kickCampaignId = msg.campaignId;
+        const kickPlayerId = msg.playerId;
+        const victim = [...conns].find((x) => x.campaignId === kickCampaignId && x.playerId === kickPlayerId);
+        if (victim) {
+          send(victim.ws, { t: 'kicked' });
+          victim.campaignId = undefined;
+          victim.playerId = undefined;
+          try { victim.ws.close(); } catch { /* già chiusa */ }
+        }
+        const next = removePlayer(c, kickPlayerId);
+        campaigns.set(next.id, next);
+        broadcast(next);
+      }
       if (msg.t === 'adminBroadcast') {
         // messaggio "notice" a tutti i client connessi (utile per avvisare di manutenzioni/aggiornamenti)
         const notice: ServerMessage = { t: 'notice', message: '[admin] ' + msg.message };
@@ -427,7 +471,7 @@ function handleMessage(conn: Conn, raw: string): void {
   }
 
   if (msg.t === 'action') {
-    if (msg.action.kind === 'saveCharacter' || msg.action.kind === 'deleteCharacter') {
+    if (msg.action.kind === 'saveCharacter' || msg.action.kind === 'deleteCharacter' || msg.action.kind === 'saveP2PCampaign' || msg.action.kind === 'deleteP2PCampaign') {
       const token = conn.token;
       const username = token ? sessionUsername(token) : undefined;
       if (!token || !username) {
@@ -436,12 +480,14 @@ function handleMessage(conn: Conn, raw: string): void {
       }
       try {
         if (msg.action.kind === 'saveCharacter') saveAccountCharacter(username, msg.action.character);
-        else deleteAccountCharacter(username, msg.action.characterId);
+        else if (msg.action.kind === 'deleteCharacter') deleteAccountCharacter(username, msg.action.characterId);
+        else if (msg.action.kind === 'saveP2PCampaign') saveAccountP2PCampaign(username, msg.action.saved);
+        else deleteAccountP2PCampaign(username, msg.action.id);
       } catch (e) {
         send(conn.ws, { t: 'error', message: (e as Error).message });
         return;
       }
-      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username) });
+      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username) });
       return;
     }
     if (!conn.campaignId || !conn.playerId) {
@@ -476,13 +522,24 @@ function handleMessage(conn: Conn, raw: string): void {
       return;
     }
     const reg = campaignRegistry(c);
-    const [next, err] = applyAction(c, conn.playerId, reg, msg.action);
+    const action = msg.action;
+    const [next, err] = applyAction(c, conn.playerId, reg, action);
     if (err) {
       send(conn.ws, { t: 'error', message: err });
       return;
     }
     campaigns.set(next.id, next);
     broadcast(next);
+    // kick: disconnetti subito il giocatore espulso
+    if (action.kind === 'kickPlayer') {
+      const victim = [...conns].find((x) => x.campaignId === next.id && x.playerId === action.playerId);
+      if (victim) {
+        send(victim.ws, { t: 'kicked' });
+        victim.campaignId = undefined;
+        victim.playerId = undefined;
+        try { victim.ws.close(); } catch { /* già chiusa */ }
+      }
+    }
   }
 }
 

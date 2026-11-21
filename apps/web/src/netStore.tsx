@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
-import type { Campaign, Character, PlayerInfo } from '@dnd5e/core';
+import type { Campaign, Character, PlayerInfo, SavedCampaignSnapshot } from '@dnd5e/core';
 import { NetClient, defaultWsUrl } from './net.js';
 
 // i tipi campagna/giocatore vivono nel core (condivisi con server e host P2P)
@@ -15,6 +15,8 @@ export interface AuthState {
   token: string;
   username: string;
   characters: Character[];
+  /** campagne P2P salvate sull'account e sincronizzate col server */
+  savedCampaigns: SavedCampaignSnapshot[];
 }
 
 export type PingState =
@@ -62,6 +64,7 @@ interface NetCtx {
   error: string;
   setError: (e: string) => void;
   notice: string;
+  setNotice: (n: string) => void;
   pingState: PingState;
   campaignList: { id: string; name: string; players: number }[];
   url: string;
@@ -147,8 +150,17 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'campaigns') {
       setCampaignList(m.list);
     } else if (m.t === 'auth') {
-      setAuth({ token: m.token, username: m.username, characters: m.characters });
+      setAuth({ token: m.token, username: m.username, characters: m.characters, savedCampaigns: m.savedCampaigns ?? [] });
       setLastUsername(m.username);
+    } else if (m.t === 'kicked') {
+      // espulso dal master (campagna server) o dall'admin: chiudi tutto
+      setConn({ phase: 'offline' });
+      setError('Sei stato espulso dalla campagna (dal master o dall\'admin).');
+      try { netRef.current?.close(); } catch { /* ignora */ }
+      netRef.current = null;
+    } else if (m.t === 'joinPending' || m.t === 'p2pJoinSent') {
+      // la richiesta di join P2P è arrivata all'host: ora si aspetta il master
+      setNotice('📨 Richiesta ricevuta dall\'host — in attesa che il master ti accetti…');
     } else if (m.t === 'campaignDeleted') {
       setConn({ phase: 'offline' });
       setError('La campagna è stata eliminata (dal master o dall\'admin).');
@@ -277,7 +289,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   const value: NetCtx = {
-    conn, auth, error, setError, notice, pingState, campaignList,
+    conn, auth, error, setError, notice, setNotice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     send, act, setConn, handleNetMessage: (m: any) => handleMsg(m), setP2PTransport,
     connect, disconnect, checkConnection, refreshCampaignList,

@@ -1,4 +1,4 @@
-import type { Campaign, Character, ClientAction, PlayerInfo, SrdData } from '@dnd5e/core';
+import type { Campaign, Character, ClientAction, PlayerInfo, SavedCampaignSnapshot, SrdData } from '@dnd5e/core';
 
 export type { Campaign, PlayerInfo, ClientAction } from '@dnd5e/core';
 
@@ -21,6 +21,10 @@ export type ClientMessage =
   | { t: 'adminRejectAccount'; username: string }
   | { t: 'adminAccountDetail'; username: string }
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
+  | { t: 'adminSetRole'; username: string; role: 'admin' | 'user' }
+  | { t: 'adminResetPassword'; username: string; password: string }
+  | { t: 'adminCampaignDetail'; id: string }
+  | { t: 'adminKickPlayer'; campaignId: string; playerId: string }
   | { t: 'adminBroadcast'; message: string }
   | { t: 'action'; action: ClientAction }
   // discovery P2P: gli host P2P si annunciano qui (relay di codici SDP e, se WebRTC manca, di tutto il traffico)
@@ -39,16 +43,21 @@ export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
   | { t: 'campaigns'; list: { id: string; name: string; players: number }[] }
   | { t: 'state'; campaign: Campaign }
-  | { t: 'auth'; token: string; username: string; characters: Character[] }
+  | { t: 'auth'; token: string; username: string; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[] }
   | { t: 'pong'; id: string; serverTime: number }
   | {
       t: 'adminState';
       campaigns: { id: string; name: string; players: number; inCombat: boolean; createdAt: string; updatedAt: string }[];
-      accounts: { username: string; characters: number; createdAt: string }[];
+      accounts: { username: string; role: 'admin' | 'user'; characters: number; createdAt: string }[];
       pending: { username: string; requestedAt: string }[];
       server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; lan: string[] };
     }
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
+  | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }
+  | { t: 'kicked' }
+  | { t: 'joinPending' }
+  /** ack al giocatore: la sua richiesta di join è stata inoltrata all'host (è in attesa di approvazione) */
+  | { t: 'p2pJoinSent' }
   | { t: 'notice'; message: string }
   | { t: 'campaignDeleted'; id: string }
   | { t: 'p2pHosts'; hosts: { id: string; name: string; ip?: string }[] }

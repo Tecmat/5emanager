@@ -83,6 +83,13 @@ che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codi
   Al ripristino: **stesso id** (resta una sola voce nell'elenco), solo il master, niente combattimento in corso; restano note, tesoro
   e inventario di gruppo. Le schede restano salvate localmente su ogni dispositivo.
 - La password della campagna P2P è confrontata in memoria dall'host (campagna effimera) ed è **facoltativa**: se vuota non viene richiesta al join.
+- **Gestione dedicata**: la tab **💾 Campagne P2P** elenca gli snapshot salvati in locale (riprendi /
+  rinomina / **elimina con conferma** / ☁️ sync sull'account del server remoto). "Riprendi" torna in
+  Campagna e precompila il form dell'host (la password è facoltativa e non viene salvata).
+- Il master può **espellere un giocatore** (pannello master → 🚫 Espelli, azione `kickPlayer`): il
+  giocatore riceve `kicked` e viene disconnesso subito (funziona su tutti i trasporti: WebRTC, relay, beacon LAN).
+- **Avvisi sul join**: inviando la richiesta vedi "📨 inviata…"; quando arriva davvero all'host
+  (`joinPending` / `p2pJoinSent`) appare "✅ ricevuta — in attesa che il master ti accetti".
 
 ## Host LAN "stile Soul Knight" (v0.1.27+) — niente server, niente codici
 

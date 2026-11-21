@@ -13,6 +13,11 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Esporta PDF senza pop-up** (v0.1.54): `printSheet` stampa da iframe nascosto invece di `window.open` (bloccato su WebView Android / WebKitGTK Tauri) — `pdf.ts`
 - ✅ **Scansione QR con preview** (v0.1.54): overlay fotocamera in-app che si chiude da solo al riconoscimento; fallback sull'app fotocamera di sistema (`input capture="environment"`) se BarcodeDetector/getUserMedia mancano — `qr.ts`
 - ✅ **Fix plugin Android invisibili (UpdateInstaller/LanBeacon)** (v0.1.54): il template Capacitor 7 genera `MainActivity` senza `onCreate`, quindi il fallback della patch registrava i plugin DOPO `super.onCreate` (invisibili alla WebView → "plugin mancante"); ora registrati prima + assert che blocca la CI se l'ordine è sbagliato — `patch_android.py` (testato su template finto, idempotente)
+- ✅ **Tab dedicata "💾 Campagne P2P"** (v0.1.55): gestione snapshot (riprendi via segnale cross-tab / rinomina / **elimina con conferma** / ☁️ sync sull'account server) — `P2PCampaignsTab.tsx`, `p2pSaved.ts`
+- ✅ **Kick giocatore** (v0.1.55): `kickPlayer` nel core (solo master, no self-kick) + disconnessione immediata su server e host P2P (RTC/relay/LAN) + 🚫 nel pannello master e nel `/admin` — test core + server
+- ✅ **Avvisi richiesta join P2P** (v0.1.55): "📨 inviata" all'invio, ack `joinPending`/`p2pJoinSent` quando arriva all'host → "✅ in attesa del master"
+- ✅ **Ruoli admin sul server** (v0.1.55): `role` sugli account (v4, `DND5E_ADMIN_USER`, primo account admin), `adminSetRole`/`adminResetPassword`/`adminCampaignDetail`/`adminKickPlayer`, login admin → pannello senza token; UI in `admin.html`; test `roles.test.ts`
+- ✅ **Sync remoto first-class** (v0.1.55): libreria schede in Home (☁️ salva tutte / scarica tutte / per-scheda) + campagne P2P sull'account (`saveP2PCampaign`/`deleteP2PCampaign`)
 - **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
 - **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
 - **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)

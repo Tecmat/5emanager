@@ -54,6 +54,15 @@ export interface Campaign {
 
 const ZERO_CURRENCY: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
 
+/** snapshot di una campagna P2P salvata in locale dall'host (sincronizzabile sull'account remoto) */
+export interface SavedCampaignSnapshot {
+  id: string;
+  name: string;
+  savedAt: string;
+  /** snapshot della campagna con passwordHash azzerato (la password non si salva mai) */
+  campaign: Campaign;
+}
+
 /** riempe i campi mancanti delle campagne salvate prima della migrazione (group inventory, note...) */
 export function migrateCampaign(c: Campaign): Campaign {
   return {
@@ -108,6 +117,9 @@ export type ClientAction =
   | { kind: 'endCombat' }
   | { kind: 'addCustom'; data: Partial<SrdData> }
   | { kind: 'leave' }
+  | { kind: 'kickPlayer'; playerId: string }
+  | { kind: 'saveP2PCampaign'; saved: SavedCampaignSnapshot }
+  | { kind: 'deleteP2PCampaign'; id: string }
   | { kind: 'saveCharacter'; character: Character }
   | { kind: 'deleteCharacter'; characterId: string }
   | { kind: 'useCharacter'; characterId: string }
@@ -148,6 +160,15 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
     case 'leave':
       c.players = c.players.filter((x) => x.id !== playerId);
       return [c];
+
+    case 'kickPlayer': {
+      if (!isMaster) return [c, 'Solo il master può espellere un giocatore'];
+      if (action.playerId === playerId) return [c, 'Non puoi espellere te stesso (usa "Esci")'];
+      if (!c.players.some((p) => p.id === action.playerId)) return [c, 'Giocatore non trovato'];
+      c.players = c.players.filter((x) => x.id !== action.playerId);
+      delete c.characters[action.playerId];
+      return [c];
+    }
 
     case 'addCustom': {
       if (!isMaster) return [c, 'Solo il master può aggiungere contenuti custom'];

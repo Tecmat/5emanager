@@ -1,5 +1,6 @@
 import { totalLevel, type Character } from '@dnd5e/core';
 import { useStore, isCampaignSheetId, campaignSheetId } from './store.js';
+import { useNet } from './netStore.js';
 import Icon from './icons.js';
 
 /**
@@ -7,7 +8,8 @@ import Icon from './icons.js';
  * nuova scheda e accesso rapido al multiplayer ("Connetti online").
  */
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
-  const { sheets, char, campaignMeta, reg, t, tf } = useStore();
+  const { sheets, char, campaignMeta, reg, t, tf, importSheets } = useStore();
+  const { auth, act } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
   const campaigns = sheets.filter((s) => isCampaignSheetId(s.id));
@@ -81,6 +83,44 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           </div>
         </>
       )}
+
+      <div className="card">
+        <h3 className="home-h"><Icon name="globe" candy size={15} /> {auth ? tf('home.remoteTitle', '☁️ Libreria remoto — account {u} ({n} schede)', { u: auth.username, n: auth.characters.length }) : t('home.remoteTitleNoAuth', '☁️ Libreria schede sul server')}</h3>
+        {!auth ? (
+          <div className="muted">{t('home.remoteHint', 'Login dall\'account (tab 🗺️ Campagna → Server → Account) per sincronizzare le schede sul server e ritrovarle su altri dispositivi.')}</div>
+        ) : (
+          <>
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button disabled={!local.length} onClick={() => { for (const c of local) act({ kind: 'saveCharacter', character: c }); }} title={t('home.remoteSaveAllTitle', 'Carica tutte le schede locali sulla libreria dell\'account')}>
+                {t('home.remoteSaveAll', '💾 Salva tutte le locali sull\'account')}
+              </button>
+              <button disabled={!auth.characters.length} onClick={() => importSheets(auth.characters)} title={t('home.remoteDownloadAllTitle', 'Scarica tutta la libreria remoto in locale (merge per id)')}>
+                {t('home.remoteDownloadAll', '⬇️ Scarica tutta la libreria in locale')}
+              </button>
+            </div>
+            {auth.characters.length === 0 ? (
+              <div className="muted">{t('home.remoteEmpty', 'Nessuna scheda sull\'account: salvane una dalla campagna (💾 Salva nella libreria) o premi "Salva tutte le locali".')}</div>
+            ) : (
+              auth.characters.map((c) => (
+                <div key={c.id} className="row" style={{ justifyContent: 'space-between', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+                  <span><b>{c.name}</b> <span className="muted">(liv {totalLevel(c)})</span></span>
+                  <span className="row">
+                    <button onClick={() => importSheets([c])} title={t('home.remoteDownloadTitle', 'Importa questa scheda in locale')}>{t('home.remoteDownload', '⬇️ locale')}</button>
+                    <button
+                      className="danger"
+                      aria-label={t('home.remoteDelete', 'Elimina dall\'account')}
+                      title={t('home.remoteDelete', 'Elimina dall\'account')}
+                      onClick={() => { if (window.confirm(tf('home.remoteDeleteConfirm', 'Eliminare "{name}" dalla libreria dell\'account?', { name: c.name }))) act({ kind: 'deleteCharacter', characterId: c.id }); }}
+                    >
+                      <Icon name="x" size={13} />
+                    </button>
+                  </span>
+                </div>
+              ))
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
