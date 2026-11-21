@@ -276,16 +276,8 @@ export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: Down
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
   const urls = apkDownloadUrls(info);
   if (urls.length === 0) throw new Error('Nessun URL APK disponibile per la v' + info.latest);
-  // build vecchia senza plugin nativo: niente auto-installazione, ma messaggio chiaro + link diretto (no pop-up)
-  let pluginOk = true;
-  try {
-    pluginOk = Capacitor.isPluginAvailable('UpdateInstaller');
-  } catch {
-    pluginOk = true;
-  }
-  if (!pluginOk) {
-    throw new Error('Auto-installazione non disponibile in questa build (plugin UpdateInstaller mancante): scarica e installa a mano l\'APK da ' + urls[0]);
-  }
+  // nota: NON usare isPluginAvailable come pre-check (falso negativo sui plugin custom senza
+  // implementazione web): si prova la chiamata e si interpreta l'errore
   let removeProg: (() => void) | undefined;
   let removePerm: (() => void) | undefined;
   try {
@@ -308,6 +300,10 @@ export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: Down
         const m = errMsg(e);
         if (/installa app|permesso/i.test(m)) {
           throw new Error('Permesso "Installa app sconosciute" mancante: abilitalo per 5e Manager nelle impostazioni che si sono aperte, poi premi di nuovo "Scarica e installa".');
+        }
+        if (/not implemented|not available|plugin/i.test(m)) {
+          // build vecchia senza plugin nativo: messaggio chiaro + link diretto (no pop-up)
+          throw new Error('Auto-installazione non disponibile in questa build (plugin UpdateInstaller mancante): scarica e installa a mano l\'APK da ' + urls[0]);
         }
         lastErr = m;
         if (!/HTTP 404|\b404\b|not found/i.test(m)) throw new Error(m); // rete/permessi: non ha senso ritentare

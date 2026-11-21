@@ -167,9 +167,12 @@ for pl in plugins:
         else:
             t = re.sub(r"(package [^;]+;)", r"\1\n" + imp, t, count=1)
         reg = "registerPlugin(" + pl + ".class);"
+        # IMPORTANTE: registerPlugin() va chiamato PRIMA di super.onCreate(): il bridge costruisce
+        # PluginHeaders durante super.onCreate, e i plugin custom registrati dopo non sono visibili
+        # alla WebView (isPluginAvailable falso, chiamate "not implemented")
         if "super.onCreate(savedInstanceState);" in t:
             t = t.replace("super.onCreate(savedInstanceState);",
-                          "super.onCreate(savedInstanceState);\n        " + reg, 1)
+                          "        " + reg + "\n        super.onCreate(savedInstanceState);", 1)
         else:
             t = re.sub(
                 r"(public class MainActivity extends BridgeActivity \{)",
