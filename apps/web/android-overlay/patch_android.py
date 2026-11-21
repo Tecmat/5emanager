@@ -59,6 +59,12 @@ for dpi in ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]:
     shutil.copy(icons / f"ic_launcher-{dpi}.png", dst / "ic_launcher_round.png")
 drawable = res / "drawable"
 drawable.mkdir(parents=True, exist_ok=True)
+# il template capacitor ha già ic_launcher_foreground.xml / ic_launcher_background.xml in drawable:
+# li rimuoviamo così i nostri PNG non vanno in conflitto (Duplicate resources)
+for old in ["ic_launcher_foreground.xml", "ic_launcher_background.xml"]:
+    p = drawable / old
+    if p.exists():
+        p.unlink()
 shutil.copy(icons / "ic_launcher_foreground.png", drawable / "ic_launcher_foreground.png")
 shutil.copy(icons / "ic_launcher_background.png", drawable / "ic_launcher_background.png")
 v26 = res / "mipmap-anydpi-v26"
