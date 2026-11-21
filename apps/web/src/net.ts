@@ -59,9 +59,14 @@ export class NetClient {
   }
 }
 
-/** true se l'host di location e' "locale" (localhost, 127.0.0.1, ::1, *.localhost es. tauri.localhost) */
+/** true se l'host e' "locale" (localhost, 127.0.0.1, ::1, *.localhost es. tauri.localhost), con o senza porta */
 export function isLocalhostHost(host: string): boolean {
-  return /(^|\.)localhost$|^127\.0\.0\.1$|^\[?::1\]?$/.test(host.trim().toLowerCase());
+  return /(^|\.)localhost(:\d+)?$|^127\.0\.0\.1(:\d+)?$|^(\[::1\]|::1)(:\d+)?$/.test(host.trim().toLowerCase());
+}
+
+/** URL WebSocket speculare alla pagina: wss:// se la pagina e' in https (es. dietro nginx), altrimenti ws:// */
+export function wsUrlFromLocation(loc: { protocol: string; host: string }): string {
+  return `${loc.protocol === 'https:' ? 'wss' : 'ws'}://${loc.host}`;
 }
 
 /**
@@ -71,7 +76,7 @@ export function isLocalhostHost(host: string): boolean {
  */
 export const defaultWsUrl = (): string => {
   if (typeof location !== 'undefined' && location.host && location.port !== '5173' && !isLocalhostHost(location.host)) {
-    return `ws://${location.host}`;
+    return wsUrlFromLocation(location);
   }
   try {
     if (Capacitor.isNativePlatform()) return '';
