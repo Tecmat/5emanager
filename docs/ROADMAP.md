@@ -8,7 +8,7 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 `packages/server` (relay/announce), `data-srd` (dati).
 
 ### Fase 1 — robustezza P2P + polish UX (alto valore, basso costo)
-- **Persistenza campagna sull'host**: snapshot automatico in IndexedDB + "Riprendi campagna" alla riapertura (oggi se l'host chiude l'app la campagna muore) — `idb.ts`/`storage.ts` + `CampaignTab`
+- ✅ **Persistenza campagne P2P sull'host** (v0.1.53): snapshot automatico in IndexedDB (max 20, **senza password**) + lista "Riprendi / Elimina" nella tab Campagna; `resumeCampaign` nel core con test, `existing` negli host P2P (RTC/relay/LAN) — `p2pSaved.ts`, `p2p.ts`, `CampaignTab.tsx`
 - **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
 - **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
 - **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)

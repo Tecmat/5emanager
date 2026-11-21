@@ -18,6 +18,7 @@ import {
   type Character,
   type Currency,
   type ItemRarity,
+  type Campaign,
   type Registry,
   type TemplateShape,
 } from '@dnd5e/core';
@@ -31,6 +32,7 @@ import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
 import { LAN_BEACON_PORT, beaconStart, beaconSetCode, detectLocalIp, detectLocalIps, lanBeaconSupported } from './lanBeacon.js';
+import { listSavedP2P, getSavedP2P, saveP2PCampaign, deleteSavedP2P, type SavedP2PCampaign } from './p2pSaved.js';
 import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
@@ -185,6 +187,35 @@ export default function CampaignTab() {
   const discHostIdRef = useRef('');
   const announceTimerRef = useRef<number | undefined>(undefined);
   const discListTimerRef = useRef<number | undefined>(undefined);
+  const [savedP2P, setSavedP2P] = useState<SavedP2PCampaign[]>([]);
+  const [resumePick, setResumePick] = useState<SavedP2PCampaign | null>(null);
+  const persistTimerRef = useRef<number | undefined>(undefined);
+
+  // carica le campagne P2P salvate in locale (host); allo smontare salva lo snapshot residuo
+  useEffect(() => {
+    void listSavedP2P().then(setSavedP2P);
+    return () => {
+      if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
+      if (hostRef.current) void saveP2PCampaign(hostRef.current.campaign);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const reloadSaved = () => { void listSavedP2P().then(setSavedP2P); };
+  /** snapshot immediato della campagna dell'host (senza password) */
+  const persistHostNow = () => {
+    const h = hostRef.current;
+    if (!h) return;
+    void saveP2PCampaign(h.campaign).then(reloadSaved);
+  };
+  /** debounce 3 s: lo stato cambia a ogni azione, non serve scrivere a ogni colpo */
+  const schedulePersist = () => {
+    if (persistTimerRef.current) window.clearTimeout(persistTimerRef.current);
+    persistTimerRef.current = window.setTimeout(() => {
+      persistTimerRef.current = undefined;
+      persistHostNow();
+    }, 3000);
+  };
 
   const stopDiscovery = () => {
     window.clearInterval(announceTimerRef.current);
@@ -301,6 +332,8 @@ export default function CampaignTab() {
   /** smonta host/transport P2P (usato da "Esci" e quando la campagna viene eliminata) */
   const teardownP2P = () => {
     stopDiscovery();
+    if (persistTimerRef.current) { window.clearTimeout(persistTimerRef.current); persistTimerRef.current = undefined; }
+    persistHostNow(); // snapshot finale della campagna
     if (hostRef.current && 'close' in hostRef.current) (hostRef.current as P2PLanHost).close();
     hostRef.current = null;
     setHostMode('rtc');
@@ -327,7 +360,10 @@ export default function CampaignTab() {
 
   const hostCb = {
     onMessage: () => {},
-    onState: (c: any) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
+    onState: (c: any) => {
+      setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev));
+      schedulePersist();
+    },
     onPeerJoined: () => {},
     onPeerLeft: () => {},
     onJoinPending: (req: { from: string; name: string }) => setPendingJoins((p) => (p.some((x) => x.from === req.from) ? p : [...p, req])),
@@ -338,12 +374,39 @@ export default function CampaignTab() {
     },
   };
 
+  /** se l'utente ha scelto "Riprendi" da una campagna salvata, carica lo snapshot (serve la password: non è salvata) */
+  const resolveExisting = async (): Promise<{ existing?: Campaign; abort?: boolean }> => {
+    if (!resumePick) return {};
+    const saved = await getSavedP2P(resumePick.id);
+    if (!saved) {
+      setResumePick(null);
+      setError(t('cg.p2pSavedMissing', 'Campagna salvata non trovata (forse eliminata).'));
+      return { abort: true };
+    }
+    if (!password.trim()) {
+      setError(t('cg.p2pResumeNeedPw', 'Per riprendere la campagna reinserisci la password: non viene salvata sul dispositivo.'));
+      return { abort: true };
+    }
+    setCampaignName(saved.name);
+    return { existing: saved.campaign };
+  };
+
+  const pickResume = (s: SavedP2PCampaign) => {
+    setResumePick(s);
+    setCampaignName(s.name);
+    setPassword('');
+    setError('');
+  };
+
   const startP2PHost = async () => {
     setError('');
+    const res = await resolveExisting();
+    if (res.abort) return;
+    const existing = res.existing;
     // su app nativa (AppImage/desktop/APK) il beacon LAN è il trasporto migliore:
     // WebSocket diretto, funziona anche senza WebRTC (WebKitGTK) e senza server
     if (lanBeaconSupported()) {
-      await startLanHost();
+      await startLanHost(existing);
       // se spuntato "annunciati su un server", l'host LAN si annuncia anche lì (codice breve per chi non è in LAN)
       if (announce) void startAnnounce(undefined, true);
       return;
@@ -360,10 +423,12 @@ export default function CampaignTab() {
         const disc = new P2PDiscovery();
         discRef.current = disc;
         await disc.connect(u);
-        const host = new P2PRelayHost({ campaignName, password, masterName: name || 'Master', reg, disc, cb: hostCb });
+        const host = new P2PRelayHost({ campaignName, password, masterName: name || 'Master', reg, disc, cb: hostCb, existing });
         hostRef.current = host;
         setHostMode('relay');
         setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+        setResumePick(null);
+        persistHostNow();
         setP2PTransport((m: any) => {
           if (m?.t === 'action') host.applyAction(host.masterId, m.action);
         });
@@ -386,11 +451,13 @@ export default function CampaignTab() {
     }
     const host = new P2PHost({
       campaignName, password, masterName: name || 'Master', reg,
-      cb: hostCb,
+      cb: hostCb, existing,
     });
     hostRef.current = host;
     setHostMode('rtc');
     setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+    setResumePick(null);
+    persistHostNow();
     setP2PTransport((m: any) => {
       if (m?.t === 'action') host.applyAction(host.masterId, m.action);
     });
@@ -402,8 +469,13 @@ export default function CampaignTab() {
    * diventa la campagna: gli altri, sulla stessa WiFi/hotspot, lo trovano con
    * "Scansiona rete" e si uniscono con un tap. Niente server, niente codici.
    */
-  const startLanHost = async () => {
+  const startLanHost = async (existing?: Campaign) => {
     setError('');
+    if (!existing) {
+      const r = await resolveExisting();
+      if (r.abort) return;
+      existing = r.existing;
+    }
     if (!lanBeaconSupported()) {
       setError(t('cg.lanNoNative', 'Beacon LAN disponibile solo nell\'app (AppImage/desktop/Android): dal browser usa la modalità server o il codice invito.'));
       return;
@@ -416,10 +488,12 @@ export default function CampaignTab() {
       setInviteCode(code);
       await beaconStart(LAN_BEACON_PORT, nm, code);
       void beaconSetCode(code);
-      const host = new P2PLanHost({ campaignName: nm, password, masterName: name || 'Master', reg, cb: hostCb });
+      const host = new P2PLanHost({ campaignName: nm, password, masterName: name || 'Master', reg, cb: hostCb, existing });
       hostRef.current = host;
       setHostMode('lan');
       setConn({ phase: 'online', campaign: host.campaign, you: host.campaign.players[0] });
+      setResumePick(null);
+      persistHostNow();
       setP2PTransport((m: any) => {
         if (m?.t === 'action') host.applyAction(host.masterId, m.action);
       });
@@ -866,7 +940,7 @@ export default function CampaignTab() {
                 <div className="row" style={{ marginTop: 10 }}>
                   <button className="primary" onClick={startP2PHost}>{t('cg.startHost', 'Avvia host P2P')}</button>
                   {lanBeaconSupported() && (
-                    <button className="primary" onClick={startLanHost} title={t('cg.hostLanTitle', 'Questo dispositivo diventa la campagna: gli altri sulla stessa rete ti trovano con un tasto e si uniscono con un tap')}>
+                    <button className="primary" onClick={() => void startLanHost()} title={t('cg.hostLanTitle', 'Questo dispositivo diventa la campagna: gli altri sulla stessa rete ti trovano con un tasto e si uniscono con un tap')}>
                       <Icon name="monitor" candy size={15} /> {t('cg.hostLan', 'Ospita su questa rete (LAN)')}
                     </button>
                   )}
@@ -874,6 +948,39 @@ export default function CampaignTab() {
                 <div className="muted" style={{ marginTop: 8 }}>
                   {t('cg.p2pHostHint', "Nessun server né dominio: tu sei l'host (anche da smartphone con hotspot). Con \"Ospita su questa rete\" gli amici sulla stessa WiFi ti vedono subito (un tap e sono dentro, li accetti tu); altrimenti usi il codice invito (testo/QR) qui sotto.")}
                 </div>
+                {resumePick && (
+                  <div className="ok" style={{ marginTop: 8 }}>
+                    ▶️ {tf('cg.p2pResumePicked', 'Riprendi "{name}": reinserisci la password e avvia l\'host (la password non viene salvata).', { name: resumePick.name })}
+                  </div>
+                )}
+                {savedP2P.length > 0 && (
+                  <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
+                    <b>💾 {t('cg.p2pSavedTitle', 'Campagne P2P salvate su questo dispositivo')}</b>
+                    <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                      {t('cg.p2pSavedHint', 'Snapshot automatico mentre fai da host (senza password). "Riprendi" continua dall\'ultima sessione: restano note, tesoro e inventario di gruppo; i giocatori rientrano e ricaricano la loro scheda.')}
+                    </div>
+                    {savedP2P.map((s) => (
+                      <div key={s.id} className="row" style={{ marginTop: 6, justifyContent: 'space-between', gap: 8 }}>
+                        <span style={{ minWidth: 0 }}>
+                          <b>{s.name}</b>
+                          <div className="muted" style={{ fontSize: 11 }}>{new Date(s.savedAt).toLocaleString()}</div>
+                        </span>
+                        <span className="row" style={{ flexShrink: 0 }}>
+                          <button className="primary" onClick={() => pickResume(s)} title={t('cg.p2pResumeTitle', 'Riprendi questa campagna dall\'ultima sessione salvata')}>
+                            <Icon name="play" size={13} /> {t('cg.p2pResume', 'Riprendi')}
+                          </button>
+                          <button
+                            onClick={() => { void deleteSavedP2P(s.id).then(reloadSaved); if (resumePick?.id === s.id) setResumePick(null); }}
+                            title={t('cg.p2pDeleteSaved', 'Elimina dalla memoria locale')}
+                            aria-label={t('cg.p2pDeleteSaved', 'Elimina')}
+                          >
+                            <Icon name="x" size={13} />
+                          </button>
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </>
             )}
             {p2pSub === 'join' && (

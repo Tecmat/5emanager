@@ -1,6 +1,7 @@
 import {
   applyCampaignAction,
   DEFAULT_HOUSE_RULES,
+  resumeCampaign,
   type Campaign,
   type ClientAction,
   type PlayerInfo,
@@ -42,6 +43,38 @@ export function webrtcSupported(): boolean {
 }
 
 const NO_WEBRTC = 'WebRTC non supportato in questo ambiente (RTCPeerConnection mancante — es. AppImage su WebKitGTK): usa la modalità 🌐 server remoto';
+
+/**
+ * costruisce la campagna dell'host: nuova da zero, oppure RIPRESA da uno snapshot
+ * salvato in locale (existing) — vedi resumeCampaign nel core (nuovo id, solo master,
+ * niente schede/combattimento vecchi; la password viene reinserita e non è salvata).
+ */
+function buildCampaign(opts: { campaignName: string; password: string; masterName: string; existing?: Campaign }): { campaign: Campaign; master: PlayerInfo } {
+  const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
+  if (opts.existing) {
+    const c = resumeCampaign(opts.existing, opts.password, master);
+    if (opts.campaignName.trim()) c.name = opts.campaignName.trim();
+    return { campaign: c, master };
+  }
+  return {
+    master,
+    campaign: {
+      id: Math.random().toString(36).slice(2, 10),
+      name: opts.campaignName || 'Campagna P2P',
+      passwordHash: opts.password, // in memoria, confrontata in chiaro (la campagna P2P è effimera)
+      houseRules: { ...DEFAULT_HOUSE_RULES },
+      custom: {},
+      players: [master],
+      characters: {},
+      combat: null,
+      groupInventory: [],
+      groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+      notes: '',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    },
+  };
+}
 
 function b64urlEncode(s: string): string {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -94,25 +127,11 @@ export class P2PHost {
   private cb: HostCallbacks;
   private nextInvite = 0;
 
-  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks }) {
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; existing?: Campaign }) {
     this.reg = opts.reg;
     this.cb = opts.cb;
-    const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
-    this.campaign = {
-      id: Math.random().toString(36).slice(2, 10),
-      name: opts.campaignName || 'Campagna P2P',
-      passwordHash: opts.password, // in memoria, confrontata in chiaro (la campagna P2P è effimera)
-      houseRules: { ...DEFAULT_HOUSE_RULES },
-      custom: {},
-      players: [master],
-      characters: {},
-      combat: null,
-      groupInventory: [],
-      groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-      notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const { campaign, master } = buildCampaign(opts);
+    this.campaign = campaign;
     this.masterId = master.id;
   }
 
@@ -378,27 +397,13 @@ export class P2PRelayHost {
   requireAccept: boolean;
   private pending = new Map<string, string>(); // connId -> name
 
-  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks; requireAccept?: boolean }) {
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks; requireAccept?: boolean; existing?: Campaign }) {
     this.reg = opts.reg;
     this.disc = opts.disc;
     this.cb = opts.cb;
     this.requireAccept = opts.requireAccept ?? true;
-    const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
-    this.campaign = {
-      id: Math.random().toString(36).slice(2, 10),
-      name: opts.campaignName || 'Campagna P2P',
-      passwordHash: opts.password, // in memoria, confrontata in chiaro (campagna effimera)
-      houseRules: { ...DEFAULT_HOUSE_RULES },
-      custom: {},
-      players: [master],
-      characters: {},
-      combat: null,
-      groupInventory: [],
-      groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-      notes: '',
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
+    const { campaign, master } = buildCampaign(opts);
+    this.campaign = campaign;
     this.masterId = master.id;
     this.disc.onJoinRequest = (from, name, password) => {
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
@@ -529,23 +534,8 @@ export class P2PRelayClient {
 
 import { beaconBroadcast, beaconSend, beaconStop, onLanEvt } from './lanBeacon.js';
 
-function makeP2PCampaign(opts: { campaignName: string; password: string; masterName: string }): Campaign {
-  const master: PlayerInfo = { id: 'host-' + Math.random().toString(36).slice(2, 8), name: opts.masterName || 'Master', role: 'master' };
-  return {
-    id: Math.random().toString(36).slice(2, 10),
-    name: opts.campaignName || 'Campagna P2P',
-    passwordHash: opts.password,
-    houseRules: { ...DEFAULT_HOUSE_RULES },
-    custom: {},
-    players: [master],
-    characters: {},
-    combat: null,
-    groupInventory: [],
-    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
-    notes: '',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
+function makeP2PCampaign(opts: { campaignName: string; password: string; masterName: string; existing?: Campaign }): Campaign {
+  return buildCampaign(opts).campaign;
 }
 
 /** HOST lato dispositivo: la campagna vive qui, i giocatori arrivano dal beacon LAN via WS diretto */
@@ -561,7 +551,7 @@ export class P2PLanHost {
   private disc: P2PDiscovery | null = null;
   private relayPeers = new Set<string>();
 
-  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; requireAccept?: boolean }) {
+  constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; requireAccept?: boolean; existing?: Campaign }) {
     this.reg = opts.reg;
     this.cb = opts.cb;
     this.requireAccept = opts.requireAccept ?? true;

@@ -74,6 +74,9 @@ WhatsApp). Su desktop (Tauri) e Android l'host può aprire anche un **beacon LAN
 (porta 3177) e accettare/rifiutare i giocatori con ✅/❌. Flussi completi in
 [docs/P2P.md](docs/P2P.md).
 
+Le campagne che **hosti sono salvate automaticamente in locale** (snapshot senza password,
+max 20): dalla tab 🗺️ Campagna le **riprendi** dalle sessioni scorse o le elimini.
+
 ## Multiplayer (server self-hosted, opzionale)
 
 Il server gira anche **in Docker con docker compose** ([docs/DOCKER.md](docs/DOCKER.md)) — HTTP/LAN oppure HTTPS su Internet con nginx come reverse proxy (certificati tuoi), **direttamente su Android via Termux** ([docs/ANDROID_SERVER.md](docs/ANDROID_SERVER.md)) o su un **server Debian con systemd** ([docs/DEPLOY_DEBIAN.md](docs/DEPLOY_DEBIAN.md)).
@@ -112,4 +115,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 118/118 verdi.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 122/122 verdi.
