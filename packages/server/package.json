@@ -12,6 +12,7 @@
   "dependencies": {
     "@dnd5e/core": "*",
     "@dnd5e/data-srd": "*",
+    "@simplewebauthn/server": "^13.3.3",
     "ws": "^8"
   },
   "devDependencies": {

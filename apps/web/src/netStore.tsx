@@ -27,6 +27,19 @@ export interface TotpSetupMsg {
   backupCodes: string[];
 }
 
+/** passkey registrate sull'account (senza chiave pubblica) */
+export interface PasskeyInfo {
+  id: string;
+  name: string;
+  createdAt: string;
+  deviceType?: string;
+  backedUp?: boolean;
+}
+
+/** WebAuthn funziona solo in secure context (https o localhost) */
+export const passkeySupported: boolean =
+  typeof window !== 'undefined' && window.isSecureContext && typeof PublicKeyCredential !== 'undefined';
+
 export type PingState =
   | { status: 'idle' }
   | { status: 'checking' }
@@ -101,6 +114,12 @@ interface NetCtx {
   setupTotp: () => Promise<void>;
   enableTotp: (code: string) => Promise<void>;
   disableTotp: (password: string) => Promise<void>;
+  /** passkey WebAuthn */
+  passkeys: PasskeyInfo[];
+  passkeyLogin: (username?: string) => Promise<void>;
+  passkeyRegister: () => Promise<void>;
+  refreshPasskeys: () => Promise<void>;
+  removePasskey: (credentialId: string) => Promise<void>;
 }
 
 const Ctx = createContext<NetCtx | null>(null);
@@ -120,6 +139,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>(loadJoined);
   const [totpPending, setTotpPending] = useState<string | null>(null);
   const [totpSetup, setTotpSetup] = useState<TotpSetupMsg | null>(null);
+  const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
+  /** richieste in attesa di una risposta WS di un certo tipo (es. passkeyLoginOptions) */
+  const pendingReq = useRef(new Map<string, { resolve: (m: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>());
   const urlRef = useRef(url);
   const nameRef = useRef(name);
   const lastUsernameRef = useRef(lastUsername);
@@ -159,6 +181,20 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const connectWdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMsg = (m: any, serverUrl?: string) => {
+    const pend = pendingReq.current.get(m.t);
+    if (pend) {
+      pendingReq.current.delete(m.t);
+      clearTimeout(pend.timer);
+      pend.resolve(m);
+    }
+    if (m.t === 'error') {
+      // un errore del server sblocca (e rifiuta) tutte le richieste in attesa
+      for (const [, p] of pendingReq.current) {
+        clearTimeout(p.timer);
+        p.reject(new Error(m.message));
+      }
+      pendingReq.current.clear();
+    }
     if (m.t === 'welcome') {
       if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
       setConn({ phase: 'online', campaign: m.campaign, you: m.you });
@@ -221,6 +257,24 @@ export function NetProvider({ children }: { children: ReactNode }) {
     if (p2pRef.current) p2pRef.current(m);
     else netRef.current?.send(m);
   };
+  /** invia un messaggio e aspetta la risposta WS di tipo `expect` (timeout di default 2 min: le cerimonie WebAuthn chiedono il gesto utente) */
+  const request = (msg: unknown, expect: string, timeoutMs = 120000): Promise<any> =>
+    new Promise((resolve, reject) => {
+      ensureNet()
+        .then((net) => {
+          const timer = setTimeout(() => {
+            pendingReq.current.delete(expect);
+            reject(new Error('Timeout in attesa della risposta del server (' + expect + ')'));
+          }, timeoutMs);
+          pendingReq.current.set(expect, {
+            resolve: (m) => resolve(m),
+            reject,
+            timer,
+          });
+          net.send(msg);
+        })
+        .catch(reject);
+    });
   const act = (action: unknown) => send({ t: 'action', action });
   const setP2PTransport = (fn: ((m: unknown) => void) | null) => {
     p2pRef.current = fn;
@@ -282,6 +336,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
     setLastUsername('');
     setTotpPending(null);
     setTotpSetup(null);
+    setPasskeys([]);
   };
 
   // --- 2FA TOTP ---
@@ -335,6 +390,64 @@ export function NetProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  // --- passkey WebAuthn ---
+
+  const refreshPasskeys = async () => {
+    if (!passkeySupported) return;
+    try {
+      const res = await request({ t: 'passkeyList' }, 'passkeyList', 15000);
+      setPasskeys(res.passkeys ?? []);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const passkeyRegister = async () => {
+    setError('');
+    setNotice('');
+    if (!passkeySupported) {
+      setError('Le passkey richiedono un contesto sicuro (HTTPS o localhost)');
+      return;
+    }
+    try {
+      const { startRegistration } = await import('@simplewebauthn/browser');
+      const opts = await request({ t: 'passkeyRegisterStart' }, 'passkeyRegisterOptions');
+      const attResp = await startRegistration({ optionsJSON: opts.options });
+      const res = await request({ t: 'passkeyRegisterFinish', response: attResp }, 'passkeyList');
+      setPasskeys(res.passkeys ?? []);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const passkeyLogin = async (username?: string) => {
+    setError('');
+    setNotice('');
+    if (!passkeySupported) {
+      setError('Le passkey richiedono un contesto sicuro (HTTPS o localhost): configura https sul server');
+      return;
+    }
+    try {
+      const { startAuthentication } = await import('@simplewebauthn/browser');
+      const uname = username?.trim() || undefined;
+      const opts = await request({ t: 'passkeyLoginStart', username: uname }, 'passkeyLoginOptions');
+      const asseResp = await startAuthentication({ optionsJSON: opts.options });
+      await request({ t: 'passkeyLoginFinish', username: uname, response: asseResp }, 'auth');
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const removePasskey = async (credentialId: string) => {
+    setError('');
+    try {
+      const res = await request({ t: 'passkeyRemove', credentialId }, 'passkeyList', 15000);
+      setPasskeys(res.passkeys ?? []);
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
   const connect = async (opts: ConnectOpts) => {
     setError('');
     setConn({ phase: 'connecting' });
@@ -373,6 +486,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
     connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout,
     totpPending, totpSetup, doLoginTotp, doLoginTotpBackup, setupTotp, enableTotp, disableTotp,
+    passkeys, passkeyLogin, passkeyRegister, refreshPasskeys, removePasskey,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

@@ -24,7 +24,7 @@ import {
 } from '@dnd5e/core';
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
-import { useNet } from './netStore.js';
+import { useNet, passkeySupported } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
@@ -158,6 +158,7 @@ export default function CampaignTab() {
     act, connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout, setConn, handleNetMessage, setP2PTransport,
     totpPending, totpSetup, doLoginTotp, doLoginTotpBackup, setupTotp, enableTotp, disableTotp,
+    passkeys, passkeyLogin, passkeyRegister, refreshPasskeys, removePasskey,
   } = useNet();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
@@ -203,6 +204,11 @@ export default function CampaignTab() {
   }, []);
 
   const reloadSaved = () => { void listSavedP2P().then(setSavedP2P); };
+  // quando entri/esci dall'account ricarica la lista delle passkey registrate
+  useEffect(() => {
+    if (auth && passkeySupported) void refreshPasskeys();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [auth?.username]);
   /** snapshot immediato della campagna dell'host (senza password) */
   const persistHostNow = () => {
     const h = hostRef.current;
@@ -1196,6 +1202,34 @@ export default function CampaignTab() {
                   </button>
                 )}
               </div>
+              {passkeySupported && (
+                <div style={{ marginTop: 8 }}>
+                  <div className="row">
+                    <b>🔑 {t('cg.pkTitle', 'Passkey')}</b>
+                    <button onClick={() => void passkeyRegister()} title={t('cg.pkAddTitle', 'Registra una nuova passkey (impronta/PIN del dispositivo o password manager)')}>
+                      ➕ {t('cg.pkAdd', 'Aggiungi passkey')}
+                    </button>
+                    <button onClick={() => void refreshPasskeys()} title={t('cg.refresh', 'Aggiorna')}>
+                      <Icon name="refresh" size={13} />
+                    </button>
+                  </div>
+                  {passkeys.length === 0 ? (
+                    <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{t('cg.pkEmpty', 'Nessuna passkey registrata su questo account')}</div>
+                  ) : (
+                    passkeys.map((p) => (
+                      <div className="row" key={p.id} style={{ marginTop: 4 }}>
+                        <span style={{ fontSize: 12 }}>
+                          🔑 {p.name}{' '}
+                          <span className="muted">
+                            ({p.deviceType ?? '?'}{p.backedUp ? ', sync' : ''} · {p.createdAt.slice(0, 10)})
+                          </span>
+                        </span>
+                        <button className="danger" onClick={() => void removePasskey(p.id)}>{t('cg.pkRemove', 'Rimuovi')}</button>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
               {totpSetup && !auth.totpEnabled && (
                 <div style={{ marginTop: 8, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
                   <b>{t('cg.2faScan', 'Scansiona il QR con l\'app authenticator, poi inserisci il codice a 6 cifre per confermare')}</b>
@@ -1236,6 +1270,20 @@ export default function CampaignTab() {
                 <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
                 <button className="primary" onClick={() => doLogin(accountName, accountPw)}>{t('cg.login', 'Login')}</button>
               </div>
+              {passkeySupported ? (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <button onClick={() => void passkeyLogin(accountName)} title={t('cg.pkLoginTitle', 'Accedi con una passkey (impronta/PIN del dispositivo o password manager): niente password')}>
+                    🔑 {t('cg.pkLogin', 'Accedi con passkey')}
+                  </button>
+                  {accountName.trim() !== '' && (
+                    <span className="muted" style={{ fontSize: 11 }}>{t('cg.pkLoginAs', 'come')} <b>{accountName.trim()}</b></span>
+                  )}
+                </div>
+              ) : (
+                <div className="muted" style={{ marginTop: 6, fontSize: 11 }}>
+                  🔑 {t('cg.pkNeedHttps', 'Le passkey funzionano solo su HTTPS (o localhost): configura https sul server per usarle')}
+                </div>
+              )}
               {totpPending && (
                 <div className="row" style={{ marginTop: 6 }}>
                   <span className="muted">🔐 {t('cg.2faNeed', '2FA attiva su questo account: inserisci il codice dell\'app authenticator')}</span>

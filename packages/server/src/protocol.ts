@@ -16,6 +16,13 @@ export type ClientMessage =
   | { t: 'setupTotp' }
   | { t: 'enableTotp'; code: string }
   | { t: 'disableTotp'; password: string }
+  // passkey WebAuthn: register* richiede login; login* e' passwordless (username opzionale = discoverable)
+  | { t: 'passkeyRegisterStart' }
+  | { t: 'passkeyRegisterFinish'; response: unknown }
+  | { t: 'passkeyLoginStart'; username?: string }
+  | { t: 'passkeyLoginFinish'; username?: string; response: unknown }
+  | { t: 'passkeyList' }
+  | { t: 'passkeyRemove'; credentialId: string }
   | { t: 'ping'; id: string }
   // pannello admin del server (LAN): se DND5E_ADMIN_TOKEN e' impostato, adminAuth deve contenerlo
   | { t: 'adminAuth'; token: string }
@@ -53,6 +60,9 @@ export type ServerMessage =
   | { t: 'auth'; token: string; username: string; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean }
   | { t: 'totpRequired'; username: string }
   | { t: 'totpSetup'; secret: string; otpauthUrl: string; backupCodes: string[] }
+  | { t: 'passkeyRegisterOptions'; options: unknown }
+  | { t: 'passkeyLoginOptions'; options: unknown }
+  | { t: 'passkeyList'; passkeys: { id: string; name: string; createdAt: string; deviceType?: string; backedUp?: boolean }[] }
   | { t: 'pong'; id: string; serverTime: number }
   | {
       t: 'adminState';

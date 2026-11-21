@@ -1,6 +1,6 @@
 {
   "name": "@dnd5e/web",
-  "version": "0.1.58",
+  "version": "0.1.59",
   "private": true,
   "type": "module",
   "scripts": {
@@ -16,20 +16,21 @@
     "@capacitor/camera": "^7",
     "@dnd5e/core": "*",
     "@dnd5e/data-srd": "*",
+    "@simplewebauthn/browser": "^13.3.0",
     "@tauri-apps/api": "^2",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },
   "devDependencies": {
+    "@capacitor/android": "^7",
+    "@capacitor/cli": "^7",
+    "@capacitor/core": "^7",
+    "@capacitor/ios": "^7",
     "@types/node": "^22",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "4.7.0",
     "typescript": "5.9.3",
-    "vite": "^7.3.8",
-    "@capacitor/core": "^7",
-    "@capacitor/cli": "^7",
-    "@capacitor/android": "^7",
-    "@capacitor/ios": "^7"
+    "vite": "^7.3.8"
   }
 }
