@@ -3,7 +3,9 @@
 Gestore di schede per Dungeons & Dragons 5e: level-up automatizzato, liste incantesimi,
 inventario, combattimento, tiri dado e contenuti custom (incantesimi, armi, armature,
 archetipi, classi intere). Disponibile come **WebApp/PWA**, **app desktop (Tauri)** e
-**Android (Capacitor)** — un unico codebase.
+**Android (Capacitor)** — un unico codebase. Multiplayer **P2P sulla stessa rete WiFi**
+(niente server: scoperta automatica, codice invito/QR) oppure con server self-hosted,
+con campagne condivise master/giocatori e combattimento live.
 
 ## Avvio rapido (web)
 
@@ -23,12 +25,15 @@ packages/core       # motore regole TS puro: tipi, level-up, slot, CA, dadi, con
                     # combattimento, inventario, house-rules, validazione custom
 packages/data-srd   # contenuti SRD (OGL) in JSON: 12 classi, 13 archetipi, 9 razze,
                     # ~100 incantesimi, 37 armi, 13 armature, talenti, stili
+packages/server     # Node + ws (opzionale): HTTP statici + WebSocket, campagne JSON,
+                    # relay/announce P2P, pannello admin
 apps/web            # React + Vite + PWA (manifest + service worker)
 src-tauri/          # wrapper desktop Tauri v2
 ```
 
 ## Funzionalità
 
+- **Multiplayer**: campagna condivisa master/giocatori con combattimento live — **P2P sulla stessa WiFi** (scansione automatica della rete, codice invito + QR, WebRTC con fallback relay) oppure **server self-hosted** (vedi sotto)
 - **Level-up guidato**: XP → dado vita → ASI/talento → stile → archetipo → expertise → slot (multiclasse inclusa)
 - **Stat derivate automatiche**: modificatori, TS, CA, bonus attacco, PF, initiative, percezione passiva, carico
 - **Incantesimi**: conosciuti/preparati, **limite appreso regolabile** (scambia con "Dimentica"), slot con upcast, concentration, riposo lungo
@@ -59,7 +64,20 @@ npm run build:android      # build web + cap sync
 npx cap open android       # apre Android Studio → genera APK/AAB
 ```
 
-## Multiplayer (server self-hosted)
+## Multiplayer P2P — stessa WiFi, senza server 🕸️
+
+Ogni dispositivo può **hostare la campagna** (WebRTC DataChannel; dove WebRTC manca, relay
+opaco sul server se raggiungibile). I giocatori sullo **stesso WiFi/hotspot** entrano con
+**un tap**: la app scansiona la rete e mostra gli host trovati (nome + IP), oppure si usa il
+**codice invito breve `XXXX-XXXX` + QR** (copia / condivisione nativa — funziona anche via
+WhatsApp). Su desktop (Tauri) e Android l'host può aprire anche un **beacon LAN nativo**
+(porta 3177) e accettare/rifiutare i giocatori con ✅/❌. Flussi completi in
+[docs/P2P.md](docs/P2P.md).
+
+Le campagne che **hosti sono salvate automaticamente in locale** (snapshot senza password,
+max 20): dalla tab 🗺️ Campagna le **riprendi** dalle sessioni scorse o le elimini.
+
+## Multiplayer (server self-hosted, opzionale)
 
 Il server gira anche **in Docker con docker compose** ([docs/DOCKER.md](docs/DOCKER.md)) — HTTP/LAN oppure HTTPS su Internet con nginx come reverse proxy (certificati tuoi), **direttamente su Android via Termux** ([docs/ANDROID_SERVER.md](docs/ANDROID_SERVER.md)) o su un **server Debian con systemd** ([docs/DEPLOY_DEBIAN.md](docs/DEPLOY_DEBIAN.md)).
 
@@ -76,6 +94,20 @@ Il bottone 🔄 in alto a destra controlla l'ultima release GitHub e aggiorna se
 web/PWA (service worker + `/version.json`), desktop AppImage (download + sostituzione + riavvio, lato Rust),
 Android APK (apre il download dell'asset). Dettagli in [docs/UPDATE.md](docs/UPDATE.md).
 
+## Roadmap
+
+Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
+[docs/ROADMAP.md](docs/ROADMAP.md)) sono:
+
+1. **Robustezza P2P + polish UX** — persistenza della campagna sull'host ("riprendi campagna"),
+   riconnessione automatica dopo un drop, chat di campagna, turno corrente evidente con avviso,
+   onboarding al primo avvio e palette comandi Cmd-K
+2. **Espansione gameplay** — mappa tattica con token trascinabili sincronizzata via P2P, party
+   tracker del master, log/statistiche di campagna ed export della campagna intera, schede pregen,
+   generatore di dungeon, crafting
+3. **Piattaforme e dati** — PWA offline completa, notifiche push, import da D&D Beyond,
+   sync cloud opzionale, iOS, test e2e Playwright
+
 ## Licenze
 
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
@@ -83,4 +115,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 45/45 verdi.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 122/122 verdi.

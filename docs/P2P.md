@@ -75,8 +75,13 @@ che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codi
 - I messaggi sono gli stessi del server WS (`join`/`welcome`/`state`/`action`/`error`/`pong`/`campaignDeleted`),
   e la logica di campagna è la stessa: `applyCampaignAction` in `packages/core/src/campaign.ts`
   (pura, usata sia dal server Node sia dall'host nel browser).
-- La campagna P2P vive solo in memoria dell'host: se l'host chiude l'app, la campagna finisce
-  (i giocatori ricevono `campaignDeleted`). Le schede restano salvate localmente su ogni dispositivo.
+- La campagna P2P vive in memoria dell'host, ma l'app salva **automaticamente uno snapshot in
+  locale** (IndexedDB, max 20 campagne, senza password) a ogni cambio di stato e alla chiusura
+  dell'host: se l'host chiude l'app, la campagna finisce per i giocatori (`campaignDeleted`),
+  però l'host può **riprenderla** dalla tab 🗺️ Campagna → P2P → "💾 Campagne P2P salvate su
+  questo dispositivo" → **Riprendi** (dopo aver reinserito la password: non viene salvata).
+  Al ripristino: nuovo id, solo il master, niente combattimento in corso; restano note, tesoro
+  e inventario di gruppo. Le schede restano salvate localmente su ogni dispositivo.
 - La password della campagna P2P è confrontata in memoria dall'host (campagna effimera).
 
 ## Host LAN "stile Soul Knight" (v0.1.27+) — niente server, niente codici
