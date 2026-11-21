@@ -152,6 +152,28 @@ if "versionName" in g:
     g = re.sub(r'versionName\s+"[^"]*"', f'versionName "{_ver}"', g, count=1)
 elif "defaultConfig" in g:
     g = re.sub(r"(defaultConfig\s*\{)", r'\1\n        versionName "' + _ver + '"', g, count=1)
+
+# 2d) firma DEBUG stabile: keystore committato nell'overlay (apps/web/android-overlay/debug.keystore,
+#     chiave pubblica SOLO per sideload, come la debug key di Android). Senza questo ogni runner CI
+#     genera una debug key diversa in ~/.android e ogni APK ha firma diversa -> gli update in-app
+#     falliscono con INSTALL_FAILED_UPDATE_INCOMPATIBLE ("app non installata" su Samsung/One UI).
+shutil.copy(overlay / "debug.keystore", root / "debug.keystore")
+if "signingConfigs" not in g:
+    debug_block = """
+    signingConfigs {
+        debug {
+            storeFile file('../debug.keystore')
+            storePassword 'android'
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeType 'PKCS12'
+        }
+    }
+"""
+    if "android {" in g:
+        g = g.replace("android {", "android {" + debug_block, 1)
+    else:
+        g = "android {" + debug_block + "\n" + g
 gradle.write_text(g)
 
 # 3) registra i plugin in MainActivity

@@ -47,6 +47,19 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
 - Fallback se il plugin manca: apre il browser sull'APK (`@capacitor/browser`).
 - L'asset APK si scarica via `browser_download_url` (repo pubblico) o via proxy
   `/api/update/asset?name=app.apk` del server (repo privato).
+- **Firma stabile degli APK (v0.1.58+)**: la CI patcha il progetto generato con
+  `signingConfigs.debug` che punta al keystore committato `apps/web/android-overlay/debug.keystore`
+  (chiave pubblica, solo sideload): tutte le build debug hanno cos\u00ec la **stessa firma**, quindi
+  gli aggiornamenti in-app non falliscono pi\u00f9 con `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
+  ("app non installata" su Samsung/One UI). Prima di v0.1.58 ogni runner CI generava una debug key
+  diversa a ogni build. **Migrazione una tantum**: se l'app installata ha una firma diversa, Android
+  blocca l'update in-place \u2192 il plugin lo segnala con un messaggio chiaro ("Firma diversa..."):
+  disinstalla 5e Manager, installa a mano l'APK della nuova release (esporta prima le schede locali,
+  che vivent solo sul dispositivo) e da quel momento gli update in-app funzionano. Se il secret
+  `ANDROID_KEYSTORE_B64` \u00e8 configurato, la CI firma in release con il tuo keystore (stabile per
+  definizione) e vale la stessa regola: mai mescolare APK firmati con chiavi diverse.
+- Su Samsung One UI 6+ controlla anche **Impostazioni \u2192 Sicurezza \u2192 Auto Blocker**: se attivo,
+  blocca gli update sideload; disattivalo o consenti l'app.
 
 ## iOS (IPA per sideload)
 
