@@ -18,6 +18,7 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Avvisi richiesta join P2P** (v0.1.55): "📨 inviata" all'invio, ack `joinPending`/`p2pJoinSent` quando arriva all'host → "✅ in attesa del master"
 - ✅ **Ruoli admin sul server** (v0.1.55): `role` sugli account (v4, `DND5E_ADMIN_USER`, primo account admin), `adminSetRole`/`adminResetPassword`/`adminCampaignDetail`/`adminKickPlayer`, login admin → pannello senza token; UI in `admin.html`; test `roles.test.ts`
 - ✅ **Sync remoto first-class** (v0.1.55): libreria schede in Home (☁️ salva tutte / scarica tutte / per-scheda) + campagne P2P sull'account (`saveP2PCampaign`/`deleteP2PCampaign`)
+- ✅ **Self-update desktop Windows/macOS** (v0.1.56): prima il check prendeva sempre l'AppImage e il rename sull'exe in esecuzione falliva su Windows (riavvio ma versione vecchia); ora asset per-SO (`pick_release_asset`), su Windows estrazione zip via PowerShell + batch staccato che copia i file a processo uscito e riavvia, su macOS swap del .app via script — `src-tauri/src/lib.rs`, `update.ts`
 - **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
 - **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
 - **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)

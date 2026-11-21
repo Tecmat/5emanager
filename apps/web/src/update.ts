@@ -80,9 +80,24 @@ export function serverOrigin(): string | null {
 interface GhAsset { name: string; browser_download_url: string }
 interface ReleaseLike { tag: string; pageUrl: string; assets: GhAsset[] }
 
+export type DesktopOs = 'windows' | 'macos' | 'linux';
+
+/** SO del desktop (per scegliere l'asset di self-update giusto: AppImage / zip portatile Windows / zip macOS) */
+export function detectDesktopOs(): DesktopOs {
+  const ua = navigator.userAgent;
+  if (/Windows/i.test(ua)) return 'windows';
+  if (/Macintosh|Mac OS X/i.test(ua)) return 'macos';
+  return 'linux';
+}
+
 function pickAsset(assets: GhAsset[], platform: Platform): GhAsset | undefined {
   if (platform === 'android') return assets.find((a) => a.name.endsWith('.apk'));
-  if (platform === 'desktop') return assets.find((a) => a.name.endsWith('.AppImage'));
+  if (platform === 'desktop') {
+    const os = detectDesktopOs();
+    if (os === 'windows') return assets.find((a) => a.name.includes('windows') && a.name.endsWith('.zip')) ?? assets.find((a) => a.name.endsWith('.exe'));
+    if (os === 'macos') return assets.find((a) => a.name.includes('macos') && a.name.endsWith('.zip')) ?? assets.find((a) => a.name.endsWith('.dmg'));
+    return assets.find((a) => a.name.endsWith('.AppImage'));
+  }
   return undefined;
 }
 
@@ -149,7 +164,17 @@ async function checkViaJsdelivr(): Promise<UpdateInfo> {
   if (!latest) throw new Error('jsdelivr: version mancante');
   const platform = detectPlatform();
   // asset come pubblicato dal workflow release.yml: l'APK si chiama app.apk (non app-debug.apk)
-  const assetName = platform === 'android' ? 'app.apk' : platform === 'desktop' ? `5e.Manager_${latest}_amd64.AppImage` : undefined;
+  const os = platform === 'desktop' ? detectDesktopOs() : null;
+  const assetName =
+    platform === 'android'
+      ? 'app.apk'
+      : os === 'windows'
+        ? '5e.Manager-windows-portable.zip'
+        : os === 'macos'
+          ? '5e.Manager-macos-arm64.zip'
+          : os === 'linux'
+            ? `5e.Manager_${latest}_amd64.AppImage`
+            : undefined;
   const current = await getCurrentVersion();
   return {
     platform,
@@ -336,7 +361,7 @@ export async function applyServerUpdate(): Promise<{ ok: boolean; error?: string
 
 export interface DownloadProgress { received: number; total: number }
 
-/** desktop: scarica il nuovo AppImage accanto all'eseguibile corrente, con progresso via evento Tauri */
+/** desktop: scarica il nuovo asset (AppImage su Linux, zip portatile su Windows/macOS) accanto all'eseguibile, con progresso via evento Tauri */
 export async function downloadDesktopUpdate(assetUrl: string, onProgress: (p: DownloadProgress) => void): Promise<void> {
   const { invoke } = await import('@tauri-apps/api/core');
   const { listen } = await import('@tauri-apps/api/event');
@@ -348,7 +373,7 @@ export async function downloadDesktopUpdate(assetUrl: string, onProgress: (p: Do
   }
 }
 
-/** desktop: sostituisce l'AppImage corrente con quello scaricato e riavvia l'app (non ritorna) */
+/** desktop: sostituisce il binario corrente con l'asset scaricato e riavvia l'app (non ritorna; su Windows/macOS il cambio file lo fa un processo staccato dopo l'uscita) */
 export async function applyDesktopUpdate(): Promise<void> {
   const { invoke } = await import('@tauri-apps/api/core');
   await invoke('apply_update');
