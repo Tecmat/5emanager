@@ -439,7 +439,7 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
     let current = app.package_info().version.to_string();
     let (tag, page_url, assets) = latest_release().await?;
     let latest = tag.trim_start_matches('v').to_string();
-    let appimage = assets.iter().find(|(n, _)| n.ends_with(".AppImage"));
+    let asset = pick_release_asset(&assets);
     let checked_at = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs().to_string())
@@ -450,23 +450,57 @@ async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
         current,
         latest,
         page_url,
-        asset_url: appimage.map(|(_, u)| u.clone()),
-        asset_name: appimage.map(|(n, _)| n.clone()),
+        asset_url: asset.map(|a| a.1.clone()),
+        asset_name: asset.map(|a| a.0.clone()),
         checked_at,
     })
 }
 
+/// asset di self-update per il SO corrente (la stessa release contiene AppImage + zip Windows + zip macOS)
+fn pick_release_asset(assets: &[(String, String)]) -> Option<&(String, String)> {
+    #[cfg(target_os = "windows")]
+    {
+        return assets
+            .iter()
+            .find(|(n, _)| n.contains("windows") && n.ends_with(".zip"))
+            .or_else(|| assets.iter().find(|(n, _)| n.ends_with(".exe")));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        return assets
+            .iter()
+            .find(|(n, _)| n.contains("macos") && n.ends_with(".zip"))
+            .or_else(|| assets.iter().find(|(n, _)| n.ends_with(".dmg")));
+    }
+    #[cfg(target_os = "linux")]
+    {
+        return assets.iter().find(|(n, _)| n.ends_with(".AppImage"));
+    }
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    {
+        return None;
+    }
+    #[allow(unreachable_code)]
+    None
+}
+
+/// nome del file temporaneo di download, per SO
+#[cfg(any(target_os = "windows", target_os = "macos"))]
+const UPDATE_TMP_NAME: &str = ".5emanager-update.zip";
+#[cfg(target_os = "linux")]
+const UPDATE_TMP_NAME: &str = ".5emanager-update.AppImage";
+
 /// percorso del file temporaneo di download: prima accanto all'eseguibile (così il rename finale
-/// resta sulla stessa fs), poi in cache (se la cartella dell'AppImage è read-only, es. os error 30)
+/// resta sulla stessa fs), poi in cache (se la cartella dell'eseguibile è read-only, es. os error 30)
 fn update_tmp_candidates(app: &tauri::AppHandle) -> Vec<std::path::PathBuf> {
     let mut v = Vec::new();
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            v.push(dir.join(".5emanager-update.AppImage"));
+            v.push(dir.join(UPDATE_TMP_NAME));
         }
     }
     if let Ok(dir) = app.path().app_cache_dir() {
-        v.push(dir.join("5emanager").join(".5emanager-update.AppImage"));
+        v.push(dir.join("5emanager").join(UPDATE_TMP_NAME));
     }
     v
 }
@@ -545,6 +579,7 @@ async fn download_update(app: tauri::AppHandle, url: String) -> Result<String, S
     ))
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn chmod755(p: &std::path::Path) -> Result<(), String> {
     #[cfg(unix)]
     {
@@ -556,6 +591,7 @@ fn chmod755(p: &std::path::Path) -> Result<(), String> {
     Ok(())
 }
 
+#[cfg_attr(not(target_os = "linux"), allow(dead_code))]
 fn launch_and_exit(p: &std::path::Path) -> ! {
     if let Err(e) = std::process::Command::new(p).spawn() {
         eprintln!("[update] avvio di {p:?} fallito: {e}");
@@ -563,12 +599,12 @@ fn launch_and_exit(p: &std::path::Path) -> ! {
     std::process::exit(0);
 }
 
-/// sostituisce l'AppImage in esecuzione con quello scaricato e riavvia (questa funzione non ritorna).
-/// Se la cartella dell'AppImage è read-only, avvia la copia scaricata in cache (la userà al posto suo).
-#[tauri::command]
-fn apply_update(app: tauri::AppHandle) -> Result<(), String> {
+/// Linux: sostituisce l'AppImage in esecuzione con quello scaricato (rename sul posto, possibile
+/// su Linux) e riavvia; se la cartella è read-only, avvia la copia in cache.
+#[cfg(target_os = "linux")]
+fn apply_update_impl(app: &tauri::AppHandle) -> Result<(), String> {
     let exe = std::env::current_exe().map_err(|e| e.to_string())?;
-    let tmp = update_tmp_candidates(&app).into_iter().find(|p| p.exists());
+    let tmp = update_tmp_candidates(app).into_iter().find(|p| p.exists());
     let Some(tmp) = tmp else {
         return Err("Nessun aggiornamento scaricato (usa prima Scarica e installa)".into());
     };
@@ -590,6 +626,123 @@ fn apply_update(app: tauri::AppHandle) -> Result<(), String> {
     let _ = std::fs::remove_file(&tmp);
     chmod755(&new_path)?;
     launch_and_exit(&new_path);
+}
+
+/// Windows: un exe in esecuzione NON si può rinominare/sostituire → estraiamo lo zip portatile in
+/// cache e un batch staccato copia i nuovi file sopra quelli vecchi appena l'app è uscita
+/// (xcopy ritenta finché il file non è più bloccato), poi riavvia l'exe.
+#[cfg(target_os = "windows")]
+fn apply_update_impl(app: &tauri::AppHandle) -> Result<(), String> {
+    use std::os::windows::process::CommandExt;
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let tmp = update_tmp_candidates(app)
+        .into_iter()
+        .find(|p| p.exists())
+        .ok_or("Nessun aggiornamento scaricato (usa prima Scarica e installa)")?;
+    let cache = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("5emanager");
+    let stage = cache.join("update-stage");
+    let _ = std::fs::remove_dir_all(&stage);
+    std::fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
+    // estrai lo zip con PowerShell (Expand-Archive è presente su Windows 10/11)
+    let ps = format!(
+        "Expand-Archive -LiteralPath '{}' -DestinationPath '{}' -Force",
+        tmp.to_string_lossy().replace('\'', "''"),
+        stage.to_string_lossy().replace('\'', "''")
+    );
+    let status = std::process::Command::new("powershell")
+        .args(["-NoProfile", "-NonInteractive", "-Command", &ps])
+        .status()
+        .map_err(|e| format!("powershell non disponibile: {e}"))?;
+    if !status.success() {
+        return Err("estrazione dello zip portatile fallita".into());
+    }
+    let dest = exe.parent().ok_or("exe senza cartella padre")?.to_path_buf();
+    let exe_name = exe.file_name().ok_or("exe senza nome")?.to_string_lossy().to_string();
+    let bat = cache.join("swap-update.bat");
+    let bat_content = format!(
+        "@echo off\r\nset \"STAGE={}\"\r\nset \"DEST={}\"\r\nset \"EXE={}\"\r\nset /a N=0\r\n:copy\r\nxcopy /E /Y /I \"%STAGE%\\*\" \"%DEST%\\\" >NUL 2>&1\r\nif errorlevel 1 (\r\n  set /a N+=1\r\n  if %N% GEQ 60 exit /b 1\r\n  timeout /t 1 /nobreak >NUL\r\n  goto copy\r\n)\r\nstart \"\" \"%DEST%\\%EXE%\"\r\n",
+        stage.to_string_lossy().replace('"', ""),
+        dest.to_string_lossy().replace('"', ""),
+        exe_name
+    );
+    std::fs::write(&bat, bat_content).map_err(|e| e.to_string())?;
+    // batch staccato senza finestra: quando l'app esce copia i file e riavvia
+    let bat_arg = bat.to_string_lossy().to_string();
+    std::process::Command::new("cmd")
+        .args(["/c", "start", "/min", "", &bat_arg])
+        .creation_flags(0x0800_0000) // CREATE_NO_WINDOW
+        .spawn()
+        .map_err(|e| format!("impossibile avviare il batch di swap: {e}"))?;
+    let _ = std::fs::remove_file(&tmp);
+    std::process::exit(0);
+}
+
+/// macOS: il bundle .app in esecuzione si può spostare con rename → lo sostituiamo con quello
+/// estratto dallo zip e lo riapriamo con `open`.
+#[cfg(target_os = "macos")]
+fn apply_update_impl(app: &tauri::AppHandle) -> Result<(), String> {
+    let exe = std::env::current_exe().map_err(|e| e.to_string())?;
+    let tmp = update_tmp_candidates(app)
+        .into_iter()
+        .find(|p| p.exists())
+        .ok_or("Nessun aggiornamento scaricato (usa prima Scarica e installa)")?;
+    let cache = app
+        .path()
+        .app_cache_dir()
+        .map_err(|e| e.to_string())?
+        .join("5emanager");
+    let stage = cache.join("update-stage");
+    let _ = std::fs::remove_dir_all(&stage);
+    std::fs::create_dir_all(&stage).map_err(|e| e.to_string())?;
+    let status = std::process::Command::new("/usr/bin/unzip")
+        .arg("-o")
+        .arg("-q")
+        .arg(&tmp)
+        .arg("-d")
+        .arg(&stage)
+        .status()
+        .map_err(|e| format!("/usr/bin/unzip non disponibile: {e}"))?;
+    if !status.success() {
+        return Err("estrazione dello zip .app fallita".into());
+    }
+    // exe = 5e.Manager.app/Contents/MacOS/<bin> → il bundle è tre livelli su
+    let bundle = exe
+        .parent()
+        .and_then(|p| p.parent())
+        .and_then(|p| p.parent())
+        .ok_or("percorso del bundle .app non riconosciuto")?
+        .to_path_buf();
+    let parent = bundle.parent().ok_or("bundle senza cartella padre")?.to_path_buf();
+    let extracted = std::fs::read_dir(&stage)
+        .map_err(|e| e.to_string())?
+        .filter_map(|e| e.ok())
+        .map(|e| e.path())
+        .find(|p| p.extension().map(|x| x == "app").unwrap_or(false))
+        .ok_or("nessun .app trovato nello zip")?;
+    let q = |p: &std::path::Path| format!("'{}'", p.to_string_lossy().replace('\'', "'\\''"));
+    let script = format!(
+        "sleep 1; mv {b} {b}.old-5e 2>/dev/null; mv {e} {p}/ && open {b} && rm -rf {b}.old-5e",
+        b = q(&bundle),
+        e = q(&extracted),
+        p = q(&parent),
+    );
+    std::process::Command::new("sh")
+        .arg("-c")
+        .arg(script)
+        .spawn()
+        .map_err(|e| format!("impossibile avviare lo script di swap: {e}"))?;
+    let _ = std::fs::remove_file(&tmp);
+    std::process::exit(0);
+}
+
+/// sostituisce il binario in esecuzione con l'aggiornamento scaricato e riavvia (non ritorna)
+#[tauri::command]
+fn apply_update(app: tauri::AppHandle) -> Result<(), String> {
+    apply_update_impl(&app)
 }
 
 pub fn run() {

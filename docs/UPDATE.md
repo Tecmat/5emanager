@@ -19,15 +19,23 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
 - Se l'endpoint non risponde (server vecchio), resta il fallback: confronto `/version.json` +
   reload del service worker dopo il redeploy manuale.
 
-## Desktop (AppImage, Tauri)
+## Desktop (Tauri, self-update per SO)
 
-- Il check lo fa il **processo Rust** (`check_update` in `src-tauri/src/lib.rs`, reqwest → GitHub API,
-  confronto semver con la versione del pacchetto) e individua l'asset `*.AppImage` della release.
-- **⬇️ Scarica e installa** (`download_update`): scarica il nuovo AppImage come `.5emanager-update.AppImage`
-  **accanto all'eseguibile corrente**, con barra di progresso (evento `update-progress`).
-- **▶ Riavvia ora** (`apply_update`): sostituisce l'AppImage in esecuzione con `rename` (su Linux è
-  permesso anche a processo in corso), lo rende eseguibile e riavvia l'app. Non ritorna mai.
-- Se la cartella dell'AppImage non è scrivibile, il download fallisce con un messaggio chiaro.
+- Il check lo fa il **processo Rust** (`check_update` in `src-tauri/src/lib.rs`, reqwest -> GitHub API,
+  confronto semver con la versione del pacchetto) e individua l'asset **per il SO corrente**
+  (`pick_release_asset`): `*.AppImage` su Linux, `*windows*.zip` su Windows, `*macos*.zip` su macOS.
+- **Scarica e installa** (`download_update`): scarica l'asset come `.5emanager-update.AppImage` /
+  `.5emanager-update.zip` **accanto all'eseguibile corrente**, con barra di progresso (evento `update-progress`).
+- **Riavvia ora** (`apply_update`):
+  - **Linux**: `rename` dell'AppImage sul posto (permesso anche a processo in corso), chmod + riavvio;
+    se la cartella e' read-only, copia in cache e avvia quella.
+  - **Windows**: un exe in esecuzione non si puo' sostituire -> lo zip viene estratto in cache con
+    PowerShell (`Expand-Archive`) e un **batch staccato** (`cmd /c start /min`, `CREATE_NO_WINDOW`)
+    copia i nuovi file sopra quelli vecchi con `xcopy` (ritenta finche' il file non e' piu' bloccato,
+    max 60 tentativi) e riavvia l'exe. L'app esce subito dopo aver lanciato il batch.
+  - **macOS**: un bundle `.app` in esecuzione si puo' spostare -> `unzip` in cache, poi script `sh`
+    staccato: `mv` del vecchio bundle, `mv` del nuovo al suo posto, `open`, pulizia.
+- Se la cartella dell'eseguibile non e' scrivibile, il download ripiega sulla cache con messaggio chiaro.
 
 ## Android (APK, Capacitor) — installa dentro l'app
 
@@ -49,9 +57,11 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
 
 ## Windows / macOS (portable)
 
-- Release con `5e.Manager-windows-portable.zip` (bundle `app` Tauri zippato, niente installatore)
-  e `5e.Manager-macos-arm64.zip` (`.app` zippato). Self-update su Windows/macOS: il check 🔄
-  funziona (confronto release), il reemplazo automatico è implementato per Linux/AppImage.
+- Release con `5e.Manager-windows-portable.zip` (exe Tauri zippato, niente installatore)
+  e `5e.Manager-macos-arm64.zip` (`.app` zippato). Self-update in-app funzionante su tutte e tre
+  le piattaforme desktop (vedi "Desktop (Tauri, self-update per SO)" sopra, v0.1.56+): prima su
+  Windows il check prendeva l'asset AppImage sbagliato e il `rename` sull'exe in esecuzione
+  falliva -> riavvio ma versione sempre vecchia.
 
 ## Repo GitHub privato
 
