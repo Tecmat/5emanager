@@ -68,6 +68,53 @@ location / {
 }
 ```
 
+## 3) Deploy remoto passo-passo (VPS + dominio + HTTPS con nginx)
+
+Prerequisiti: un dominio con **record A** che punta all'IP pubblico del server, porte **80 e 443 aperte**
+(es. `ufw allow 80/tcp && ufw allow 443/tcp`), Docker + compose installati, repo clonato in `/opt/5emanager`.
+
+```bash
+# 1) dominio e token
+cd /opt/5emanager/docker
+sed -i 's/^DND5E_DOMAIN=.*/DND5E_DOMAIN=dnd.tuosito.it/' .env
+sed -i 's/^DND5E_ADMIN_TOKEN=.*/DND5E_ADMIN_TOKEN=<token-lungo-casuale>/' .env
+# opzionale: primo admin bootstrap
+# echo 'DND5E_ADMIN_USER=admin' >> .env
+
+# 2) certificato Let's Encrypt (webroot servita dal container nginx)
+mkdir -p certs data certbot-webroot
+certbot certonly --webroot -w /opt/5emanager/docker/certbot-webroot -d dnd.tuosito.it
+cp /etc/letsencrypt/live/dnd.tuosito.it/fullchain.pem certs/fullchain.pem
+cp /etc/letsencrypt/live/dnd.tuosito.it/privkey.pem    certs/privkey.pem
+chmod 600 certs/privkey.pem
+
+# 3) avvio: server (solo rete docker interna) + nginx esposto su 80/443
+docker compose -f docker-compose.nginx.yml up -d --build
+
+# 4) verifica automatica
+docker compose -f docker-compose.nginx.yml ps
+./../../deploy/smoke-test.sh https://dnd.tuosito.it
+# (controlla: index, /version.json, /api/info, /admin, handshake WebSocket 101, redirect http->https)
+```
+
+- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` (chiede `DND5E_ADMIN_TOKEN`)
+- Multiplayer remoto: `wss://dnd.tuosito.it` — la web app lo deriva **in automatico** dall'origin della
+  pagina (`wss://` se https, fix v0.1.60); nelle app native (APK/desktop) inserisci `wss://dnd.tuosito.it`
+  nel campo server (accetta anche `wss://`).
+- **Passkey WebAuthn**: funzionano perché ora c'è HTTPS (secure context). Il compose imposta
+  `DND5E_RP_ID`/`DND5E_RP_ORIGIN` dal dominio (nginx passa `Host $host`, quindi anche senza env
+  il server li deriva giusti). In Campagna → Account → "Aggiungi passkey".
+- **Primo admin**: registra il tuo account dalla web app (richiesta in attesa), poi approv yourself da
+  `/admin` (token), oppure imposta `DND5E_ADMIN_USER` prima del primo avvio.
+- **Aggiornamenti**: dal pannello `/admin` → "⬇️ Aggiorna la webapp del server ora" (scarica `web-dist.zip`
+  dalla release GitHub con backup/rollback). Per il container server: `git pull && docker compose -f
+  docker-compose.nginx.yml up -d --build`.
+- **Rinnovo certificato** (ogni 90 gg): `certbot renew` poi copia di nuovo i pem in `docker/certs/` e
+  `docker compose -f docker-compose.nginx.yml restart nginx`.
+- **Backup dati**: `tar czf backup-data.tgz -C /opt/5emanager/docker data` (campagne, account incl. TOTP/passkey, librerie).
+- **Sicurezza**: tieni `DND5E_ADMIN_TOKEN` segreto, limita `/admin` se vuoi (es. allowlist IP in nginx),
+  proteggi `docker/data` (contiene hash password, secret TOTP e chiavi pubbliche delle passkey).
+
 ## Variabili d'ambiente utili (container `5emanager`)
 
 | Variabile | Default | Significato |
@@ -77,6 +124,8 @@ location / {
 | `DND5E_STATIC_DIR` | `/app/apps/web/dist` | web app servita (buildata dentro l'immagine) |
 | `DND5E_ADMIN_TOKEN` | *(vuoto)* | token richiesto dal pannello `/admin` e da `POST /api/update/apply` — **impostalo in produzione** |
 | `GITHUB_TOKEN` | *(vuoto)* | solo se il repo GitHub fosse privato: sblocca check-update e self-update |
+| `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https (impostati in automatico dal compose nginx dal `DND5E_DOMAIN`) |
+| `DND5E_ADMIN_USER` | *(vuoto)* | username che diventa admin a prescindere dal file (bootstrap primo admin) |
 
 ## Comandi utili
 

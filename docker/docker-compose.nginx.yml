@@ -27,6 +27,12 @@ services:
       DND5E_DATA_DIR: /data
       DND5E_STATIC_DIR: /app/apps/web/dist
       DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # passkey WebAuthn: RP ID = dominio pubblico, origin = https del dominio
+      # (nginx passa Host $host, quindi anche senza queste il server le deriva giuste)
+      DND5E_RP_ID: ${DND5E_DOMAIN:?imposta DND5E_DOMAIN nel .env}
+      DND5E_RP_ORIGIN: https://${DND5E_DOMAIN:?imposta DND5E_DOMAIN nel .env}
+      # opzionale: primo account admin (bootstrap) — il primo account registrato diventa admin lo stesso
+      # DND5E_ADMIN_USER: ${DND5E_ADMIN_USER:-}
       # GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     volumes:
       - ./data:/data

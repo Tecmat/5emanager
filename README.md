@@ -120,4 +120,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 142/142 verdi (root) + 1/1 UI jsdom.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 142/142 verdi (root) + 4/4 UI jsdom.
