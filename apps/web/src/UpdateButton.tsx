@@ -12,6 +12,7 @@ import {
   detectPlatform,
   downloadDesktopUpdate,
   errMsg,
+  REPO,
   type DownloadProgress,
   type UpdateInfo,
 } from './update.js';
@@ -48,6 +49,11 @@ export default function UpdateButton() {
     try {
       const [api, sw] = await Promise.all([checkUpdate(), platform === 'web' ? checkSwUpdate() : Promise.resolve(false)]);
       setSwAvail(sw);
+      if (platform === 'android' && api.available && !api.assetUrl) {
+        // il pulsante "Scarica e installa" deve esserci SEMPRE quando c'è un update: URL diretto della release
+        api.assetUrl = `https://github.com/${REPO}/releases/download/v${api.latest}/app.apk`;
+        api.assetName = api.assetName ?? 'app.apk';
+      }
       setInfo({ ...api, available: api.available || sw });
       setStatus('ready');
     } catch (e) {
@@ -80,10 +86,11 @@ export default function UpdateButton() {
           await applyWebUpdate();
         }
       } else if (platform === 'android') {
-        // APK scaricato e prompt di installazione aperto direttamente dentro l'app
+        // APK scaricato e prompt di installazione aperto direttamente dentro l'app (niente browser/pop-up)
         setStatus('downloading');
         setProgress(null);
-        await applyAndroidUpdate(info, setProgress);
+        await applyAndroidUpdate(info, setProgress, () =>
+          setMsg(t('up.needsPermNow', 'Aperte le Impostazioni: concedi "Installa app sconosciute" a 5e Manager — al ritorno l\'installazione riparte da sola.')));
         setMsg(t('up.apkInstalling', 'APK scaricato: conferma il prompt di installazione di Android.'));
         setStatus('ready');
       } else {
@@ -143,11 +150,16 @@ export default function UpdateButton() {
           </div>
           <div className="row" style={{ marginTop: 8 }}>
             <button onClick={run} disabled={busy}>{busy ? t('up.checking', 'Controllo…') : t('up.check', 'Cerca aggiornamenti')}</button>
-            {info?.pageUrl && (
+            {info?.pageUrl && (platform === 'android' ? (
+              // su Android niente pop-up/browser: il link della release resta come testo copiabile
+              <span className="muted" style={{ fontSize: 11, wordBreak: 'break-all', alignSelf: 'center' }} title={t('up.pageUrlTitle', 'Copia questo link se vuoi aprire la pagina della release a mano')}>
+                {info.pageUrl}
+              </span>
+            ) : (
               <button onClick={() => window.open(info.pageUrl, '_blank')} title={t('up.pageTitle', 'Apri la pagina della release su GitHub')}>
                 {t('up.page', '📄 Release')}
               </button>
-            )}
+            ))}
           </div>
           {status === 'ready' && info && (
             <div className={info.available ? 'ok' : 'muted'} style={{ marginTop: 8, fontSize: 13 }}>

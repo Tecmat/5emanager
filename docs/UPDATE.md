@@ -38,7 +38,7 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
   Se manca il permesso "installa app sconosciute", apre le impostazioni dell'app.
 - Fallback se il plugin manca: apre il browser sull'APK (`@capacitor/browser`).
 - L'asset APK si scarica via `browser_download_url` (repo pubblico) o via proxy
-  `/api/update/asset?name=app-debug.apk` del server (repo privato).
+  `/api/update/asset?name=app.apk` del server (repo privato).
 
 ## iOS (IPA per sideload)
 
@@ -66,7 +66,7 @@ Se `Tecmat/5emanager` è **privato**, `api.github.com` e le pagine HTML di githu
 
    La web app servita dal server chiama `/api/update` sulla stessa origin; l'APK Android usa
    l'URL del server salvato nelle impostazioni (ws://… → http://…) e scarica l'APK via
-   `/api/update/asset?name=app-debug.apk`. **Nessun token finisce nel client.**
+   `/api/update/asset?name=app.apk`. **Nessun token finisce nel client.**
 2. **Desktop**: token locale, cercato in quest'ordine: env `GITHUB_TOKEN` →
    `~/.config/emanager/github-token` → `gh auth token` (basta aver fatto `gh auth login`).
    Viene inviato come `Authorization: Bearer` sia alla API sia al download dell'asset.
