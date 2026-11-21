@@ -30,7 +30,7 @@ import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
-import { LAN_BEACON_PORT, beaconStart, detectLocalIp, detectLocalIps, lanBeaconSupported } from './lanBeacon.js';
+import { LAN_BEACON_PORT, beaconStart, beaconSetCode, detectLocalIp, detectLocalIps, lanBeaconSupported } from './lanBeacon.js';
 import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
@@ -384,7 +384,12 @@ export default function CampaignTab() {
     }
     try {
       const nm = campaignName || name || 'Campagna LAN';
-      await beaconStart(LAN_BEACON_PORT, nm);
+      // codice invito breve pubblicato SUL BEACON (serverless): chi è in LAN lo risolve via scansione
+      const code = newInviteCode();
+      inviteCodeRef.current = code;
+      setInviteCode(code);
+      await beaconStart(LAN_BEACON_PORT, nm, code);
+      void beaconSetCode(code);
       const host = new P2PLanHost({ campaignName: nm, password, masterName: name || 'Master', reg, cb: hostCb });
       hostRef.current = host;
       setHostMode('lan');
@@ -476,6 +481,7 @@ export default function CampaignTab() {
     const code = newInviteCode();
     inviteCodeRef.current = code;
     setInviteCode(code);
+    void beaconSetCode(code); // pubblicato sul beacon: risolvibile in LAN senza server
     const disc = discRef.current;
     const nm = campaignName || name || 'Campagna P2P';
     if (disc?.connected) {
@@ -612,21 +618,40 @@ export default function CampaignTab() {
     if (!skipJoin) disc.join(hostId);
   };
 
-  /** giocatore: unisciti con un codice invito BREVE (XXXX-XXXX): il server risolve il codice e relay SDP in automatico */
-  const joinByInviteCode = (raw: string) => {
+  /**
+   * giocatore: unisciti con un codice invito BREVE (XXXX-XXXX).
+   * 1) SERVERLESS: scansione LAN — il beacon dell'host pubblica il codice in /api/info,
+   *    chi è sulla stessa rete lo risolve e si collega diretto (ws://ip:3177), senza server.
+   * 2) alternativa SOLO se in reti diverse: server 5emanager che risolve il codice e relay SDP.
+   */
+  const joinByInviteCode = async (raw: string) => {
     const code = raw.trim();
     if (!code) return;
     setError('');
+    setCodeInput(code);
+    const norm = (c: string) => c.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    setScanning(true);
+    setDiscMsg(tf('cg.p2pCodeJoining', 'Cerco il codice {code} sulla rete locale…', { code }));
+    try {
+      const peers = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
+      const hit = peers.find((p) => p.kind === 'p2p' && p.code && norm(p.code) === norm(code));
+      if (hit) {
+        setDiscMsg(tf('cg.p2pCodeFoundLan', 'Host {ip} trovato in LAN col codice — mi collego…', { ip: hit.ip }));
+        void joinLanPeer(hit);
+        return;
+      }
+    } catch { /* scansione fallita: si prova col server */ } finally {
+      setScanning(false);
+    }
+    // non trovato in LAN: prova via server (se connesso), altrimenti errore con guida
     const disc = discRef.current;
-    if (!disc || !disc.connected) {
-      setError(t('cg.p2pNoServer', 'Nessun server individuato: premi "Scansiona rete e cerca host" (trova server e host P2P diretti in LAN) oppure inserisci il ws:// del server remoto (es. wss://dnd.tuosito.it)'));
+    if (disc?.connected) {
+      setDiscMsg(tf('cg.p2pCodeJoiningSrv', 'Non trovato in LAN: provo col codice {code} via server…', { code }));
+      disc.onCodeHost = (hostId, hostName) => joinDiscoveredHost(hostId, hostName || code, true);
+      disc.joinByCode(code, name || 'Giocatore', password);
       return;
     }
-    setCodeInput(code);
-    setDiscMsg(tf('cg.p2pCodeJoining', 'Mi unisco con il codice {code}…', { code }));
-    // il server manda p2pCodeHost con l'hostId e relay la richiesta di join: niente altro da incollare
-    disc.onCodeHost = (hostId, hostName) => joinDiscoveredHost(hostId, hostName || code, true);
-    disc.joinByCode(code, name || 'Giocatore', password);
+    setError(tf('cg.p2pCodeNotFound', 'Codice {code} non trovato sulla rete locale: siete sulla stessa WiFi/hotspot? Su reti diverse l\'host deve annunciarsi su un server 5emanager (oppure si scambia il codice SDP 5EP2P1:…).', { code }));
   };
 
   /** giocatore: incolla/scansiona il codice invito e genera la risposta */
@@ -906,7 +931,7 @@ export default function CampaignTab() {
                       placeholder={t('cg.p2pCodePh', 'AB3F-K9Q2')}
                       style={{ flex: 1, fontFamily: 'monospace', letterSpacing: 1, textTransform: 'uppercase' }}
                     />
-                    <button className="primary" disabled={!codeInput.trim() || discState !== 'on'} onClick={() => joinByInviteCode(codeInput)}>
+                    <button className="primary" disabled={!codeInput.trim() || scanning} onClick={() => void joinByInviteCode(codeInput)}>
                       <Icon name="play" candy size={13} /> {t('cg.p2pJoinByCode', 'Unisciti')}
                     </button>
                     <button onClick={scanInvite} title={t('cg.p2pScanTitle', "Scansiona il QR mostrato dall'host")}>
@@ -1226,7 +1251,7 @@ export default function CampaignTab() {
             </>
           )}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
-          {inviteCode && discState === 'on' && (
+          {inviteCode && (hostMode === 'lan' || discState === 'on') && (
             <div className="row" style={{ marginTop: 8, alignItems: 'flex-start' }}>
               <QrBox text={`${CODE_PREFIX}${inviteCode}`} />
               <div>

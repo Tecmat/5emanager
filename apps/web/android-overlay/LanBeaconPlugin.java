@@ -75,11 +75,14 @@ public class LanBeaconPlugin extends Plugin {
     private class BeaconServer extends NanoWSD {
         private final String name;
         private final String version;
+        /** codice invito breve pubblicato in /api/info: i giocatori in LAN lo risolvono via scansione (serverless) */
+        volatile String code;
 
-        BeaconServer(int port, String name, String version) {
+        BeaconServer(int port, String name, String version, String code) {
             super(port);
             this.name = name;
             this.version = version;
+            this.code = code;
         }
 
         @Override
@@ -92,6 +95,8 @@ public class LanBeaconPlugin extends Plugin {
                     j.put("name", name);
                     j.put("version", version);
                     j.put("port", getListeningPort());
+                    String c = code;
+                    if (c != null && !c.isEmpty()) j.put("code", c);
                     return newFixedLengthResponse(NanoHTTPD.Response.Status.OK, "application/json; charset=utf-8", j.toString());
                 } catch (Exception e) {
                     return newFixedLengthResponse(NanoHTTPD.Response.Status.INTERNAL_ERROR, "text/plain", "err: " + e.getMessage());
@@ -131,8 +136,12 @@ public class LanBeaconPlugin extends Plugin {
         Integer port = call.getInt("port", 3177);
         String name = call.getString("name", "Host 5e Manager");
         if (name == null || name.trim().isEmpty()) name = "Host 5e Manager";
+        String code = call.getString("code", null);
+        if (code != null) code = code.trim().toUpperCase();
+        if (code != null && code.isEmpty()) code = null;
         final int p = port;
         final String n = name.trim();
+        final String c = code;
         String ver = "0.0.0";
         try {
             ver = getContext().getPackageManager().getPackageInfo(getContext().getPackageName(), 0).versionName;
@@ -142,7 +151,7 @@ public class LanBeaconPlugin extends Plugin {
         new Thread(() -> {
             try {
                 stopServerSync();
-                server = new BeaconServer(p, n, version);
+                server = new BeaconServer(p, n, version, c);
                 server.start(NanoHTTPD.SOCKET_READ_TIMEOUT, true);
                 JSObject res = new JSObject();
                 res.put("address", "0.0.0.0:" + p);
@@ -197,6 +206,16 @@ public class LanBeaconPlugin extends Plugin {
     @PluginMethod
     public void stop(PluginCall call) {
         stopServerSync();
+        call.resolve();
+    }
+
+    /** aggiorna il codice invito breve pubblicato in /api/info (senza riavviare il beacon) */
+    @PluginMethod
+    public void setCode(PluginCall call) {
+        String code = call.getString("code", "");
+        if (server != null) {
+            server.code = (code == null || code.trim().isEmpty()) ? null : code.trim().toUpperCase();
+        }
         call.resolve();
     }
 

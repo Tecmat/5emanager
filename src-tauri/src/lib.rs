@@ -22,6 +22,9 @@ struct BeaconState {
     name: String,
     version: String,
     port: u16,
+    /// codice invito breve pubblicato in /api/info: i giocatori sulla stessa LAN lo risolvono
+    /// scansionando la rete (serverless) e si collegano direttamente a ws://<ip>:<port>/ws
+    code: Mutex<Option<String>>,
     clients: Mutex<HashMap<String, tokio::sync::mpsc::UnboundedSender<axum::extract::ws::Message>>>,
     counter: AtomicU64,
 }
@@ -50,13 +53,17 @@ fn lan_emit(app: &tauri::AppHandle, parts: &[&str]) {
 async fn beacon_info(
     axum::extract::State(state): axum::extract::State<Arc<BeaconState>>,
 ) -> axum::Json<serde_json::Value> {
-    axum::Json(serde_json::json!({
+    let mut j = serde_json::json!({
         "app": "5emanager",
         "kind": "p2p-host",
         "name": state.name,
         "version": state.version,
         "port": state.port,
-    }))
+    });
+    if let Some(c) = state.code.lock().unwrap().clone() {
+        j["code"] = serde_json::json!(c);
+    }
+    axum::Json(j)
 }
 
 async fn beacon_ws(
@@ -101,6 +108,7 @@ async fn lan_beacon_start(
     app: tauri::AppHandle,
     port: u16,
     name: String,
+    code: Option<String>,
 ) -> Result<String, String> {
     // stop di un eventuale beacon precedente
     if let Some(h) = beacon_slot().lock().unwrap().take() {
@@ -115,6 +123,7 @@ async fn lan_beacon_start(
         },
         version: env!("CARGO_PKG_VERSION").to_string(),
         port,
+        code: Mutex::new(code.map(|c| c.trim().to_uppercase()).filter(|c| !c.is_empty())),
         clients: Mutex::new(HashMap::new()),
         counter: AtomicU64::new(1),
     });
@@ -178,6 +187,19 @@ fn lan_beacon_broadcast(msg: String) -> Result<usize, String> {
 async fn lan_beacon_stop() -> Result<(), String> {
     if let Some(h) = beacon_slot().lock().unwrap().take() {
         let _ = h.shutdown.send(());
+    }
+    Ok(())
+}
+
+/// aggiorna il codice invito breve pubblicato dal beacon in /api/info (senza riavviare il server)
+#[tauri::command]
+fn lan_beacon_set_code(code: String) -> Result<(), String> {
+    if let Some(h) = beacon_slot().lock().unwrap().as_ref() {
+        *h.state.code.lock().unwrap() = if code.trim().is_empty() {
+            None
+        } else {
+            Some(code.trim().to_uppercase())
+        };
     }
     Ok(())
 }
@@ -581,6 +603,7 @@ pub fn run() {
             lan_beacon_send,
             lan_beacon_broadcast,
             lan_beacon_stop,
+            lan_beacon_set_code,
             lan_local_ip
         ])
         .setup(|app| {
