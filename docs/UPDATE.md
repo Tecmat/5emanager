@@ -63,6 +63,25 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
   Windows il check prendeva l'asset AppImage sbagliato e il `rename` sull'exe in esecuzione
   falliva -> riavvio ma versione sempre vecchia.
 
+### Schermo nero su Windows dopo aver creato una scheda (WebView2)
+
+Se la finestra Tauri su Windows resta nera (niente selettore lingua, niente pannello update),
+la causa quasi sempre non e' l'app ma il profilo WebView2, che vive in
+`%LOCALAPPDATA%\5e.Manager\EBWebView` (o simile): e' per questo che ripulire la cartella
+dell'applicazione estratta non cambia nulla. Dal v0.1.57 l'app ha un `ErrorBoundary` globale:
+se c'e' un errore di render la schermata mostra il messaggio esatto invece del nero, e
+l'errore viene salvato in `localStorage` come `dnd5e.lastError` (visibile anche dagli
+strumenti di sviluppo WebView2, `Ctrl+Shift+I`).
+
+Cose da provare, in ordine:
+
+1. Aggiornare WebView2 runtime (https://developer.microsoft.com/microsoft-edge/webview2/).
+2. Avviare con GPU disabilitata: variabile d'ambiente
+   `WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS=--disable-gpu` (molte segnalazioni di schermo nero
+   su VM/remote desktop sono legate al rendering GPU di WebView2).
+3. Cancellare il profilo WebView2: chiudi l'app e rimuovi `%LOCALAPPDATA%\5e.Manager`
+   (verra' ricreato al riavvio; le campagne P2P salvate sono in un'altra cartella, non vanno perse).
+
 ## Repo GitHub privato
 
 Se `Tecmat/5emanager` è **privato**, `api.github.com` e le pagine HTML di github.com rispondono

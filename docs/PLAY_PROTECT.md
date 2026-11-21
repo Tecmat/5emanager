@@ -36,3 +36,12 @@ Con questi secret la release CI produce `app.apk` **release-signed**; senza secr
 - privacy policy pubblicata (URL nell'app listing) che dichiari: fotocamera (QR), install unknown apps (self-update), rete
 - Data Safety form: nessun dato raccolto/transmesso a server tuoi; le schede restano sul dispositivo o sul TUO server
 - `targetSdk 35` (già così)
+
+## Diagnostica pre-installazione (v0.1.57+)
+
+Il plugin nativo `UpdateInstaller` valida l'APK scaricato **prima** di aprire il prompt di sistema:
+magic `PK`, `PackageManager.getPackageArchiveInfo` (APK valido), `versionCode` (no downgrade) e
+**firme confrontate con l'app installata**. Se la firma è diversa (es. APK debug-signed sopra una
+release-signed, o viceversa) l'installazione in-place è vietata da Android e il gestore pacchetti
+(Samsung/One UI) mostra solo “app non installata”: ora l'app mostra il motivo reale e consiglia
+disinstalla + reinstalla (dopo aver esportato le schede locali).

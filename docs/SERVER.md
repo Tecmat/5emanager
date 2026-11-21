@@ -46,6 +46,25 @@ Sync remoto: le **schede della libreria account** si sincronizzano dalla Home (c
 scarica tutte / per singola scheda); le **campagne P2P salvate in locale** si sincronizzano sull'account
 dalla tab 💾 Campagne P2P ("☁️ sync su server") — senza password, quindi scaricabili su un altro dispositivo.
 
+## 2FA TOTP (app authenticator)
+
+Gli account possono attivare la **verifica in due passaggi** (RFC 6238, HMAC-SHA1, 30 s, 6 cifre —
+compatibile con Google Authenticator, Aegis, ecc.), implementata in purezza in `packages/server/src/totp.ts`
+(zero dipendenze, `node:crypto`; test con i vettori RFC 6238).
+
+- **Attivazione** (dall'app, loggati): `setupTotp` → il server risponde `totpSetup` con `secret`,
+  `otpauth://…` (QR) e **8 codici di backup** (mostrati una sola volta; salvati solo come hash sha256).
+  L'app mostra il QR e l'utente conferma con `enableTotp` + codice a 6 cifre (finestra ±30 s).
+- **Login**: con 2FA attiva, `login` (password) risponde `totpRequired` e NON crea sessione;
+  poi `loginTotp` (password + codice) oppure `loginTotpBackup` (password + codice backup, **monouso**).
+- **Sicurezza**: throttle anti-bruteforce (max 5 tentativi/minuto per username, in memoria);
+  disattivazione solo con password (`disableTotp`). Il secret TOTP è salvato in `accounts.data`
+  → proteggi `DND5E_DATA_DIR` (come già per le campagne).
+- Play Protect: vedi [docs/PLAY_PROTECT.md](docs/PLAY_PROTECT.md) — APK release-signed via secret
+  `ANDROID_KEYSTORE_B64` (la CI avvisa se manca), e il plugin di self-update valida l'APK prima
+  dell'installazione (firma confrontata con l'app installata, no downgrade, magic PK) così un
+ 安装 fallita su Samsung/One UI (“app non installata”) diventa un messaggio chiaro.
+
 ## Protocollo (JSON su WebSocket)
 
 Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando

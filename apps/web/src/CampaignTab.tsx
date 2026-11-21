@@ -157,6 +157,7 @@ export default function CampaignTab() {
     url, setUrl, name, setName, servers, savedCampaigns,
     act, connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout, setConn, handleNetMessage, setP2PTransport,
+    totpPending, totpSetup, doLoginTotp, doLoginTotpBackup, setupTotp, enableTotp, disableTotp,
   } = useNet();
   const [mode, setMode] = useState<'create' | 'join'>('create');
   const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
@@ -805,6 +806,7 @@ export default function CampaignTab() {
   const [asMaster, setAsMaster] = useState(false);
   const [accountName, setAccountName] = useState('');
   const [accountPw, setAccountPw] = useState('');
+  const [totpCode, setTotpCode] = useState('');
   const [localPick, setLocalPick] = useState('');
   const [accPick, setAccPick] = useState('');
   const [targetId, setTargetId] = useState('');
@@ -1176,7 +1178,53 @@ export default function CampaignTab() {
               <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
               <div className="row" style={{ marginTop: 6 }}>
                 <button onClick={logout}>{t('cg.logout', 'Esci dall\'account')}</button>
+                {auth.totpEnabled ? (
+                  <>
+                    <span className="ok">🔐 {t('cg.2faOn', '2FA attiva')}</span>
+                    <button
+                      onClick={() => {
+                        const pw = window.prompt(t('cg.2faDisablePw', 'Password dell\'account per disattivare la 2FA:'));
+                        if (pw) void disableTotp(pw);
+                      }}
+                    >
+                      {t('cg.2faOff', 'Disattiva 2FA')}
+                    </button>
+                  </>
+                ) : (
+                  <button onClick={() => void setupTotp()} title={t('cg.2faEnableTitle', 'Attiva la verifica in due passaggi con un\'app authenticator (Google Authenticator, Aegis…)')}>
+                    🔐 {t('cg.2faEnable', 'Attiva 2FA')}
+                  </button>
+                )}
               </div>
+              {totpSetup && !auth.totpEnabled && (
+                <div style={{ marginTop: 8, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
+                  <b>{t('cg.2faScan', 'Scansiona il QR con l\'app authenticator, poi inserisci il codice a 6 cifre per confermare')}</b>
+                  <div className="row" style={{ marginTop: 6, alignItems: 'flex-start', gap: 12 }}>
+                    <QrBox text={totpSetup.otpauthUrl} />
+                    <div>
+                      <div className="muted" style={{ fontSize: 11 }}>{t('cg.2faSecret', 'secret (inserimento manuale):')} <code>{totpSetup.secret}</code></div>
+                      <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{t('cg.2faBackup', 'Codici di backup (salvali: valgono una volta sola):')}</div>
+                      <div style={{ columns: 2 }}>
+                        {totpSetup.backupCodes.map((b) => <div key={b} style={{ fontSize: 12 }}><code>{b}</code></div>)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <input
+                      value={totpCode}
+                      onChange={(e) => setTotpCode(e.target.value)}
+                      onKeyDown={onEnter(() => void enableTotp(totpCode))}
+                      placeholder={t('cg.2faCodePh', 'Codice 6 cifre')}
+                      inputMode="numeric"
+                      maxLength={6}
+                      style={{ width: 130 }}
+                    />
+                    <button className="primary" disabled={totpCode.trim().length !== 6} onClick={() => void enableTotp(totpCode)}>
+                      {t('cg.2faConfirm', 'Conferma e attiva')}
+                    </button>
+                  </div>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -1188,6 +1236,29 @@ export default function CampaignTab() {
                 <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
                 <button className="primary" onClick={() => doLogin(accountName, accountPw)}>{t('cg.login', 'Login')}</button>
               </div>
+              {totpPending && (
+                <div className="row" style={{ marginTop: 6 }}>
+                  <span className="muted">🔐 {t('cg.2faNeed', '2FA attiva su questo account: inserisci il codice dell\'app authenticator')}</span>
+                  <input
+                    value={totpCode}
+                    onChange={(e) => setTotpCode(e.target.value)}
+                    onKeyDown={onEnter(() => doLoginTotp(totpPending, accountPw, totpCode))}
+                    placeholder={t('cg.2faCodePh', 'Codice 6 cifre')}
+                    inputMode="numeric"
+                    maxLength={6}
+                    style={{ width: 130 }}
+                    autoFocus
+                  />
+                  <button className="primary" disabled={totpCode.trim().length !== 6} onClick={() => doLoginTotp(totpPending, accountPw, totpCode)}>{t('cg.login', 'Login')}</button>
+                  <button
+                    disabled={totpCode.trim().length < 6}
+                    onClick={() => doLoginTotpBackup(totpPending, accountPw, totpCode)}
+                    title={t('cg.2faBackupLoginTitle', 'Usa un codice di backup (vale una volta sola)')}
+                  >
+                    {t('cg.2faBackupLogin', 'Usa codice di backup')}
+                  </button>
+                </div>
+              )}
               {notice && <div className="ok" style={{ marginTop: 6 }}>ℹ️ {notice}</div>}
               <div className="muted" style={{ marginTop: 6 }}>
                 {t('cg.regNote', 'La registrazione crea una richiesta che l\'admin approva dal pannello /admin; la password è verificata lato server (hash sha256, mai in chiaro).')}
