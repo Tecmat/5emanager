@@ -61,8 +61,15 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
       </div>
 
       {local.length === 0 && campaigns.length === 0 && (
-        <div className="card muted" style={{ textAlign: 'center', padding: 24 }}>
-          {t('home.empty', 'Nessuna scheda ancora: creane una con "Nuova scheda", oppure entra in una campagna online con "Connetti online".')}
+        <div className="card" style={{ textAlign: 'center', padding: 28 }}>
+          <div style={{ fontSize: 30, marginBottom: 8 }}><Icon name="book" size={30} /></div>
+          <div className="muted" style={{ maxWidth: 420, margin: '0 auto' }}>
+            {t('home.empty', 'Nessuna scheda ancora: creane una con "Nuova scheda", oppure entra in una campagna online con "Connetti online".')}
+          </div>
+          <div className="row" style={{ marginTop: 12, justifyContent: 'center' }}>
+            <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
+            <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>
+          </div>
         </div>
       )}
 

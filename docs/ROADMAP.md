@@ -27,7 +27,7 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
 - **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
 - **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)
-- **Polish UI generale**: onboarding primo avvio (wizard "crea il tuo PG in 3 passi"), empty states, skeleton di caricamento, errori con retry, palette comandi **Cmd-K**, animazioni/soni opzionali al tiro dado
+- ✅ **Polish UI** (v0.1.61): onboarding primo avvio wizard 3 passi (nome/razza/classe → punteggi array-standard o 4d6 → crea, con Salta/Form completo), palette comandi **Ctrl/Cmd+K** con filtro e tastiera (↑↓+Invio), skeleton di caricamento, empty state Home con CTA, erreurs banner con pulsante chiudi; test jsdom `polish.test.tsx`
 
 ### Fase 2 — espansione gameplay (medio termine)
 - **Mappa tattica minimale** con token trascinabili su griglia 5 ft, sincronizzata via P2P (il master muove i token, tutti li vedono) — estende `TemplateView`/`CombatTab`, stato in `core/campaign.ts`

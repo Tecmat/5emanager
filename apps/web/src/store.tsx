@@ -62,6 +62,8 @@ async function loadSheetsAsync(): Promise<SheetStoreData> {
 
 interface Store {
   reg: Registry;
+  /** true quando le schede sono state caricate da IndexedDB (per skeleton di caricamento) */
+  ready: boolean;
   /** personaggio "in vista" (es. scheda di un giocatore vista dal master): se impostato, char punterà a lui */
   viewChar: Character | null;
   viewLabel: string | null;
@@ -99,11 +101,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const [data, setData] = useState<SheetStoreData>({ activeId: null, sheets: {}, campaignMeta: {} });
+  const [ready, setReady] = useState(false);
   const [customCount, setCustomCount] = useState(0);
   const [lang, setLangState] = useState<Lang>(getLang);
 
   useEffect(() => {
-    loadSheetsAsync().then(setData);
+    loadSheetsAsync().then((d) => {
+      setData(d);
+      setReady(true);
+    });
   }, []);
 
   const persist = (d: SheetStoreData) => {
@@ -220,6 +226,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   const value: Store = {
     reg,
+    ready,
     viewChar,
     viewLabel,
     setViewChar,
