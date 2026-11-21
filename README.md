@@ -75,7 +75,9 @@ WhatsApp). Su desktop (Tauri) e Android l'host può aprire anche un **beacon LAN
 [docs/P2P.md](docs/P2P.md).
 
 Le campagne che **hosti sono salvate automaticamente in locale** (snapshot senza password,
-max 20): dalla tab 🗺️ Campagna le **riprendi** dalle sessioni scorse o le elimini.
+max 20): dalla tab 🗺️ Campagna le **riprendi** dalle sessioni scorse o le elimini — al
+ripristino resta una sola voce (stesso id). La **password della campagna P2P è facoltativa**:
+se vuota, entra chi ha il codice o l'indirizzo.
 
 ## Multiplayer (server self-hosted, opzionale)
 
@@ -115,4 +117,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 122/122 verdi.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 123/123 verdi.

@@ -343,29 +343,108 @@ async function ensureCameraPermission(): Promise<void> {
   }
 }
 
-/** scansiona un QR con la fotocamera, se il browser lo supporta (BarcodeDetector, es. Chrome Android) */
+type BarcodeDetectorCtor = new (o: { formats: string[] }) => { detect: (src: CanvasImageSource) => Promise<{ rawValue: string }[]> };
+
+function barcodeDetectorCtor(): BarcodeDetectorCtor | undefined {
+  return (window as unknown as { BarcodeDetector?: BarcodeDetectorCtor }).BarcodeDetector;
+}
+
+/**
+ * fallback: apre l'APP FOTOCAMERA DI SISTEMA (input capture="environment":
+ * si apre, scatta e si chiude da sola), poi decodifica la foto con BarcodeDetector.
+ */
+function scanQrViaSystemCamera(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const BD = barcodeDetectorCtor();
+    if (!BD) {
+      reject(new Error('Scansione QR non supportata da questo browser (usa incolla)'));
+      return;
+    }
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.capture = 'environment';
+    input.style.display = 'none';
+    input.onchange = () => {
+      const f = input.files?.[0];
+      input.remove();
+      if (!f) {
+        reject(new Error('Scansione annullata'));
+        return;
+      }
+      void (async () => {
+        try {
+          const det = new BD({ formats: ['qr_code'] });
+          const codes = await det.detect(await createImageBitmap(f));
+          if (codes.length > 0) resolve(codes[0].rawValue);
+          else reject(new Error('Nessun QR nella foto: riprova più da vicino'));
+        } catch (e) {
+          reject(e instanceof Error ? e : new Error(errText(e)));
+        }
+      })();
+    };
+    document.body.appendChild(input);
+    input.click();
+  });
+}
+
+/**
+ * Scansiona un QR: apre un overlay con la PREVIEW della fotocamera (l'overlay si chiude
+ * da solo appena trova il codice, e i track vengono fermati); se getUserMedia/BarcodeDetector
+ * non sono disponibili (WebView vecchie) passa all'app fotocamera di sistema.
+ */
 export async function scanQr(): Promise<string> {
-  const BD = (window as unknown as { BarcodeDetector?: new (o: { formats: string[] }) => { detect: (v: HTMLVideoElement) => Promise<{ rawValue: string }[]> } });
-  if (!BD.BarcodeDetector) throw new Error('Scansione QR non supportata da questo browser (usa incolla)');
+  const BD = barcodeDetectorCtor();
   await ensureCameraPermission();
-  let stream: MediaStream;
+  let stream: MediaStream | null = null;
   try {
     stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-  } catch (e) {
-    throw new Error('Fotocamera non disponibile o permesso negato (' + errText(e) + ') — usa "incolla il codice"');
+  } catch {
+    stream = null; // niente fotocamera in-app: fallback sotto
   }
+  if (!BD || !stream) {
+    if (stream) stream.getTracks().forEach((t) => t.stop());
+    return scanQrViaSystemCamera();
+  }
+  const overlay = document.createElement('div');
+  overlay.className = 'modal-bg';
+  overlay.innerHTML = `
+    <div class="modal" style="width:min(420px,92vw)">
+      <h2>📷 Inquadra il QR</h2>
+      <video playsinline muted style="width:100%;border-radius:8px;background:#000;aspect-ratio:4/3"></video>
+      <div class="row" style="margin-top:8px;justify-content:flex-end">
+        <button type="button" data-cancel>Annulla</button>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  const video = overlay.querySelector('video') as HTMLVideoElement;
+  const cleanup = () => {
+    stream!.getTracks().forEach((t) => t.stop());
+    overlay.remove();
+  };
   try {
-    const video = document.createElement('video');
     video.srcObject = stream;
     await video.play();
-    const det = new BD.BarcodeDetector({ formats: ['qr_code'] });
-    for (let i = 0; i < 100; i++) {
-      await new Promise((r) => setTimeout(r, 200));
-      const codes = await det.detect(video);
-      if (codes.length > 0) return codes[0].rawValue;
-    }
-    throw new Error('Nessun QR trovato (inquadra il codice)');
+    const det = new BD({ formats: ['qr_code'] });
+    const found = await new Promise<string | null>((resolve) => {
+      overlay.querySelector('[data-cancel]')!.addEventListener('click', () => resolve(null));
+      window.setTimeout(() => resolve(null), 60_000); // stop dopo 60 s
+      const tick = async () => {
+        if (!overlay.isConnected) return;
+        try {
+          const codes = await det.detect(video);
+          if (codes.length > 0) {
+            resolve(codes[0].rawValue);
+            return;
+          }
+        } catch { /* fotogramma non pronto: riprova al prossimo tick */ }
+        window.setTimeout(tick, 200);
+      };
+      void tick();
+    });
+    if (found) return found;
+    throw new Error('Scansione annullata o scaduta (60 s) — riprova o incolla il codice');
   } finally {
-    stream.getTracks().forEach((t) => t.stop());
+    cleanup();
   }
 }

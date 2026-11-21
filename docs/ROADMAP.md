@@ -9,6 +9,10 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 ### Fase 1 — robustezza P2P + polish UX (alto valore, basso costo)
 - ✅ **Persistenza campagne P2P sull'host** (v0.1.53): snapshot automatico in IndexedDB (max 20, **senza password**) + lista "Riprendi / Elimina" nella tab Campagna; `resumeCampaign` nel core con test, `existing` negli host P2P (RTC/relay/LAN) — `p2pSaved.ts`, `p2p.ts`, `CampaignTab.tsx`
+- ✅ **Ripristino a id stabile + password P2P facoltativa** (v0.1.54): `resumeCampaign` mantiene l'id (una sola voce per campagna nella lista salvati); join senza controllo password se l'host non l'ha impostata (P2PHost/P2PRelayHost/P2PLanHost)
+- ✅ **Esporta PDF senza pop-up** (v0.1.54): `printSheet` stampa da iframe nascosto invece di `window.open` (bloccato su WebView Android / WebKitGTK Tauri) — `pdf.ts`
+- ✅ **Scansione QR con preview** (v0.1.54): overlay fotocamera in-app che si chiude da solo al riconoscimento; fallback sull'app fotocamera di sistema (`input capture="environment"`) se BarcodeDetector/getUserMedia mancano — `qr.ts`
+- ✅ **Fix plugin Android invisibili (UpdateInstaller/LanBeacon)** (v0.1.54): il template Capacitor 7 genera `MainActivity` senza `onCreate`, quindi il fallback della patch registrava i plugin DOPO `super.onCreate` (invisibili alla WebView → "plugin mancante"); ora registrati prima + assert che blocca la CI se l'ordine è sbagliato — `patch_android.py` (testato su template finto, idempotente)
 - **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
 - **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
 - **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)

@@ -105,15 +105,37 @@ ${journal ? `<h2>Diario di sessione</h2><table>${journal}</table>` : ''}
 </body></html>`;
 }
 
-/** apre una finestra con la scheda formattata e lancia la stampa (salva come PDF) */
+/**
+ * stampa la scheda formattata (dal dialog del browser: "Salva come PDF").
+ * NIENTE window.open: i pop-up blocker lo bloccano e le WebView native
+ * (Android APK / Tauri WebKitGTK) non lo supportano proprio — si usa un
+ * iframe nascosto fuori schermo, che non viene mai bloccato.
+ */
 export function printSheet(char: Character, reg: Registry): void {
-  const w = window.open('', '_blank', 'width=900,height=1200');
-  if (!w) {
-    alert('Pop-up bloccato: consenti i pop-up per esportare il PDF');
+  const iframe = document.createElement('iframe');
+  iframe.style.cssText = 'position:fixed;left:-10000px;top:0;width:820px;height:1000px;border:0';
+  iframe.setAttribute('aria-hidden', 'true');
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow;
+  const doc = iframe.contentDocument ?? win?.document;
+  if (!win || !doc) {
+    iframe.remove();
+    alert('Stampa non disponibile in questo ambiente: usa Ctrl+P (o menu ⋮ → Stampa) sulla pagina della scheda');
     return;
   }
-  w.document.write(buildSheetHtml(char, reg));
-  w.document.close();
-  w.focus();
-  setTimeout(() => w.print(), 300);
+  doc.open();
+  doc.write(buildSheetHtml(char, reg));
+  doc.close();
+  const cleanup = () => iframe.remove();
+  win.addEventListener('afterprint', cleanup);
+  window.setTimeout(() => {
+    try {
+      win.focus();
+      win.print();
+    } catch {
+      cleanup();
+    }
+    // fallback di pulizia se afterprint non scatta (alcune WebView)
+    window.setTimeout(cleanup, 120_000);
+  }, 350);
 }

@@ -193,7 +193,8 @@ export class P2PHost {
 
   private handlePeerMessage(ch: RTCDataChannel, playerId: string | undefined, msg: AnyMsg) {
     if (msg.t === 'join') {
-      if (msg.password !== this.campaign.passwordHash) {
+      // password facoltativa: se l'host non l'ha impostata (passwordHash vuoto) non si controlla
+      if (this.campaign.passwordHash && msg.password !== this.campaign.passwordHash) {
         ch.send(JSON.stringify({ t: 'error', message: 'Password sbagliata' }));
         return;
       }
@@ -438,7 +439,7 @@ export class P2PRelayHost {
 
   private handleJoin(from: string, name: string, password: string): void {
     this.pendingPw.set(from, password);
-    if (password !== this.campaign.passwordHash) {
+    if (this.campaign.passwordHash && password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;
     }
@@ -614,7 +615,7 @@ export class P2PLanHost {
   }
 
   private doJoin(from: string, name: string, password: string, relay: boolean): void {
-    if (password !== this.campaign.passwordHash) {
+    if (this.campaign.passwordHash && password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;
     }

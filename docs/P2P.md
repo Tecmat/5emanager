@@ -9,9 +9,9 @@ niente server, niente dominio, niente porte da aprire.
 ### 🔍 Modo automatico (consigliato, stessa rete) — un solo tasto, niente IP da scrivere
 
 1. L'**host** apre la tab 🌐 Campagna → **📡 P2P** → "Faccio da host", mette nome campagna,
-   password e nome, spunta **📡 Annunciati su un server LAN** e preme **Avvia host P2P**.
+   password (**facoltativa**: se vuota entra chi ha codice/indirizzo) e nome, spunta **📡 Annunciati su un server LAN** e preme **Avvia host P2P**.
 2. Ogni **giocatore** (stessa rete) apre 📡 P2P → "Mi unisco a un host", mette nome e password
-   e preme **🔍 Scansiona rete e cerca host**: l'app trova da sola il proprio IP LAN (via ICE
+   (se l'host l'ha impostata) e preme **🔍 Scansiona rete e cerca host**: l'app trova da sola il proprio IP LAN (via ICE
    WebRTC), scansiona la sottorete /24 sondando `/api/info` sui server 5emanager, mostra i
    **server trovati (nome host + IP)** e poi la **lista degli host con nome e IP LAN** —
    un tap su ▶ e si entra. La lista si aggiorna da sola ogni 8 s.
@@ -79,10 +79,10 @@ che fa solo da relay opaco. Stesso flusso "cerca host → un click", niente codi
   locale** (IndexedDB, max 20 campagne, senza password) a ogni cambio di stato e alla chiusura
   dell'host: se l'host chiude l'app, la campagna finisce per i giocatori (`campaignDeleted`),
   però l'host può **riprenderla** dalla tab 🗺️ Campagna → P2P → "💾 Campagne P2P salvate su
-  questo dispositivo" → **Riprendi** (dopo aver reinserito la password: non viene salvata).
-  Al ripristino: nuovo id, solo il master, niente combattimento in corso; restano note, tesoro
+  questo dispositivo" → **Riprendi** (la password non viene salvata ed è facoltativa: se la usava la reinserisce, altrimenti lascia vuoto).
+  Al ripristino: **stesso id** (resta una sola voce nell'elenco), solo il master, niente combattimento in corso; restano note, tesoro
   e inventario di gruppo. Le schede restano salvate localmente su ogni dispositivo.
-- La password della campagna P2P è confrontata in memoria dall'host (campagna effimera).
+- La password della campagna P2P è confrontata in memoria dall'host (campagna effimera) ed è **facoltativa**: se vuota non viene richiesta al join.
 
 ## Host LAN "stile Soul Knight" (v0.1.27+) — niente server, niente codici
 
