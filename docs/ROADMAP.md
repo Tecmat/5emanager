@@ -1,5 +1,33 @@
 # Roadmap — espansione di 5e Manager
 
+## 🔜 Prossime priorità — post P2P LAN (v0.1.52+, proposte da discutere insieme)
+
+Il multiplayer P2P sulla stessa WiFi funziona (scoperta LAN, codice invito/QR, beacon, relay).
+Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si innesta:
+`packages/core` (regole/campagna), `apps/web` (UI + `p2p.ts`/`netStore.tsx` per il trasporto),
+`packages/server` (relay/announce), `data-srd` (dati).
+
+### Fase 1 — robustezza P2P + polish UX (alto valore, basso costo)
+- **Persistenza campagna sull'host**: snapshot automatico in IndexedDB + "Riprendi campagna" alla riapertura (oggi se l'host chiude l'app la campagna muore) — `idb.ts`/`storage.ts` + `CampaignTab`
+- **Riconnessione automatica**: token identità per giocatore, rientro automatico dopo un drop di rete, badge "disconnesso" in lobby — `p2p.ts`, `netStore.tsx`, `core/campaign.ts`
+- **Chat di campagna** testuale nel log (messaggi master/giocatori: senza voce in P2P è **indispensabile**) — nuova azione in `core/campaign.ts` + UI in `CampaignTab`
+- **Turno evidente**: highlight del combattente di turno + suono/avviso opzionale "è il tuo turno" (il timer c'è già)
+- **Polish UI generale**: onboarding primo avvio (wizard "crea il tuo PG in 3 passi"), empty states, skeleton di caricamento, errori con retry, palette comandi **Cmd-K**, animazioni/soni opzionali al tiro dado
+
+### Fase 2 — espansione gameplay (medio termine)
+- **Mappa tattica minimale** con token trascinabili su griglia 5 ft, sincronizzata via P2P (il master muove i token, tutti li vedono) — estende `TemplateView`/`CombatTab`, stato in `core/campaign.ts`
+- **Party tracker lato master** sempre visibile: PF/CA/percezione/condizioni di tutti i PG anche fuori dal combattimento
+- **Log del combattimento persistente per round** + **statistiche di campagna** (danni totali, incantesimi lanciati, round) + **export campagna intera** (log + schede + tesoreria) in un file
+- **Schede pregen** da sfogliare e clonare
+- Nuovi contenuti: **generatore di dungeon/stanze casuali** (tabelle JSON, come `random.json`), **crafting/ricette**, **compravendita con calcolo del resto**
+
+### Fase 3 — piattaforme e dati (visioni)
+- **PWA offline completa** (dati SRD cachati nel service worker) + **notifiche push** promemoria sessione (Android/desktop)
+- **Import da D&D Beyond** (parsing del JSON esportato dall'utente — solo dati propri) + **sync cloud opzionale** (login multi-dispositivo, conflitto last-write-wins)
+- **iOS via Capacitor**, **test e2e Playwright** (flusso: crea PG → XP → level-up → lancia incantesimo), copertura core > 90%
+
+> Questa sezione riorganizza e dà priorità alle "idee P3" elencate più sotto.
+
 ## ✅ P1/P2 completate (v0.1.13, branch vibe/dnd5e-scheda-f0caaa)
 
 - **P1 Upcast del danno**: `upcastExtraDice`/`spellDamagePreview` nel core (parse dell'`higherLevel`, es. +1d6/slot) — anteprima "a slot N°: danno X + Y" in tab Incantesimi e voce `upcast +NdM` nel diario al lancio
