@@ -555,8 +555,11 @@ export class P2PLanHost {
   masterId: string;
   requireAccept: boolean;
   private cb: HostCallbacks;
-  private pending = new Map<string, { name: string; password: string }>();
+  private pending = new Map<string, { name: string; password: string; relay: boolean }>();
   private offEvt: (() => void) | null = null;
+  /** connessioni del server (relay): peer che arrivano via codice breve/lista host, non dal beacon */
+  private disc: P2PDiscovery | null = null;
+  private relayPeers = new Set<string>();
 
   constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; requireAccept?: boolean }) {
     this.reg = opts.reg;
@@ -581,16 +584,36 @@ export class P2PLanHost {
     });
   }
 
+  /**
+   * annunciati su un server 5emanager: i giocatori che arrivano dal server (codice breve
+   * XXXX-XXXX o lista host) entrano sulla STESSA campagna via relay p2pData, oltre a quelli
+   * del beacon LAN (stesso handleData: stessi messaggi join/welcome/state/action).
+   */
+  attachDiscovery(disc: P2PDiscovery): void {
+    this.disc = disc;
+    disc.onJoinRequest = (from, name, password) => {
+      if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
+        this.pending.set(from, { name: name ?? 'Giocatore', password: password ?? '', relay: true });
+        this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
+        return;
+      }
+      this.doJoin(from, name ?? 'Giocatore', password ?? '', true);
+    };
+    disc.onData = (from, msg) => {
+      if (this.relayPeers.has(from)) this.handleData(from, msg);
+    };
+  }
+
   private handleData(from: string, msg: AnyMsg): void {
     if (msg.t === 'join') {
       const name = String(msg.name || 'Giocatore');
       const password = String(msg.password ?? '');
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
-        this.pending.set(from, { name, password });
+        this.pending.set(from, { name, password, relay: false });
         this.cb.onJoinPending?.({ from, name });
         return;
       }
-      this.doJoin(from, name, password);
+      this.doJoin(from, name, password, false);
       return;
     }
     if (msg.t === 'ping') {
@@ -600,7 +623,7 @@ export class P2PLanHost {
     if (msg.t === 'action') this.applyAction(from, msg.action as ClientAction);
   }
 
-  private doJoin(from: string, name: string, password: string): void {
+  private doJoin(from: string, name: string, password: string, relay: boolean): void {
     if (password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;
@@ -611,6 +634,7 @@ export class P2PLanHost {
     }
     const player: PlayerInfo = { id: from, name, role: 'player' };
     this.campaign.players.push(player);
+    if (relay) this.relayPeers.add(from);
     this.sendTo(from, { t: 'welcome', you: player, campaign: this.campaign });
     this.cb.onPeerJoined(player);
     this.broadcastState();
@@ -620,7 +644,7 @@ export class P2PLanHost {
   acceptJoin(from: string): void {
     const p = this.pending.get(from);
     this.pending.delete(from);
-    this.doJoin(from, p?.name ?? 'Giocatore', p?.password ?? '');
+    this.doJoin(from, p?.name ?? 'Giocatore', p?.password ?? '', p?.relay ?? false);
   }
 
   /** il master rifiuta la richiesta */
@@ -648,11 +672,17 @@ export class P2PLanHost {
   }
 
   sendTo(playerId: string, m: AnyMsg): void {
+    // i peer del server (relay) ricevono via p2pData, quelli del beacon via WS diretto
+    if (this.relayPeers.has(playerId)) {
+      this.disc?.sendData(playerId, m);
+      return;
+    }
     void beaconSend(playerId, JSON.stringify(m));
   }
 
   broadcast(m: AnyMsg): void {
     void beaconBroadcast(JSON.stringify(m));
+    for (const id of this.relayPeers) this.disc?.sendData(id, m);
   }
 
   broadcastState(): void {

@@ -30,7 +30,7 @@ import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
-import { LAN_BEACON_PORT, beaconStart, detectLocalIp, lanBeaconSupported } from './lanBeacon.js';
+import { LAN_BEACON_PORT, beaconStart, detectLocalIp, detectLocalIps, lanBeaconSupported } from './lanBeacon.js';
 import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
@@ -158,7 +158,7 @@ export default function CampaignTab() {
   const [hosts, setHosts] = useState<P2PHostInfo[]>([]);
   const [lanServers, setLanServers] = useState<LanServer[]>([]);
   const [lanP2pHosts, setLanP2pHosts] = useState<LanPeer[]>([]);
-  const [beaconInfo, setBeaconInfo] = useState<{ ip: string; port: number } | null>(null);
+  const [beaconInfo, setBeaconInfo] = useState<{ ip: string; port: number; ips?: string[] } | null>(null);
   const [scanning, setScanning] = useState(false);
   const [scanProg, setScanProg] = useState<{ d: number; t: number } | null>(null);
   const [pendingJoins, setPendingJoins] = useState<{ from: string; name: string }[]>([]);
@@ -243,6 +243,8 @@ export default function CampaignTab() {
           })();
         };
       }
+      // host LAN (beacon): i giocatori che arrivano dal server (codice breve/lista) entrano via relay sulla stessa campagna
+      if (hostMode === 'lan' && hostRef.current) (hostRef.current as P2PLanHost).attachDiscovery(disc);
       await disc.connect(u);
       const nm = campaignName || name || 'Campagna P2P';
       disc.announce(nm);
@@ -308,6 +310,8 @@ export default function CampaignTab() {
     // WebSocket diretto, funziona anche senza WebRTC (WebKitGTK) e senza server
     if (lanBeaconSupported()) {
       await startLanHost();
+      // se spuntato "annunciati su un server", l'host LAN si annuncia anche lì (codice breve per chi non è in LAN)
+      if (announce) void startAnnounce();
       return;
     }
     // senza WebRTC (browser/vecchie build) si usa il trasporto relay sul server LAN
@@ -380,9 +384,17 @@ export default function CampaignTab() {
       setP2PTransport((m: any) => {
         if (m?.t === 'action') host.applyAction(host.masterId, m.action);
       });
-      const ip = await detectLocalIp();
+      const ips = await detectLocalIps();
+      const ip = ips[0] ?? (await detectLocalIp()) ?? '0.0.0.0';
+      // autodiagnosi: il beacon deve rispondere anche su 127.0.0.1 dentro l'app (cleartext OK)
+      try {
+        const r = await fetch(`http://127.0.0.1:${LAN_BEACON_PORT}/api/info`, { cache: 'no-store' });
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+      } catch (e) {
+        setError(tf('cg.lanBeaconSelfFail', 'Beacon avviato ma non risponde nemmeno in locale (127.0.0.1:{port}): {e} — riavvia l\'host.', { port: LAN_BEACON_PORT, e: errMsg(e) }));
+      }
       // la card host (sotto) mostra già "In onda su ws://ip:3177": niente messaggio duplicato
-      setBeaconInfo({ ip: ip ?? '0.0.0.0', port: LAN_BEACON_PORT });
+      setBeaconInfo({ ip, port: LAN_BEACON_PORT, ips });
     } catch (e) {
       setError(errMsg(e));
     }
@@ -1164,15 +1176,30 @@ export default function CampaignTab() {
                   <div style={{ marginTop: 4 }}><code>ws://{beaconInfo.ip}:{beaconInfo.port}</code></div>
                 </div>
               </div>
+              {beaconInfo.ips && beaconInfo.ips.length > 1 && (
+                <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+                  {tf('cg.lanMultiIp', 'Questo dispositivo ha più IP (WiFi/hotspot): se ws://{ip} non risponde dagli altri dispositivi, prova:', { ip: beaconInfo.ip })}
+                  {beaconInfo.ips.filter((x) => x !== beaconInfo.ip).map((x) => (
+                    <div key={x} style={{ marginTop: 2 }}><code>ws://{x}:{beaconInfo.port}</code></div>
+                  ))}
+                </div>
+              )}
             </>
           )}
-          {hostMode === 'relay' && (discState === 'on' ? (
+          {(hostMode === 'relay' || hostMode === 'lan') && (discState === 'on' ? (
             <div className="ok" style={{ marginBottom: 8 }}>
-              📡 {tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url })} — {t('cg.p2pRelayPlayersHint', 'chi cerca host sulla rete ti vede e entra con un click (trasporto relay via server, perché WebRTC non è disponibile qui).')}
+              📡 {tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url })} — {t('cg.p2pRelayPlayersHint', 'chi cerca host sulla rete ti vede e entra con un click (via server, oltre al QR/indirizzo LAN).')}
             </div>
           ) : (
             <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
           ))}
+          {(hostMode === 'relay' || hostMode === 'lan') && discState === 'on' && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <button onClick={newShortInviteCode} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
+                <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
+              </button>
+            </div>
+          )}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
           {inviteCode && discState === 'on' && (
             <div className="row" style={{ marginTop: 8, alignItems: 'flex-start' }}>

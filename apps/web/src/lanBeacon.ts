@@ -58,6 +58,8 @@ interface LanBeaconPlugin {
   stop(): Promise<void>;
   /** IP IPv4 locale del dispositivo (interfacce di rete) — serve quando WebRTC manca (WebKitGTK) */
   localIp(): Promise<{ ip?: string }>;
+  /** TUTTI gli IP IPv4 locali (utile con WiFi + hotspot contemporanei) */
+  localIps(): Promise<{ ips?: string[] }>;
 }
 // plugin nativo custom (patchato in CI in apps/web/android-overlay/LanBeaconPlugin.java)
 const LanBeacon = registerPlugin<LanBeaconPlugin>('LanBeacon');
@@ -120,6 +122,21 @@ export async function detectLocalIp(): Promise<string | null> {
     }
   } catch { /* ignora */ }
   return null;
+}
+
+/**
+ * tutti gli IP IPv4 locali del dispositivo (WiFi, hotspot, ecc.): quando il telefono ha più
+ * interfacce attive quello mostrato nel QR potrebbe non essere quello che gli altri raggiungono.
+ */
+export async function detectLocalIps(): Promise<string[]> {
+  try {
+    if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
+      const r = await LanBeacon.localIps();
+      if (r.ips && r.ips.length > 0) return r.ips;
+    }
+  } catch { /* cade sotto */ }
+  const one = await detectLocalIp();
+  return one ? [one] : [];
 }
 
 export async function beaconStop(): Promise<void> {
