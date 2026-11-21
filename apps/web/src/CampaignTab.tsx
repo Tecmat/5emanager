@@ -208,7 +208,7 @@ export default function CampaignTab() {
     setError('');
     const u = (wsUrl ?? url).trim() || autoDiscWsUrl();
     if (!u) {
-      setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://192.168.1.10:3001)'));
+      setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://<ip-del-server>:3001) oppure usa la scansione di rete'));
       return;
     }
     setUrl(u);
@@ -330,8 +330,8 @@ export default function CampaignTab() {
         if (m?.t === 'action') host.applyAction(host.masterId, m.action);
       });
       const ip = await detectLocalIp();
+      // la card host (sotto) mostra già "In onda su ws://ip:3177": niente messaggio duplicato
       setBeaconInfo({ ip: ip ?? '0.0.0.0', port: LAN_BEACON_PORT });
-      setHostNotice(tf('cg.lanBeaconOn', '📡 In onda su questa rete: ws://{ip}:{port} — i giocatori ti vedono con "Scansiona rete" e entrano con un tap.', { ip: ip ?? '?', port: LAN_BEACON_PORT }));
     } catch (e) {
       setError(errMsg(e));
     }
@@ -390,6 +390,8 @@ export default function CampaignTab() {
     setLanServers([]);
     setLanP2pHosts([]);
     let foundCount = -1;
+    const myIp = await detectLocalIp();
+    const netInfo = myIp ? tf('cg.p2pScanNetInfo', 'il tuo IP è {ip} — scansiono la rete {net}/24', { ip: myIp, net: myIp.split('.').slice(0, 3).join('.') }) : '';
     try {
       const found = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
       foundCount = found.length;
@@ -407,9 +409,9 @@ export default function CampaignTab() {
     if (u) {
       await searchHosts();
     } else if (foundCount === 0) {
-      setDiscMsg(t('cg.p2pScanNone', 'Niente trovato sulla rete. Controlla: (1) dispositivi sulla stessa WiFi/hotspot e stessa sottorete; (2) sull\'altro dispositivo è stato premuto "Ospita su questa rete (LAN)"; (3) il firewall non blocca la porta 3177 (su Windows: Firewall → consenti "5e Manager"); (4) prova a riavviare l\'host.'));
+      setDiscMsg((netInfo ? netInfo + ' — ' : '') + t('cg.p2pScanNone', 'Niente trovato sulla rete. Controlla: (1) dispositivi sulla stessa WiFi/hotspot e stessa sottorete (l\'IP del telefono e del PC devono iniziare uguale); (2) sull\'altro dispositivo è stato premuto "Ospita su questa rete (LAN)"; (3) il firewall non blocca la porta 3177; (4) dal telefono apri nel browser http://<ip-del-pc>:3177/api/info per verificare che il beacon risponda; (5) riavvia l\'host.'));
     } else {
-      setDiscMsg(t('cg.p2pNoServerScan', 'Nessun server 5emanager trovato in rete — se cerchi una campagna P2P diretta usa gli host LAN qui sotto (tap per entrare), oppure inserisci il ws:// del server remoto a mano.'));
+      setDiscMsg((netInfo ? netInfo + ' — ' : '') + t('cg.p2pNoServerScan', 'Nessun server 5emanager trovato in rete — se cerchi una campagna P2P diretta usa gli host LAN qui sotto (tap per entrare), oppure inserisci il ws:// del server remoto a mano.'));
     }
   };
 
@@ -790,9 +792,13 @@ export default function CampaignTab() {
       <div className="grid" style={{ maxWidth: 560 }}>
         <div className="card">
           <h3><Icon name="globe" candy size={16} /> {t('cg.server', 'Server')}</h3>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <span className="tag custom">server remoto</span>
-            <button onClick={() => switchNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito"><Icon name="signal" size={14} /> {t('cg.orP2p', 'oppure P2P')}</button>
+          <div className="segmented" style={{ marginBottom: 8 }}>
+            <button className={`seg ${(netMode as string) === 'server' ? 'active' : ''}`} onClick={() => switchNetMode('server')}>
+              <Icon name="globe" candy size={15} /> {t('cg.remoteServer', 'Server remoto')}
+            </button>
+            <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')} title="Campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito">
+              <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
+            </button>
           </div>
           <label>{t('cg.wsUrl', 'Server WebSocket')}</label>
           <div className="row">

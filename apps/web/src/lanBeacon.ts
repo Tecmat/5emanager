@@ -97,9 +97,15 @@ export async function beaconBroadcast(msg: string): Promise<number> {
  * IP locale del dispositivo: prima il trucco ICE WebRTC, poi (su app native, es. AppImage
  * su WebKitGTK dove RTCPeerConnection manca) la lettura nativa delle interfacce di rete.
  */
+let ipCache: { ip: string; at: number } | null = null;
+
 export async function detectLocalIp(): Promise<string | null> {
+  if (ipCache && Date.now() - ipCache.at < 30_000) return ipCache.ip;
   const viaRtc = await localIpViaWebRTC(1200);
-  if (viaRtc) return viaRtc;
+  if (viaRtc) {
+    ipCache = { ip: viaRtc, at: Date.now() };
+    return viaRtc;
+  }
   try {
     if (await isTauri()) {
       const { invoke } = await import('@tauri-apps/api/core');
@@ -107,7 +113,10 @@ export async function detectLocalIp(): Promise<string | null> {
       if (ip) return ip;
     } else if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
       const r = await LanBeacon.localIp();
-      if (r.ip) return r.ip;
+      if (r.ip) {
+        ipCache = { ip: r.ip, at: Date.now() };
+        return r.ip;
+      }
     }
   } catch { /* ignora */ }
   return null;
