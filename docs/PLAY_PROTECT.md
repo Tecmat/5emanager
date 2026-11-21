@@ -37,6 +37,19 @@ Con questi secret la release CI produce `app.apk` **release-signed**; senza secr
 - Data Safety form: nessun dato raccolto/transmesso a server tuoi; le schede restano sul dispositivo o sul TUO server
 - `targetSdk 35` (già così)
 
+## Firma stabile degli APK debug in CI (v0.1.58+)
+
+Il keystore `apps/web/android-overlay/debug.keystore` (PKCS12, alias `androiddebugkey`, password
+`android`) \u00e8 **committato nel repo apposta**: \u00e8 una chiave pubblica pensata solo per il sideload
+(come la debug key standard di Android), non protegge nulla e non va usata per il Play Store.
+`patch_android.py` lo copia nel progetto generato e configura `signingConfigs.debug` su di esso:
+cos\u00ec ogni build CI (`assembleDebug`) ha la **stessa firma** e gli update in-app funzionano.
+Prima di v0.1.58 ogni runner generava una debug key diversa in `~/.android/debug.keystore`,
+quindi ogni APK aveva firma diversa e Samsung mostrava "app non installata"
+(`INSTALL_FAILED_UPDATE_INCOMPATIBLE`). **Migrazione**: se l'app installata ha firma diversa,
+disinstalla e installa a mano la nuova APK (esporta prima le schede: i dati locali vivent sul
+dispositivo e vengono cancellati con la disinstallazione).
+
 ## Diagnostica pre-installazione (v0.1.57+)
 
 Il plugin nativo `UpdateInstaller` valida l'APK scaricato **prima** di aprire il prompt di sistema:
