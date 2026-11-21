@@ -57,7 +57,7 @@ if "uses-feature" not in s:
     )
 # 1c) deep link: il QR "5ELAN:ws://..." / "5EP2P1:..." scansionato con la fotocamera di
 # sistema apre direttamente l'app (intent-filter VIEW/BROWSABLE sugli scheme, activity launcher)
-if "5elan" not in s:
+if "5elan" not in s.lower():
     deep = (
         "\n            <intent-filter>\n"
         '                <action android:name="android.intent.action.VIEW" />\n'
@@ -67,6 +67,8 @@ if "5elan" not in s:
         '                <data android:scheme="5ELAN" />\n'
         '                <data android:scheme="5ep2p1" />\n'
         '                <data android:scheme="5EP2P1" />\n'
+        '                <data android:scheme="5ecode" />\n'
+        '                <data android:scheme="5ECODE" />\n'
         "            </intent-filter>"
     )
     idx = s.find("android.intent.category.LAUNCHER")
@@ -177,4 +179,4 @@ for pl in plugins:
             )
 ma.write_text(t)
 
-print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi + deep-link 5elan/5ep2p1 + version " + _ver)
+print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi + deep-link 5elan/5ep2p1/5ecode + version " + _ver)

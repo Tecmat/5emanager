@@ -24,7 +24,7 @@ import {
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet } from './netStore.js';
-import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
+import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
@@ -151,6 +151,9 @@ export default function CampaignTab() {
   const [invite, setInvite] = useState<{ key: string; code: string } | null>(null);
   const [joinerAnswer, setJoinerAnswer] = useState('');
   const [inviteInput, setInviteInput] = useState('');
+  const [codeInput, setCodeInput] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const inviteCodeRef = useRef('');
   const [myAnswer, setMyAnswer] = useState('');
   const [hosts, setHosts] = useState<P2PHostInfo[]>([]);
   const [lanServers, setLanServers] = useState<LanServer[]>([]);
@@ -196,6 +199,9 @@ export default function CampaignTab() {
     setInvite(null);
     setJoinerAnswer('');
     setInviteInput('');
+    setCodeInput('');
+    setInviteCode('');
+    inviteCodeRef.current = '';
     setMyAnswer('');
     setScanProg(null);
     setError('');
@@ -240,11 +246,17 @@ export default function CampaignTab() {
       await disc.connect(u);
       const nm = campaignName || name || 'Campagna P2P';
       disc.announce(nm);
+      newShortInviteCode();
       setDiscState('on');
       setDiscMsg(tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url: u }));
-      // ri-annuncia ogni 30 s (il server tiene l'annuncio per 90 s)
+      // ri-annuncia ogni 30 s (il server tiene annuncio e codice per 90 s)
       window.clearInterval(announceTimerRef.current);
-      announceTimerRef.current = window.setInterval(() => { if (disc.connected) disc.announce(nm); }, 30_000);
+      announceTimerRef.current = window.setInterval(() => {
+        if (disc.connected) {
+          disc.announce(nm);
+          if (inviteCodeRef.current) disc.announceCode(inviteCodeRef.current, nm);
+        }
+      }, 30_000);
     } catch (e) {
       setError(errMsg(e));
     }
@@ -263,6 +275,9 @@ export default function CampaignTab() {
     setInvite(null);
     setJoinerAnswer('');
     setInviteInput('');
+    setCodeInput('');
+    setInviteCode('');
+    inviteCodeRef.current = '';
     setMyAnswer('');
     setHostNotice('');
     setDiscMsg('');
@@ -316,10 +331,16 @@ export default function CampaignTab() {
         });
         const nm = campaignName || name || 'Campagna P2P';
         disc.announce(nm);
+        newShortInviteCode();
         setDiscState('on');
         setDiscMsg(tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url: u }));
         window.clearInterval(announceTimerRef.current);
-        announceTimerRef.current = window.setInterval(() => { if (disc.connected) disc.announce(nm); }, 30_000);
+        announceTimerRef.current = window.setInterval(() => {
+          if (disc.connected) {
+            disc.announce(nm);
+            if (inviteCodeRef.current) disc.announceCode(inviteCodeRef.current, nm);
+          }
+        }, 30_000);
       } catch (e) {
         setError(errMsg(e));
       }
@@ -392,6 +413,10 @@ export default function CampaignTab() {
     const low = s.toLowerCase();
     if (netMode !== 'p2p') switchNetMode('p2p');
     setP2pSub('join');
+    if (low.startsWith('5ecode:')) {
+      joinByInviteCode(s.slice('5ecode:'.length));
+      return;
+    }
     if (low.startsWith('5ep2p1:')) {
       setInviteInput(s);
       setError('');
@@ -424,6 +449,20 @@ export default function CampaignTab() {
     } catch (e) {
       setError(errMsg(e));
     }
+  };
+
+  /** host: genera un codice invito BREVE (XXXX-XXXX) relayato dal server: il giocatore lo digita/scansiona e entra da solo */
+  const newShortInviteCode = (): string => {
+    const code = newInviteCode();
+    inviteCodeRef.current = code;
+    setInviteCode(code);
+    const disc = discRef.current;
+    const nm = campaignName || name || 'Campagna P2P';
+    if (disc?.connected) {
+      disc.announceCode(code, nm);
+      setHostNotice(tf('cg.p2pCodeReady', 'Codice invito breve: {code} — il giocatore lo inserisce (o scansiona il QR) e si unisce da solo.', { code }));
+    }
+    return code;
   };
 
   /** host: genera un nuovo codice invito da dare al giocatore */
@@ -523,8 +562,9 @@ export default function CampaignTab() {
     }
   };
 
-  /** giocatore: unisciti con un click a un host trovato via discovery (il server fa solo da relay) */
-  const joinDiscoveredHost = (hostId: string, hostName: string) => {
+  /** giocatore: unisciti con un click a un host trovato via discovery (il server fa solo da relay).
+   *  skipJoin=true quando la richiesta di join è già stata inviata (es. con p2pJoinCode). */
+  const joinDiscoveredHost = (hostId: string, hostName: string, skipJoin = false) => {
     setError('');
     setDiscMsg(tf('cg.p2pJoining', 'Richiesta inviata a "{name}"…', { name: hostName }));
     discHostIdRef.current = hostId;
@@ -536,7 +576,7 @@ export default function CampaignTab() {
       client.onMessage = (m) => onNetMessage(m);
       p2pClientRef.current = client;
       setP2PTransport((m) => client.send(m as never));
-      client.join(name || 'Giocatore', password);
+      if (!skipJoin) client.join(name || 'Giocatore', password);
       return;
     }
     const client = makeP2PClient();
@@ -549,7 +589,24 @@ export default function CampaignTab() {
         } catch (e) { setError((e as Error).message); }
       })();
     };
-    disc.join(hostId);
+    if (!skipJoin) disc.join(hostId);
+  };
+
+  /** giocatore: unisciti con un codice invito BREVE (XXXX-XXXX): il server risolve il codice e relay SDP in automatico */
+  const joinByInviteCode = (raw: string) => {
+    const code = raw.trim();
+    if (!code) return;
+    setError('');
+    const disc = discRef.current;
+    if (!disc || !disc.connected) {
+      setError(t('cg.p2pNoServer', 'Nessun server individuato: premi "Scansiona rete e cerca host" (trova server e host P2P diretti in LAN) oppure inserisci il ws:// del server remoto (es. wss://dnd.tuosito.it)'));
+      return;
+    }
+    setCodeInput(code);
+    setDiscMsg(tf('cg.p2pCodeJoining', 'Mi unisco con il codice {code}…', { code }));
+    // il server manda p2pCodeHost con l'hostId e relay la richiesta di join: niente altro da incollare
+    disc.onCodeHost = (hostId, hostName) => joinDiscoveredHost(hostId, hostName || code, true);
+    disc.joinByCode(code, name || 'Giocatore', password);
   };
 
   /** giocatore: incolla/scansiona il codice invito e genera la risposta */
@@ -814,6 +871,28 @@ export default function CampaignTab() {
                   {discState === 'on' && !discBusy && hosts.length === 0 && (
                     <div className="muted" style={{ marginTop: 6 }}>{t('cg.p2pNoHosts', "Nessun host trovato ora: l'host deve aver spuntato l'annuncio (o usa il codice manuale qui sotto).")}</div>
                   )}
+                </div>
+
+                <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
+                  <b><Icon name="key" candy size={15} /> {t('cg.p2pCodeTitle', "Codice invito breve (se l'host te lo ha dato)")}</b>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                    {t('cg.p2pCodeHint', "L'host mostra un codice tipo AB3F-K9Q2 (o un QR 5ECODE:…): digitalo qui o lo scansiono — entro senza incollare codici lunghi.")}
+                  </div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <input
+                      value={codeInput}
+                      onChange={(e) => setCodeInput(e.target.value)}
+                      onKeyDown={onEnter(() => joinByInviteCode(codeInput))}
+                      placeholder={t('cg.p2pCodePh', 'AB3F-K9Q2')}
+                      style={{ flex: 1, fontFamily: 'monospace', letterSpacing: 1, textTransform: 'uppercase' }}
+                    />
+                    <button className="primary" disabled={!codeInput.trim() || discState !== 'on'} onClick={() => joinByInviteCode(codeInput)}>
+                      <Icon name="play" candy size={13} /> {t('cg.p2pJoinByCode', 'Unisciti')}
+                    </button>
+                    <button onClick={scanInvite} title={t('cg.p2pScanTitle', "Scansiona il QR mostrato dall'host")}>
+                      <Icon name="qr" size={14} /> {t('cg.p2pScan', 'QR')}
+                    </button>
+                  </div>
                 </div>
 
                 <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
@@ -1095,6 +1174,17 @@ export default function CampaignTab() {
             <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
           ))}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
+          {inviteCode && discState === 'on' && (
+            <div className="row" style={{ marginTop: 8, alignItems: 'flex-start' }}>
+              <QrBox text={`${CODE_PREFIX}${inviteCode}`} />
+              <div>
+                <div style={{ fontFamily: 'monospace', fontSize: 18, letterSpacing: 2 }}><b>{inviteCode}</b></div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                  {t('cg.p2pShortCodeHint', "Il giocatore digita questo codice (o scansiona il QR col telefono) e si unisce da solo: niente codici SDP lunghi da incollare. Valido finché resti annunciato sul server.")}
+                </div>
+              </div>
+            </div>
+          )}
           {pendingJoins.length > 0 && (
             <div style={{ marginTop: 8 }}>
               <b>{t('cg.p2pPending', 'Richieste di unione in attesa:')}</b>
@@ -1141,12 +1231,26 @@ export default function CampaignTab() {
           {hostNotice && <div className="ok" style={{ marginBottom: 8 }}>{hostNotice}</div>}
           <div className="row">
             <button className="primary" onClick={newInvite}>{t('cg.p2pNewInvite', '➕ Nuovo codice invito')}</button>
+            <button onClick={newShortInviteCode} disabled={discState !== 'on'} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
+              <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
+            </button>
             {discState !== 'on' && (
               <button onClick={() => startAnnounce()} title={t('cg.p2pAnnounceTitle', 'Annuncia questo host su un server LAN (relay solo dei codici, il gioco resta P2P diretto)')}>
                 {t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}
               </button>
             )}
           </div>
+          {inviteCode && discState === 'on' && (
+            <div className="row" style={{ marginTop: 10, alignItems: 'flex-start' }}>
+              <QrBox text={`${CODE_PREFIX}${inviteCode}`} />
+              <div>
+                <div style={{ fontFamily: 'monospace', fontSize: 22, letterSpacing: 2 }}><b>{inviteCode}</b></div>
+                <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                  {t('cg.p2pShortCodeHint', "Il giocatore digita questo codice (o scansiona il QR col telefono) e si unisce da solo: niente codici SDP lunghi da incollare. Valido finché resti annunciato sul server.")}
+                </div>
+              </div>
+            </div>
+          )}
           {invite && (
             <div style={{ marginTop: 10 }}>
               <label>{t('cg.p2pInviteCode', 'Codice invito da dare al giocatore (copia, condividi o mostra il QR):')}</label>

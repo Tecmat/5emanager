@@ -99,4 +99,49 @@ describe('relay discovery P2P + /api/info', () => {
     expect(err.message).toMatch(/non trovato/i);
     c.ws.close();
   });
+
+  it('codice invito breve: announceCode → joinCode → p2pCodeHost + p2pJoinRequest relayati', async () => {
+    const host = await connect();
+    host.send({ t: 'p2pAnnounceCode', code: 'ab3f-k9q2', name: 'Campagna Codice' });
+    const notice = await host.waitFor((m) => m.t === 'notice' && /AB3FK9Q2/.test(m.message));
+    expect(notice.message).toContain('AB3FK9Q2'); // normalizzato: maiuscolo, senza trattino
+
+    // l'host appare anche nella lista host
+    const joiner = await connect();
+    joiner.send({ t: 'p2pList' });
+    const hosts = await joiner.waitFor((m) => m.t === 'p2pHosts' && m.hosts.some((h: any) => h.name === 'Campagna Codice'));
+    const hostId = hosts.hosts.find((h: any) => h.name === 'Campagna Codice').id;
+
+    // il joiner entra col codice (minuscolo e con trattino: viene normalizzato)
+    joiner.send({ t: 'p2pJoinCode', code: 'ab3f-k9q2', name: 'PG', password: 'pw' });
+    const resolved = await joiner.waitFor((m) => m.t === 'p2pCodeHost');
+    expect(resolved.hostId).toBe(hostId);
+    const jr = await host.waitFor((m) => m.t === 'p2pJoinRequest');
+    expect(jr.from).toBeTruthy();
+    expect(jr.name).toBe('PG');
+    expect(jr.password).toBe('pw');
+
+    // il flusso offer/answer continua identico al tap-join
+    host.send({ t: 'p2pOffer', to: jr.from, code: 'OFFER-CODE' });
+    const offer = await joiner.waitFor((m) => m.t === 'p2pOffer');
+    expect(offer.code).toBe('OFFER-CODE');
+
+    // codice sbagliato → errore
+    const other = await connect();
+    other.send({ t: 'p2pJoinCode', code: 'ZZZZZZZZ' });
+    const err = await other.waitFor((m) => m.t === 'error');
+    expect(err.message).toMatch(/non valido|scaduto/i);
+
+    // chiudendo l'host il codice viene rimosso
+    host.ws.close();
+    await new Promise((r) => setTimeout(r, 200));
+    const late = await connect();
+    late.send({ t: 'p2pJoinCode', code: 'AB3FK9Q2' });
+    const err2 = await late.waitFor((m) => m.t === 'error');
+    expect(err2.message).toMatch(/non valido|scaduto|non raggiungibile/i);
+
+    joiner.ws.close();
+    other.ws.close();
+    late.ws.close();
+  });
 });
