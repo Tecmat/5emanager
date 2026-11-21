@@ -32,7 +32,7 @@ import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
 import { LAN_BEACON_PORT, beaconStart, beaconSetCode, detectLocalIp, detectLocalIps, lanBeaconSupported } from './lanBeacon.js';
-import { listSavedP2P, getSavedP2P, saveP2PCampaign, deleteSavedP2P, type SavedP2PCampaign } from './p2pSaved.js';
+import { listSavedP2P, getSavedP2P, saveP2PCampaign, onResumeRequest, type SavedP2PCampaign } from './p2pSaved.js';
 import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
@@ -356,6 +356,7 @@ export default function CampaignTab() {
   const onNetMessage = (m: any) => {
     handleNetMessage(m);
     if (m?.t === 'campaignDeleted') teardownP2P();
+    else if (m?.t === 'joinPending' || m?.t === 'p2pJoinSent') setDiscMsg('✅ ' + t('cg.p2pJoinAcked', 'Richiesta ricevuta dall\'host — in attesa che il master ti accetti (✅)'));
   };
 
   const hostCb = {
@@ -394,6 +395,15 @@ export default function CampaignTab() {
     setPassword('');
     setError('');
   };
+
+  // la tab "Campagne P2P" può chiedere di riprendere una campagna salvata (pulsante Riprendi)
+  useEffect(() => onResumeRequest((id) => {
+    void getSavedP2P(id).then((s) => {
+      if (s) pickResume(s);
+      else setError(t('cg.p2pSavedMissing', 'Campagna salvata non trovata (forse eliminata).'));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }), []);
 
   const startP2PHost = async () => {
     setError('');
@@ -568,6 +578,7 @@ export default function CampaignTab() {
       await client.connect();
       client.onOpen = () => client.join(name || 'Giocatore', password);
       client.join(name || 'Giocatore', password);
+      setDiscMsg(t('cg.p2pJoinSent', '📨 Richiesta inviata all\'host — in attesa della risposta del master…'));
     } catch (e) {
       setError(errMsg(e));
     }
@@ -950,34 +961,9 @@ export default function CampaignTab() {
                     ▶️ {tf('cg.p2pResumePicked', 'Riprendi "{name}": reinserisci la password e avvia l\'host (la password non viene salvata).', { name: resumePick.name })}
                   </div>
                 )}
-                {savedP2P.length > 0 && (
-                  <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
-                    <b>💾 {t('cg.p2pSavedTitle', 'Campagne P2P salvate su questo dispositivo')}</b>
-                    <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
-                      {t('cg.p2pSavedHint', 'Snapshot automatico mentre fai da host (senza password). "Riprendi" continua dall\'ultima sessione: restano note, tesoro e inventario di gruppo; i giocatori rientrano e ricaricano la loro scheda.')}
-                    </div>
-                    {savedP2P.map((s) => (
-                      <div key={s.id} className="row" style={{ marginTop: 6, justifyContent: 'space-between', gap: 8 }}>
-                        <span style={{ minWidth: 0 }}>
-                          <b>{s.name}</b>
-                          <div className="muted" style={{ fontSize: 11 }}>{new Date(s.savedAt).toLocaleString()}</div>
-                        </span>
-                        <span className="row" style={{ flexShrink: 0 }}>
-                          <button className="primary" onClick={() => pickResume(s)} title={t('cg.p2pResumeTitle', 'Riprendi questa campagna dall\'ultima sessione salvata')}>
-                            <Icon name="play" size={13} /> {t('cg.p2pResume', 'Riprendi')}
-                          </button>
-                          <button
-                            onClick={() => { void deleteSavedP2P(s.id).then(reloadSaved); if (resumePick?.id === s.id) setResumePick(null); }}
-                            title={t('cg.p2pDeleteSaved', 'Elimina dalla memoria locale')}
-                            aria-label={t('cg.p2pDeleteSaved', 'Elimina')}
-                          >
-                            <Icon name="x" size={13} />
-                          </button>
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="muted" style={{ marginTop: 8 }}>
+                  {tf('cg.p2pSavedLink', '💾 {n} campagne salvate: gestiscile (riprendi / rinomina / elimina / sync col server) dalla tab "Campagne P2P".', { n: savedP2P.length })}
+                </div>
               </>
             )}
             {p2pSub === 'join' && (
@@ -1582,6 +1568,12 @@ export default function CampaignTab() {
                       {ch.conditions.map((cd) => <span key={cd} className="tag custom">{CONDITIONS.find((x) => x.id === cd)?.name ?? cd}</span>)}
                     </span>
                   ) : <span className="muted"> {t('cg.withoutSheet', '(senza scheda)')}</span>}
+                  {p.role !== 'master' && (
+                    <button className="danger" style={{ marginLeft: 8 }} title={t('cg.kickTitle', 'Espelli questo giocatore dalla campagna (lo disconnette subito)')}
+                      onClick={() => { if (window.confirm(tf('cg.kickConfirm', 'Espellere {name} dalla campagna?', { name: p.name }))) act({ kind: 'kickPlayer', playerId: p.id }); }}>
+                      🚫 {t('cg.kick', 'Espelli')}
+                    </button>
+                  )}
                 </summary>
                 {ch && (
                   <div style={{ marginTop: 6 }}>

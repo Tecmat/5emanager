@@ -77,13 +77,16 @@ WhatsApp). Su desktop (Tauri) e Android l'host può aprire anche un **beacon LAN
 Le campagne che **hosti sono salvate automaticamente in locale** (snapshot senza password,
 max 20): dalla tab 🗺️ Campagna le **riprendi** dalle sessioni scorse o le elimini — al
 ripristino resta una sola voce (stesso id). La **password della campagna P2P è facoltativa**:
-se vuota, entra chi ha il codice o l'indirizzo.
+se vuota, entra chi ha il codice o l'indirizzo. Gestione completa (riprendi / rinomina / elimina
+con conferma / sync col server) nella tab **💾 Campagne P2P**; il master può **espellere** i giocatori (🚫).
 
 ## Multiplayer (server self-hosted, opzionale)
 
 Il server gira anche **in Docker con docker compose** ([docs/DOCKER.md](docs/DOCKER.md)) — HTTP/LAN oppure HTTPS su Internet con nginx come reverse proxy (certificati tuoi), **direttamente su Android via Termux** ([docs/ANDROID_SERVER.md](docs/ANDROID_SERVER.md)) o su un **server Debian con systemd** ([docs/DEPLOY_DEBIAN.md](docs/DEPLOY_DEBIAN.md)).
 
 `npm run build -w @dnd5e/web && npm run server` → apre http://localhost:3001 con web app + WebSocket: campagne condivise master/giocatori, combattimento live con action economy (vedi [docs/SERVER.md](docs/SERVER.md)).
+
+Account con **ruoli admin/user** (primo account o `DND5E_ADMIN_USER` è admin) e pannello `/admin`: approva utenti, promuovi/declassa, reset password, gestione campagne con **espelli giocatore**. **Libreria schede sincronizzata sull'account** (☁️ in Home) e **campagne P2P sincronizzabili** col server (tab 💾 Campagne P2P → ☁️).
 
 ## PWA (installabile da browser)
 
@@ -117,4 +120,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 123/123 verdi.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 126/126 verdi.

@@ -239,6 +239,15 @@ export class P2PHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
+    if (action.kind === 'kickPlayer') {
+      // avvisa e chiudi il canale del giocatore espulso
+      const ch = this.peers.get(action.playerId);
+      if (ch) {
+        try { ch.send(JSON.stringify({ t: 'kicked' })); } catch { /* ignora */ }
+        this.peers.delete(action.playerId);
+        try { ch.close(); } catch { /* ignora */ }
+      }
+    }
     this.broadcastState();
   }
 
@@ -411,6 +420,8 @@ export class P2PRelayHost {
         this.pending.set(from, name ?? 'Giocatore');
         this.pendingPw.set(from, password ?? '');
         this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
+        // ack: la richiesta è arrivata, ora si aspetta il master
+        this.sendTo(from, { t: 'joinPending' });
         return;
       }
       this.handleJoin(from, name ?? 'Giocatore', password ?? '');
@@ -476,6 +487,7 @@ export class P2PRelayHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
+    if (action.kind === 'kickPlayer') this.sendTo(action.playerId, { t: 'kicked' });
     this.broadcastState();
   }
 
@@ -586,6 +598,7 @@ export class P2PLanHost {
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
         this.pending.set(from, { name: name ?? 'Giocatore', password: password ?? '', relay: true });
         this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
+        this.sendTo(from, { t: 'joinPending' });
         return;
       }
       this.doJoin(from, name ?? 'Giocatore', password ?? '', true);
@@ -602,6 +615,7 @@ export class P2PLanHost {
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
         this.pending.set(from, { name, password, relay: false });
         this.cb.onJoinPending?.({ from, name });
+        this.sendTo(from, { t: 'joinPending' });
         return;
       }
       this.doJoin(from, name, password, false);
@@ -659,6 +673,7 @@ export class P2PLanHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
+    if (action.kind === 'kickPlayer') this.sendTo(action.playerId, { t: 'kicked' });
     this.broadcastState();
   }
 

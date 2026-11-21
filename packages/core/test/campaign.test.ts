@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_HOUSE_RULES, migrateCampaign, resumeCampaign, type Campaign } from '../src/index.js';
+import { applyCampaignAction, createRegistry, DEFAULT_HOUSE_RULES, migrateCampaign, resumeCampaign, type Campaign } from '../src/index.js';
 
 function savedCampaign(): Campaign {
   return {
@@ -51,6 +51,45 @@ describe('resumeCampaign (P2P host riprende da snapshot locale)', () => {
     expect(c.groupInventory).toEqual([]);
     expect(c.notes).toBe('');
     expect(c.groupCurrency).toEqual({ cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 });
+  });
+});
+
+describe('kickPlayer', () => {
+  const reg = createRegistry();
+  const camp = (): Campaign => ({
+    id: 'c1',
+    name: 'Test',
+    passwordHash: 'x',
+    houseRules: { ...DEFAULT_HOUSE_RULES },
+    custom: {},
+    players: [
+      { id: 'm', name: 'Master', role: 'master' },
+      { id: 'p1', name: 'Eroe', role: 'player' },
+      { id: 'p2', name: 'Altro', role: 'player' },
+    ],
+    characters: { p1: { id: 'ch1' } as never, p2: { id: 'ch2' } as never },
+    combat: null,
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('il master espelle un giocatore (rimosso da players e characters)', () => {
+    const [next, err] = applyCampaignAction(camp(), 'm', reg, { kind: 'kickPlayer', playerId: 'p1' });
+    expect(err).toBeUndefined();
+    expect(next.players.map((p) => p.id)).toEqual(['m', 'p2']);
+    expect(next.characters.p1).toBeUndefined();
+    expect(next.characters.p2).toBeDefined();
+  });
+  it('un giocatore non può espellere; il master non può espellere sé stesso', () => {
+    const [, err1] = applyCampaignAction(camp(), 'p1', reg, { kind: 'kickPlayer', playerId: 'p2' });
+    expect(err1).toMatch(/Solo il master/);
+    const [, err2] = applyCampaignAction(camp(), 'm', reg, { kind: 'kickPlayer', playerId: 'm' });
+    expect(err2).toMatch(/te stesso/);
+    const [, err3] = applyCampaignAction(camp(), 'm', reg, { kind: 'kickPlayer', playerId: ' inesistente' });
+    expect(err3).toMatch(/non trovato/);
   });
 });
 

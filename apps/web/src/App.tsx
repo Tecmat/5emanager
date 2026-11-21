@@ -6,9 +6,11 @@ import { hasPendingDeepLink, onDeepLink, queueDeepLink } from './deepLink.js';
 import CreateForm from './CreateForm.js';
 import UpdateButton from './UpdateButton.js';
 import Icon, { type IconName } from './icons.js';
+import { requestResume } from './p2pSaved.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
 const HomeTab = lazy(() => import('./HomeTab.js'));
+const P2PCampaignsTab = lazy(() => import('./P2PCampaignsTab.js'));
 const Overview = lazy(() => import('./Overview.js'));
 const SpellsTab = lazy(() => import('./SpellsTab.js'));
 const InventoryTab = lazy(() => import('./InventoryTab.js'));
@@ -17,12 +19,13 @@ const CombatTab = lazy(() => import('./CombatTab.js'));
 const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
 /** pagine principali del menu: sempre accessibili */
-type Page = 'home' | 'campagna' | 'custom' | 'scheda';
+type Page = 'home' | 'campagna' | 'custom' | 'p2p' | 'scheda';
 /** tab interne alla pagina scheda (visibile solo con una scheda attiva) */
 type SheetTab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento';
 const MAIN_PAGES: { id: Exclude<Page, 'scheda'>; icon: IconName; key: string; fb: string }[] = [
   { id: 'home', icon: 'home', key: 'tab.home', fb: 'Home' },
   { id: 'campagna', icon: 'map', key: 'tab.campagna', fb: 'Campagna' },
+  { id: 'p2p', icon: 'save', key: 'tab.p2p', fb: 'Campagne P2P' },
   { id: 'custom', icon: 'flask', key: 'tab.custom', fb: 'Contenuti custom' },
 ];
 const SHEET_TABS: { id: SheetTab; icon: IconName; key: string; fb: string }[] = [
@@ -284,6 +287,15 @@ export default function App() {
                 />
               )}
               {effPage === 'campagna' && <CampaignTab />}
+              {effPage === 'p2p' && (
+                <P2PCampaignsTab
+                  onPlay={(id) => {
+                    // "Riprendi" dalla tab campagne: torno in Campagna e avvio l'host con quello snapshot
+                    requestResume(id);
+                    setPage('campagna');
+                  }}
+                />
+              )}
               {effPage === 'custom' && <CustomTab />}
             </Suspense>
           </>

@@ -29,7 +29,22 @@ Apri `http://<host>:3001/` da più dispositivi (stessa rete) → tab **🌐 Camp
 3. A ogni turno il combattente corrente ha: ✅azione / ✅bonus / ✅reazione / 🏃movimento (speed)
 4. **Attacco**: scegli il bersaglio e l'arma → il server tira d20+bonus contro la CA (20 = critico, dadi raddoppiati), applica i danni e logga tutto
 5. **Condizioni con durata in round** (stordito 2 round...), decrementate automaticamente a inizio turno
-6. Master può: rilanciare initiative, infliggere/curare PF, aggiungere condizioni, terminare il combattimento
+6. Master può: rilanciare initiative, infliggere/curare PF, aggiungere condizioni, terminare il combattimento, **espellere un giocatore** (`kickPlayer` — il client riceve `kicked` e viene disconnesso subito)
+
+## Ruoli account e pannello admin
+
+Gli account hanno un **ruolo** (`admin` / `user`): il primo account creato (o quello indicato con
+`DND5E_ADMIN_USER`) è admin; un account admin entra nel pannello `/admin` direttamente dal login
+in app, senza `DND5E_ADMIN_TOKEN`.
+
+Dal pannello `/admin` l'admin può: approvare/rifiutare registrazioni, **promuovere/declassare** utenti
+(`adminSetRole`), **resettare la password** (`adminResetPassword`), eliminare account e schede, vedere i
+**giocatori di una campagna e espellerli** (`adminCampaignDetail` / `adminKickPlayer`), creare/modificare/
+eliminare campagne, broadcast a tutti i client.
+
+Sync remoto: le **schede della libreria account** si sincronizzano dalla Home (card ☁️: salva tutte /
+scarica tutte / per singola scheda); le **campagne P2P salvate in locale** si sincronizzano sull'account
+dalla tab 💾 Campagne P2P ("☁️ sync su server") — senza password, quindi scaricabili su un altro dispositivo.
 
 ## Protocollo (JSON su WebSocket)
 

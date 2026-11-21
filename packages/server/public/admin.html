@@ -88,16 +88,28 @@
       <thead><tr><th>ID</th><th>Nome</th><th>Giocatori</th><th>Combattimento</th><th>Creata</th><th>Aggiornata</th><th></th></tr></thead>
       <tbody id="campaigns"></tbody>
     </table>
+    <div class="muted" style="margin-top:6px">"Dettagli" mostra i giocatori collegati (con espelli) anche delle campagne in memoria.</div>
     <div id="campaigns-empty" class="muted">Nessuna campagna salvata.</div>
   </div>
 
   <div class="card">
     <h2>Account</h2>
     <table>
-      <thead><tr><th>Username</th><th>Schede in libreria</th><th>Creato</th><th></th></tr></thead>
+      <thead><tr><th>Username</th><th>Ruolo</th><th>Schede in libreria</th><th>Creato</th><th></th></tr></thead>
       <tbody id="accounts"></tbody>
     </table>
     <div id="accounts-empty" class="muted">Nessun account registrato.</div>
+    <div class="muted" style="margin-top:6px">Il ruolo <b>admin</b> dà accesso a questo pannello anche senza <code>DND5E_ADMIN_TOKEN</code> (login in app). Il primo account creato (o <code>DND5E_ADMIN_USER</code>) è admin.</div>
+  </div>
+
+  <div class="card" id="campaign-detail-card" style="display:none">
+    <h2>Giocatori della campagna <span id="cd-name"></span> <code id="cd-id"></code></h2>
+    <div class="muted" id="cd-info"></div>
+    <table>
+      <thead><tr><th>Nome</th><th>Ruolo</th><th></th></tr></thead>
+      <tbody id="cd-players"></tbody>
+    </table>
+    <div class="row" style="margin-top:8px"><button id="cd-close">Chiudi</button></div>
   </div>
 
   <div class="card" id="account-detail-card" style="display:none">
@@ -167,6 +179,9 @@ function render(state) {
       '<td>' + (c.inCombat ? '⚔️ in corso' : '—') + '</td><td class="muted">' + fmtDate(c.createdAt) + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
     const td = document.createElement('td');
     td.className = 'row';
+    const detail = document.createElement('button');
+    detail.textContent = '👥 Dettagli';
+    detail.onclick = () => ws.send(JSON.stringify({ t: 'adminCampaignDetail', id: c.id }));
     const edit = document.createElement('button');
     edit.textContent = '✏️ Modifica';
     edit.onclick = () => {
@@ -182,6 +197,7 @@ function render(state) {
     btn.onclick = () => {
       if (confirm('Eliminare la campagna "' + c.name + '" (' + c.id + ') dal disco?')) ws.send(JSON.stringify({ t: 'adminDeleteCampaign', id: c.id }));
     };
+    td.appendChild(detail);
     td.appendChild(edit);
     td.appendChild(btn);
     tr.appendChild(td);
@@ -192,9 +208,25 @@ function render(state) {
   document.getElementById('accounts-empty').style.display = state.accounts.length ? 'none' : 'block';
   for (const a of state.accounts) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + a.characters + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
+    const roleTag = a.role === 'admin' ? '<span class="tag" style="border-color:var(--accent);color:var(--accent)">👑 admin</span>' : '<span class="tag">user</span>';
+    tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + roleTag + '</td><td>' + a.characters + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
     const td = document.createElement('td');
     td.className = 'row';
+    const roleBtn = document.createElement('button');
+    roleBtn.textContent = a.role === 'admin' ? '⬇ declassa' : '⬆ promuovi admin';
+    roleBtn.title = 'Cambia ruolo (admin = accesso al pannello senza token)';
+    roleBtn.onclick = () => {
+      const role = a.role === 'admin' ? 'user' : 'admin';
+      if (confirm('Impostare "' + a.username + '" come ' + role + '?')) ws.send(JSON.stringify({ t: 'adminSetRole', username: a.username, role }));
+    };
+    const pwBtn = document.createElement('button');
+    pwBtn.textContent = '🔑 reset password';
+    pwBtn.onclick = () => {
+      const pw = prompt('Nuova password per "' + a.username + '" (min 4 caratteri):');
+      if (pw === null) return;
+      if (pw.length < 4) { err('Password troppo corta'); return; }
+      ws.send(JSON.stringify({ t: 'adminResetPassword', username: a.username, password: pw }));
+    };
     const sheets = document.createElement('button');
     sheets.textContent = '📄 Schede';
     sheets.onclick = () => ws.send(JSON.stringify({ t: 'adminAccountDetail', username: a.username }));
@@ -204,11 +236,41 @@ function render(state) {
     btn.onclick = () => {
       if (confirm('Eliminare l\'account "' + a.username + '" e tutte le sue schede?')) ws.send(JSON.stringify({ t: 'adminDeleteAccount', username: a.username }));
     };
+    td.appendChild(roleBtn);
+    td.appendChild(pwBtn);
     td.appendChild(sheets);
     td.appendChild(btn);
     tr.appendChild(td);
     at.appendChild(tr);
   }
+}
+
+function renderCampaignDetail(m) {
+  document.getElementById('campaign-detail-card').style.display = 'block';
+  document.getElementById('cd-name').textContent = m.name;
+  document.getElementById('cd-id').textContent = m.id;
+  document.getElementById('cd-info').textContent =
+    'giocatori: ' + m.players.length + ' · schede caricate: ' + m.characters + ' · combattimento: ' + (m.inCombat ? '⚔️ in corso' : '—') +
+    ' · creata: ' + fmtDate(m.createdAt) + ' · aggiornata: ' + fmtDate(m.updatedAt);
+  const tb = document.getElementById('cd-players');
+  tb.innerHTML = '';
+  for (const p of m.players) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><b>' + esc(p.name) + '</b></td><td>' + (p.role === 'master' ? '👑 master' : 'giocatore') + '</td>';
+    const td = document.createElement('td');
+    if (p.role !== 'master') {
+      const kick = document.createElement('button');
+      kick.className = 'danger';
+      kick.textContent = '🚫 Espelli';
+      kick.onclick = () => {
+        if (confirm('Espellere "' + p.name + '" dalla campagna ' + m.id + '?')) ws.send(JSON.stringify({ t: 'adminKickPlayer', campaignId: m.id, playerId: p.id }));
+      };
+      td.appendChild(kick);
+    }
+    tr.appendChild(td);
+    tb.appendChild(tr);
+  }
+  document.getElementById('campaign-detail-card').scrollIntoView({ behavior: 'smooth' });
 }
 
 function renderAccountDetail(m) {
@@ -246,6 +308,7 @@ function connect() {
     const m = JSON.parse(e.data);
     if (m.t === 'adminState') render(m);
     else if (m.t === 'adminAccount') renderAccountDetail(m);
+    else if (m.t === 'adminCampaign') renderCampaignDetail(m);
     else if (m.t === 'error') { err(m.message); setStatus('errore', false); }
   };
   ws.onclose = () => setStatus('disconnesso', false);
@@ -284,6 +347,7 @@ document.getElementById('update-app-btn').onclick = async () => {
 document.getElementById('connect').onclick = connect;
 document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };
 document.getElementById('ad-close').onclick = () => { document.getElementById('account-detail-card').style.display = 'none'; };
+document.getElementById('cd-close').onclick = () => { document.getElementById('campaign-detail-card').style.display = 'none'; };
 document.getElementById('newcamp').onclick = () => {
   const name = document.getElementById('newcamp-name').value.trim();
   const pw = document.getElementById('newcamp-pw').value;
