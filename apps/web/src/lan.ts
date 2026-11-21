@@ -13,6 +13,8 @@ export interface LanServer {
   port: number;
   name?: string;
   version?: string;
+  /** codice invito breve pubblicato dall'host P2P nel beacon (risoluzione serverless via scansione LAN) */
+  code?: string;
 }
 
 export interface LanPeer extends LanServer {
@@ -30,9 +32,9 @@ async function probe(ip: string, port: number, timeoutMs = 600): Promise<LanPeer
     try {
       const r = await fetch(`http://${ip}:${port}/api/info`, { signal: ctl.signal });
       if (!r.ok) return null;
-      const j = (await r.json()) as { app?: string; kind?: string; name?: string; version?: string };
+      const j = (await r.json()) as { app?: string; kind?: string; name?: string; version?: string; code?: string };
       if (j.app !== '5emanager') return null;
-      return { ip, port, name: j.name, version: j.version, kind: j.kind === 'p2p-host' ? 'p2p' : 'server' };
+      return { ip, port, name: j.name, version: j.version, code: j.code, kind: j.kind === 'p2p-host' ? 'p2p' : 'server' };
     } finally {
       clearTimeout(t);
     }

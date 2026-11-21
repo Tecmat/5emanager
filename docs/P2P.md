@@ -28,17 +28,22 @@ niente server, niente dominio, niente porte da aprire.
    dal QR**) → **1️⃣ Genera risposta** → copia/condivide la **risposta**.
 3. L'host incolla la risposta in **Incolla qui la risposta del giocatore** → **✅ Collega giocatore**.
 
-### 🔑 Codice invito breve (con un server 5emanager raggiungibile: niente SDP da incollare)
+### 🔑 Codice invito breve — SERVERLESS (funziona solo P2P, quando la scansione con un clic fallisce)
 
-Quando host e giocatore possono entrambi raggiungere lo stesso server 5emanager (LAN o remoto),
-l'host non deve più passare il codice `5EP2P1:…` (lunghissimo, ingestibile come QR):
+L'host genera un **codice breve `XXXX-XXXX`** (mostrato grande + **QR `5ECODE:…`**, scansionabile
+anche dalla fotocamera di sistema del telefono). **Non serve alcun server**:
 
-1. L'host, annunciandosi sul server, genera automaticamente un **codice breve `XXXX-XXXX`**
-   (o premi **🔑 Codice invito breve**): appare grande, con **QR `5ECODE:…`** — il giocatore lo
-   digita o lo scansiona col telefono (la fotocamera di sistema apre l'app col deep link).
-2. Il giocatore inserisce il codice in **🔑 Codice invito breve** → **Unisciti**: il server risolve
-   il codice nell'host (`p2pJoinCode` → `p2pCodeHost`) e relay offer/answer SDP in automatico.
-   Il codice resta valido 90 s (ri-annunciato ogni 30 s) ed è normalizzato (maiuscole, senza trattini).
+1. L'host LAN (beacon porta 3177) **pubblica il codice nel proprio `/api/info`** (`LanBeaconPlugin` /
+   `lan_beacon_start`/`lan_beacon_set_code`); è visibile nella card host appena avvii "Ospita su questa rete".
+2. Il giocatore digita il codice (o scansiona il QR `5ECODE:…`) → **Unisciti**: l'app **scansiona la
+   LAN** (come "🔍 Scansiona rete", sondeggia `/api/info` sulla /24) e trova l'host con quel codice →
+   si collega diretto a `ws://<ip>:3177/ws`. Funziona finché i due dispositivi sono sulla stessa
+   WiFi/hotspot — nessuna dipendenza da server.
+3. **Alternativa solo per reti diverse** (es. telefono in 4G, PC a casa): se entrambi possono
+   raggiungere un server 5emanager, l'host preme **📡 Annuncia su server LAN** e il codice viene
+   registrato lì (`p2pAnnounceCode`/`p2pJoinCode`/`p2pCodeHost`, TTL 90 s, ri-annunciato ogni 30 s,
+   normalizzato maiuscole/senza trattini): il server fa solo da centralino e relay SDP.
+   Senza server e su reti diverse resta il codice SDP completo `5EP2P1:…` (sezione sopra).
 
 ## Fallback senza WebRTC (AppImage/WebKitGTK, browser datati)
 

@@ -52,7 +52,9 @@ export function lanBeaconSupported(): boolean {
 }
 
 interface LanBeaconPlugin {
-  start(opts: { port: number; name: string }): Promise<{ address?: string }>;
+  start(opts: { port: number; name: string; code?: string }): Promise<{ address?: string }>;
+  /** aggiorna il codice invito breve pubblicato in /api/info senza riavviare il beacon */
+  setCode(opts: { code: string }): Promise<void>;
   send(opts: { clientId: string; msg: string }): Promise<void>;
   broadcast(opts: { msg: string }): Promise<{ sent?: number }>;
   stop(): Promise<void>;
@@ -68,13 +70,25 @@ async function isTauri(): Promise<boolean> {
   return !!(window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__;
 }
 
-export async function beaconStart(port: number, name: string): Promise<string> {
+export async function beaconStart(port: number, name: string, code?: string): Promise<string> {
   if (await isTauri()) {
     const { invoke } = await import('@tauri-apps/api/core');
-    return (await invoke('lan_beacon_start', { port, name })) as string;
+    return (await invoke('lan_beacon_start', { port, name, code: code ?? null })) as string;
   }
-  const r = await LanBeacon.start({ port, name });
+  const r = await LanBeacon.start({ port, name, code });
   return r.address ?? `0.0.0.0:${port}`;
+}
+
+/** pubblica/aggiorna il codice invito breve nel /api/info del beacon (serverless) */
+export async function beaconSetCode(code: string): Promise<void> {
+  try {
+    if (await isTauri()) {
+      const { invoke } = await import('@tauri-apps/api/core');
+      await invoke('lan_beacon_set_code', { code });
+      return;
+    }
+    await LanBeacon.setCode({ code });
+  } catch { /* beacon non attivo */ }
 }
 
 export async function beaconSend(clientId: string, msg: string): Promise<void> {
