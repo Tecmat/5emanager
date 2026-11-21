@@ -134,9 +134,12 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   const p2pRef = useRef<((m: unknown) => void) | null>(null);
+  /** watchdog del connect: se il server non manda il welcome, sblocca il pulsante "Entra" */
+  const connectWdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const handleMsg = (m: any, serverUrl?: string) => {
     if (m.t === 'welcome') {
+      if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
       setConn({ phase: 'online', campaign: m.campaign, you: m.you });
       rememberJoined({ server: serverUrl ?? urlRef.current, id: m.campaign.id, name: m.campaign.name });
     } else if (m.t === 'state') {
@@ -253,13 +256,22 @@ export function NetProvider({ children }: { children: ReactNode }) {
       } else {
         net.send({ t: 'join', campaignId: opts.joinId, password: opts.password, name: nameRef.current || 'Giocatore', role: opts.asMaster ? 'master' : 'player' });
       }
+      // watchdog: WS aperto ma nessun welcome entro 10s -> non restare bloccati su "Connessione..."
+      if (connectWdRef.current) clearTimeout(connectWdRef.current);
+      connectWdRef.current = setTimeout(() => {
+        connectWdRef.current = null;
+        setConn((c) => (c.phase === 'connecting' ? { phase: 'offline' } : c));
+        setError('Nessuna risposta dal server entro 10s (timeout): controlla ws:// URL e porta');
+      }, 10_000);
     } catch (e) {
+      if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
       setError((e as Error).message);
       setConn({ phase: 'offline' });
     }
   };
 
   const disconnect = () => {
+    if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
     netRef.current?.close();
     setConn({ phase: 'offline' });
   };

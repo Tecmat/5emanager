@@ -10,11 +10,17 @@ export class NetClient {
   }
   connect(url: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      this.ws = new WebSocket(url);
-      this.ws.onopen = () => resolve();
-      this.ws.onerror = () => reject(new Error('Connessione a ' + url + ' fallita'));
-      this.ws.onclose = () => this.handlers.forEach((h) => h({ t: 'closed' }));
-      this.ws.onmessage = (e) => {
+      const ws = new WebSocket(url);
+      this.ws = ws;
+      // timeout: un host irraggiungibile/filtrato non deve bloccare il pulsante su "Connessione..."
+      const to = setTimeout(() => {
+        try { ws.close(); } catch { /* ignora */ }
+        reject(new Error('Timeout connessione a ' + url + ' (8s): host irraggiungibile?'));
+      }, 8000);
+      ws.onopen = () => { clearTimeout(to); resolve(); };
+      ws.onerror = () => { clearTimeout(to); reject(new Error('Connessione a ' + url + ' fallita')); };
+      ws.onclose = () => { clearTimeout(to); this.handlers.forEach((h) => h({ t: 'closed' })); };
+      ws.onmessage = (e) => {
         const m = JSON.parse(e.data);
         this.handlers.forEach((h) => h(m));
       };

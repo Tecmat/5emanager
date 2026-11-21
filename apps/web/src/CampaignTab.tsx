@@ -527,10 +527,15 @@ export default function CampaignTab() {
     setLanServers([]);
     setLanP2pHosts([]);
     let foundCount = -1;
-    const myIp = await detectLocalIp();
-    const netInfo = myIp ? tf('cg.p2pScanNetInfo', 'il tuo IP è {ip} — scansiono la rete {net}/24', { ip: myIp, net: myIp.split('.').slice(0, 3).join('.') }) : '';
+    let netInfo = '';
     try {
-      const found = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
+      const myIp = await detectLocalIp();
+      netInfo = myIp ? tf('cg.p2pScanNetInfo', 'il tuo IP è {ip} — scansiono la rete {net}/24', { ip: myIp, net: myIp.split('.').slice(0, 3).join('.') }) : '';
+      // deadline: la scansione non deve mai bloccare i pulsanti all'infinito
+      const found = await Promise.race([
+        scanLanPeers((d, t2) => setScanProg({ d, t: t2 })),
+        new Promise<LanPeer[]>((r) => setTimeout(() => r([]), 25_000)),
+      ]);
       foundCount = found.length;
       const servers = found.filter((p) => p.kind === 'server');
       const p2p = found.filter((p) => p.kind === 'p2p');
@@ -633,7 +638,11 @@ export default function CampaignTab() {
     setScanning(true);
     setDiscMsg(tf('cg.p2pCodeJoining', 'Cerco il codice {code} sulla rete locale…', { code }));
     try {
-      const peers = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
+      // deadline: la scansione non deve mai bloccare il pulsante all'infinito
+      const peers = await Promise.race([
+        scanLanPeers((d, t2) => setScanProg({ d, t: t2 })),
+        new Promise<LanPeer[]>((r) => setTimeout(() => r([]), 20_000)),
+      ]);
       const hit = peers.find((p) => p.kind === 'p2p' && p.code && norm(p.code) === norm(code));
       if (hit) {
         setDiscMsg(tf('cg.p2pCodeFoundLan', 'Host {ip} trovato in LAN col codice — mi collego…', { ip: hit.ip }));
@@ -931,7 +940,7 @@ export default function CampaignTab() {
                       placeholder={t('cg.p2pCodePh', 'AB3F-K9Q2')}
                       style={{ flex: 1, fontFamily: 'monospace', letterSpacing: 1, textTransform: 'uppercase' }}
                     />
-                    <button className="primary" disabled={!codeInput.trim() || scanning} onClick={() => void joinByInviteCode(codeInput)}>
+                    <button className="primary" disabled={!codeInput.trim()} onClick={() => void joinByInviteCode(codeInput)}>
                       <Icon name="play" candy size={13} /> {t('cg.p2pJoinByCode', 'Unisciti')}
                     </button>
                     <button onClick={scanInvite} title={t('cg.p2pScanTitle', "Scansiona il QR mostrato dall'host")}>
