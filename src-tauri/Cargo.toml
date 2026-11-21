@@ -1,6 +1,6 @@
 [package]
 name = "emanager"
-version = "0.1.52"
+version = "0.1.53"
 description = "Gestore di schede D&D 5e — desktop (Tauri v2)"
 edition = "2021"
 
