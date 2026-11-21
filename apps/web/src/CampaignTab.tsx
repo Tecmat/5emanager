@@ -211,7 +211,12 @@ export default function CampaignTab() {
   };
 
   /** host: annunciati su un server LAN così i giocatori ti trovano nella lista */
-  const startAnnounce = async (wsUrl?: string) => {
+  /**
+   * annuncia l'host su un server 5emanager (serve SOLO per giocatori su un'altra rete).
+   * soft=true (chiamata automatica dall'host LAN): se non c'è server, niente errore rosso —
+   * in LAN basta QR/codice/indirizzo del beacon, l'host resta valido lo stesso.
+   */
+  const startAnnounce = async (wsUrl?: string, soft = false) => {
     setError('');
     let u = (wsUrl ?? url).trim() || autoDiscWsUrl();
     if (!u) {
@@ -220,9 +225,13 @@ export default function CampaignTab() {
         const found = await scanLanPeers();
         const srv = found.find((p) => p.kind === 'server');
         if (srv) u = `ws://${srv.ip}:${srv.port}`;
-      } catch { /* ignora: si passa al messaggio di errore */ }
+      } catch { /* ignora: si passa al messaggio */ }
     }
     if (!u) {
+      if (soft) {
+        setDiscMsg(t('cg.p2pNoServerSoft', 'Nessun server 5emanager trovato in LAN: nessun problema — in LAN gli altri entrano con QR / codice breve / indirizzo ws://<ip>:3177. L\'annuncio su server serve solo se i giocatori sono su un\'altra rete.'));
+        return;
+      }
       setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://<ip-del-server>:3001) oppure usa la scansione di rete'));
       return;
     }
@@ -268,7 +277,8 @@ export default function CampaignTab() {
         }
       }, 30_000);
     } catch (e) {
-      setError(errMsg(e));
+      if (soft) setDiscMsg(tf('cg.p2pAnnounceFailSoft', 'Annuncio su server non riuscito ({e}): in LAN resta valido QR/codice/indirizzo del beacon.', { e: errMsg(e) }));
+      else setError(errMsg(e));
     }
   };
 
@@ -319,7 +329,7 @@ export default function CampaignTab() {
     if (lanBeaconSupported()) {
       await startLanHost();
       // se spuntato "annunciati su un server", l'host LAN si annuncia anche lì (codice breve per chi non è in LAN)
-      if (announce) void startAnnounce();
+      if (announce) void startAnnounce(undefined, true);
       return;
     }
     // senza WebRTC (browser/vecchie build) si usa il trasporto relay sul server LAN
@@ -1248,7 +1258,7 @@ export default function CampaignTab() {
             <>
               <div className="row" style={{ marginBottom: 4 }}>
                 <button
-                  onClick={() => { if (discState !== 'on') void startAnnounce(); else newShortInviteCode(); }}
+                  onClick={() => { if (discState !== 'on') void startAnnounce(undefined, true); else newShortInviteCode(); }}
                   title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}
                 >
                   <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
@@ -1317,7 +1327,7 @@ export default function CampaignTab() {
           {hostNotice && <div className="ok" style={{ marginBottom: 8 }}>{hostNotice}</div>}
           <div className="row">
             <button className="primary" onClick={newInvite}>{t('cg.p2pNewInvite', '➕ Nuovo codice invito')}</button>
-            <button onClick={() => { if (discState !== 'on') void startAnnounce(); else newShortInviteCode(); }} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
+            <button onClick={() => { if (discState !== 'on') void startAnnounce(undefined, true); else newShortInviteCode(); }} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
               <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
             </button>
             {discState !== 'on' && (
