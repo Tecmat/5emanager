@@ -213,7 +213,15 @@ export default function CampaignTab() {
   /** host: annunciati su un server LAN così i giocatori ti trovano nella lista */
   const startAnnounce = async (wsUrl?: string) => {
     setError('');
-    const u = (wsUrl ?? url).trim() || autoDiscWsUrl();
+    let u = (wsUrl ?? url).trim() || autoDiscWsUrl();
+    if (!u) {
+      // su app nativa (APK) senza URL salvato: prova a trovare da solo un server 5emanager sulla rete
+      try {
+        const found = await scanLanPeers();
+        const srv = found.find((p) => p.kind === 'server');
+        if (srv) u = `ws://${srv.ip}:${srv.port}`;
+      } catch { /* ignora: si passa al messaggio di errore */ }
+    }
     if (!u) {
       setError(t('cg.p2pNoServer', 'Nessun server LAN individuato: inserisci il ws:// del server (es. ws://<ip-del-server>:3001) oppure usa la scansione di rete'));
       return;
@@ -1191,14 +1199,31 @@ export default function CampaignTab() {
               📡 {tf('cg.p2pAnnouncedOn', 'Annunciato su {url}', { url })} — {t('cg.p2pRelayPlayersHint', 'chi cerca host sulla rete ti vede e entra con un click (via server, oltre al QR/indirizzo LAN).')}
             </div>
           ) : (
-            <button onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
-          ))}
-          {(hostMode === 'relay' || hostMode === 'lan') && discState === 'on' && (
             <div className="row" style={{ marginBottom: 8 }}>
-              <button onClick={newShortInviteCode} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
-                <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
-              </button>
+              <input
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onKeyDown={onEnter(() => startAnnounce())}
+                placeholder="ws://<ip-server>:3001"
+                style={{ flex: 1 }}
+              />
+              <button className="primary" onClick={() => startAnnounce()}>{t('cg.p2pAnnounceNow', '📡 Annuncia su server LAN')}</button>
             </div>
+          ))}
+          {(hostMode === 'relay' || hostMode === 'lan') && (
+            <>
+              <div className="row" style={{ marginBottom: 4 }}>
+                <button
+                  onClick={() => { if (discState !== 'on') void startAnnounce(); else newShortInviteCode(); }}
+                  title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}
+                >
+                  <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
+                </button>
+              </div>
+              <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+                {t('cg.p2pAnnounceExplain', 'Annunciarsi su un server 5emanager (es. quello Docker su questa rete, ws://<ip>:3001) registra lì il codice breve: chi può raggiungere quel server entra digitando il codice, anche se non è sulla tua stessa WiFi. In LAN non serve: basta il QR/indirizzo qui sopra.')}
+              </div>
+            </>
           )}
           {hostNotice && <div className="ok" style={{ marginTop: 8 }}>{hostNotice}</div>}
           {inviteCode && discState === 'on' && (
@@ -1258,7 +1283,7 @@ export default function CampaignTab() {
           {hostNotice && <div className="ok" style={{ marginBottom: 8 }}>{hostNotice}</div>}
           <div className="row">
             <button className="primary" onClick={newInvite}>{t('cg.p2pNewInvite', '➕ Nuovo codice invito')}</button>
-            <button onClick={newShortInviteCode} disabled={discState !== 'on'} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
+            <button onClick={() => { if (discState !== 'on') void startAnnounce(); else newShortInviteCode(); }} title={t('cg.p2pShortCodeTitle', 'Codice breve XXXX-XXXX relayato dal server: il giocatore lo digita (o scansiona il QR) e si unisce da solo, senza incollare l\'invito SDP')}>
               <Icon name="key" candy size={14} /> {t('cg.p2pNewShortCode', '🔑 Codice invito breve')}
             </button>
             {discState !== 'on' && (
