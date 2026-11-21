@@ -16,7 +16,7 @@ import { hostname } from 'node:os';
  *   DND5E_GH_API   default https://api.github.com (override per test)
  *
  * La web app servita da questo server chiama /api/update sulla stessa origin: nessun token nel client.
- * L'APK Android può scaricare via /api/update/asset?name=app-debug.apk (il browser non ha il token).
+ * L'APK Android può scaricare via /api/update/asset?name=app.apk (il browser non ha il token).
  */
 
 const GH_API = (process.env.DND5E_GH_API ?? 'https://api.github.com').replace(/\/$/, '');

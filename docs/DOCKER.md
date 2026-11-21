@@ -6,6 +6,22 @@ volume `docker/data` (campagne, account, schede degli utenti).
 
 ## 1) LAN / HTTP (rete locale, test, VPS senza dominio)
 
+### Dalla root del repo clonato (es. `/opt/5emanager`) — il modo più comodo
+
+C'è un **`docker-compose.yml` anche alla root del repo** (`context: .`, `pull_policy: build`):
+
+```bash
+cd /opt/5emanager        # root del clone
+docker compose up -d     # builda 5emanager-server:latest dal sorgente locale: niente pull da
+                         # registry, niente "docker login", niente --build obbligatorio
+```
+
+> Se vedi `pull access denied ... repository does not exist` oppure `lstat .../docker: no such file`,
+> stai lanciando compose dalla directory sbagliata o senza build: usa il compose alla **root del clone**
+> (`docker compose up -d`) oppure `cd docker && docker compose up -d --build`.
+
+### Dalla cartella `docker/`
+
 C'è già un **`docker/.env` precompilato** committato: basta
 
 ```bash

@@ -1,0 +1,32 @@
+# 5e Manager — server in Docker, direttamente dalla ROOT del repo clonato (es. /opt/5emanager):
+#
+#   docker compose up -d
+#
+# L'immagine 5emanager-server:latest viene SEMPRE buildata dal sorgente locale
+# (pull_policy: build): niente pull da registry, niente "docker login", niente
+# "repository does not exist". L'equivalente in docker/ resta: cd docker && docker compose up -d --build
+#
+# Web app: http://<ip-server>:3001 · multiplayer: ws://<ip-server>:3001 · admin: http://<ip-server>:3001/admin
+# Dati persistenti: docker/data/ (volume ./docker/data). Variabili: vedi docker/.env (usa --env-file docker/.env)
+# Per esporlo su Internet con HTTPS: docker/docker-compose.nginx.yml (vedi docs/DOCKER.md)
+
+services:
+  5emanager:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: 5emanager-server:latest
+    pull_policy: build # mai pull: se manca l'immagine locale si builda dal sorgente
+    container_name: 5emanager-server
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3001}:3001"
+    environment:
+      PORT: "3001"
+      HOST: 0.0.0.0
+      DND5E_DATA_DIR: /data
+      DND5E_STATIC_DIR: /app/apps/web/dist
+      DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # opzionale (repo privato): GITHUB_TOKEN: ${GITHUB_TOKEN:-}
+    volumes:
+      - ./docker/data:/data

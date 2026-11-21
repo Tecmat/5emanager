@@ -16,6 +16,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: 5emanager-server:latest
+    pull_policy: build # mai pull da registry: senza immagine locale si builda dal sorgente
     container_name: 5emanager-server
     restart: unless-stopped
     expose:

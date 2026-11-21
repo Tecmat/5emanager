@@ -1,5 +1,10 @@
 # Deploy su server Debian (systemd + nginx opzionale)
 
+> **Alternativa Docker (più semplice, niente Node sul server):** dopo il clone in `/opt/5emanager`,
+> dalla **root del clone** basta `docker compose up -d` — il compose alla root builda l'immagine
+> `5emanager-server:latest` dal sorgente locale (`pull_policy: build`: niente pull da registry,
+> niente `docker login`). Vedi [DOCKER.md](DOCKER.md) per i dettagli e la modalità HTTPS con nginx.
+
 ## 1. Prerequisiti
 
 ```bash
