@@ -276,12 +276,24 @@ export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: Down
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
   const urls = apkDownloadUrls(info);
   if (urls.length === 0) throw new Error('Nessun URL APK disponibile per la v' + info.latest);
+  // build vecchia senza plugin nativo: niente auto-installazione, ma messaggio chiaro + link diretto (no pop-up)
+  let pluginOk = true;
+  try {
+    pluginOk = Capacitor.isPluginAvailable('UpdateInstaller');
+  } catch {
+    pluginOk = true;
+  }
+  if (!pluginOk) {
+    throw new Error('Auto-installazione non disponibile in questa build (plugin UpdateInstaller mancante): scarica e installa a mano l\'APK da ' + urls[0]);
+  }
   let removeProg: (() => void) | undefined;
   let removePerm: (() => void) | undefined;
   try {
     if (onProgress) {
-      const l = await UpdateInstaller.addListener('update-progress', onProgress);
-      removeProg = () => void l.remove();
+      try {
+        const l = await UpdateInstaller.addListener('update-progress', onProgress);
+        removeProg = () => void l.remove();
+      } catch { /* listener non supportato: si continua senza progresso */ }
     }
     try {
       const lp = await UpdateInstaller.addListener('needsInstallPermission', () => onNeedsPermission?.());

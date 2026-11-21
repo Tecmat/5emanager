@@ -109,6 +109,14 @@ export async function beaconBroadcast(msg: string): Promise<number> {
   return r.sent ?? 0;
 }
 
+/** timeout di sicurezza sulle chiamate native (un plugin che non risponde non deve bloccare la UI) */
+function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('timeout')), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
+  });
+}
+
 /**
  * IP locale del dispositivo: prima il trucco ICE WebRTC, poi (su app native, es. AppImage
  * su WebKitGTK dove RTCPeerConnection manca) la lettura nativa delle interfacce di rete.
@@ -117,7 +125,7 @@ let ipCache: { ip: string; at: number } | null = null;
 
 export async function detectLocalIp(): Promise<string | null> {
   if (ipCache && Date.now() - ipCache.at < 30_000) return ipCache.ip;
-  const viaRtc = await localIpViaWebRTC(1200);
+  const viaRtc = await withTimeout(localIpViaWebRTC(1200), 3000).catch(() => null);
   if (viaRtc) {
     ipCache = { ip: viaRtc, at: Date.now() };
     return viaRtc;
@@ -125,10 +133,10 @@ export async function detectLocalIp(): Promise<string | null> {
   try {
     if (await isTauri()) {
       const { invoke } = await import('@tauri-apps/api/core');
-      const ip = (await invoke('lan_local_ip')) as string | null;
+      const ip = (await withTimeout(invoke('lan_local_ip'), 3000)) as string | null;
       if (ip) return ip;
     } else if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-      const r = await LanBeacon.localIp();
+      const r = await withTimeout(LanBeacon.localIp(), 3000);
       if (r.ip) {
         ipCache = { ip: r.ip, at: Date.now() };
         return r.ip;
@@ -145,7 +153,7 @@ export async function detectLocalIp(): Promise<string | null> {
 export async function detectLocalIps(): Promise<string[]> {
   try {
     if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === 'android') {
-      const r = await LanBeacon.localIps();
+      const r = await withTimeout(LanBeacon.localIps(), 3000);
       if (r.ips && r.ips.length > 0) return r.ips;
     }
   } catch { /* cade sotto */ }
