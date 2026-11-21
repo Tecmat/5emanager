@@ -125,6 +125,21 @@ interface Conn {
 const conns = new Set<Conn>();
 const campaigns = new Map<string, Campaign>();
 
+/**
+ * elimina una campagna e disconnetti TUTTI i partecipanti (master incluso) insieme:
+ * gli viene mandato campaignDeleted e poi il socket viene chiuso lato server.
+ */
+function disconnectCampaign(cid: string): void {
+  for (const cc of conns) {
+    if (cc.campaignId === cid) {
+      send(cc.ws, { t: 'campaignDeleted', id: cid });
+      cc.campaignId = undefined;
+      cc.playerId = undefined;
+      try { cc.ws.close(); } catch { /* già chiusa */ }
+    }
+  }
+}
+
 /** host P2P annunciati su questa rete: connId -> { name, at, ip } (in memoria, TTL 90s) */
 const p2pHosts = new Map<string, { name: string; at: number; ip?: string }>();
 const P2P_HOST_TTL_MS = 90_000;
@@ -292,6 +307,7 @@ function handleMessage(conn: Conn, raw: string): void {
       if (msg.t === 'adminDeleteCampaign') {
         if (!deleteCampaign(msg.id)) throw new Error('Campagna non trovata: ' + msg.id);
         campaigns.delete(msg.id);
+        disconnectCampaign(msg.id);
       }
       if (msg.t === 'adminDeleteAccount') deleteAccount(msg.username);
       if (msg.t === 'adminApproveAccount') approveAccount(msg.username);
@@ -408,13 +424,7 @@ function handleMessage(conn: Conn, raw: string): void {
       const cid = c.id;
       campaigns.delete(cid);
       deleteCampaign(cid);
-      for (const cc of conns) {
-        if (cc.campaignId === cid) {
-          send(cc.ws, { t: 'campaignDeleted', id: cid });
-          cc.campaignId = undefined;
-          cc.playerId = undefined;
-        }
-      }
+      disconnectCampaign(cid);
       return;
     }
     const reg = campaignRegistry(c);

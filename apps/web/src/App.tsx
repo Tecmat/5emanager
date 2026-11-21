@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
 import { useStore, isCampaignSheetId } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
+import { hasPendingDeepLink, onDeepLink, queueDeepLink } from './deepLink.js';
 import CreateForm from './CreateForm.js';
 import UpdateButton from './UpdateButton.js';
 import Icon, { type IconName } from './icons.js';
@@ -62,6 +63,15 @@ export default function App() {
   const [lockErr, setLockErr] = useState('');
 
   const createdRef = useRef(false);
+  // deep link (QR scansionato con la fotocamera di sistema): vai subito alla pagina Campagna
+  useEffect(() => {
+    if (hasPendingDeepLink()) setPage('campagna');
+    return onDeepLink((raw) => {
+      queueDeepLink(raw); // CampaignTab lo consuma e instrada
+      setPage('campagna');
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   useEffect(() => {
     if (creating) createdRef.current = true;
     else if (char && createdRef.current) {

@@ -332,6 +332,15 @@ describe('server multiplayer', () => {
     const delP = await p.waitFor((m2) => m2.t === 'campaignDeleted' && m2.id === adminCid);
     expect(delP.id).toBe(adminCid);
 
+    // tutti giù insieme: il server chiude il socket di master e giocatori
+    const closed = (c: Client) =>
+      c.ws.readyState === WebSocket.CLOSED
+        ? Promise.resolve()
+        : new Promise<void>((res) => c.ws.once('close', () => res()));
+    await Promise.all([closed(m), closed(p)]);
+    expect(m.ws.readyState).toBe(WebSocket.CLOSED);
+    expect(p.ws.readyState).toBe(WebSocket.CLOSED);
+
     // la campagna non è più in lista
     adm.send({ t: 'adminList' });
     const as4 = await adm.waitFor((m2) => m2.t === 'adminState' && !m2.campaigns.some((c: any) => c.id === adminCid));

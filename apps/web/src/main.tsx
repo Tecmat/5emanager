@@ -3,7 +3,13 @@ import { createRoot } from 'react-dom/client';
 import App from './App.js';
 import { StoreProvider } from './store.js';
 import { NetProvider } from './netStore.js';
+import { initDeepLinks } from './deepLink.js';
+import { requestStartupPermissions } from './permissions.js';
 import './styles.css';
+
+// Android: deep link dai QR (5ELAN:/5EP2P1: aperti dalla fotocamera di sistema) + permessi all'avvio
+void initDeepLinks();
+void requestStartupPermissions();
 
 const savedTheme = localStorage.getItem('dnd5e-theme');
 if (savedTheme) {

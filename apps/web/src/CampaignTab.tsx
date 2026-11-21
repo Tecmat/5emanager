@@ -26,6 +26,7 @@ import { useStore } from './store.js';
 import { useNet } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
+import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
 import { isLocalhostHost } from './net.js';
 import { scanLanPeers, type LanPeer, type LanServer } from './lan.js';
@@ -249,12 +250,41 @@ export default function CampaignTab() {
     }
   };
 
+  /** smonta host/transport P2P (usato da "Esci" e quando la campagna viene eliminata) */
+  const teardownP2P = () => {
+    stopDiscovery();
+    if (hostRef.current && 'close' in hostRef.current) (hostRef.current as P2PLanHost).close();
+    hostRef.current = null;
+    setHostMode('rtc');
+    setBeaconInfo(null);
+    p2pClientRef.current?.close();
+    p2pClientRef.current = null;
+    setP2PTransport(null);
+    setInvite(null);
+    setJoinerAnswer('');
+    setInviteInput('');
+    setMyAnswer('');
+    setHostNotice('');
+    setDiscMsg('');
+  };
+
+  /** wrappa i messaggi di rete: su campaignDeleted disconnetti anche il trasporto P2P */
+  const onNetMessage = (m: any) => {
+    handleNetMessage(m);
+    if (m?.t === 'campaignDeleted') teardownP2P();
+  };
+
   const hostCb = {
     onMessage: () => {},
     onState: (c: any) => setConn((prev) => (prev.phase === 'online' ? { ...prev, campaign: c } : prev)),
     onPeerJoined: () => {},
     onPeerLeft: () => {},
     onJoinPending: (req: { from: string; name: string }) => setPendingJoins((p) => (p.some((x) => x.from === req.from) ? p : [...p, req])),
+    onCampaignDeleted: () => {
+      setConn({ phase: 'offline' });
+      setError(t('cg.campaignDeletedSelf', 'Campagna eliminata: tutti i partecipanti sono stati disconnessi.'));
+      teardownP2P();
+    },
   };
 
   const startP2PHost = async () => {
@@ -342,7 +372,7 @@ export default function CampaignTab() {
   const joinLanUrl = (raw: string) => {
     setError('');
     let u = raw.trim();
-    if (u.startsWith('5ELAN:')) u = u.slice('5ELAN:'.length);
+    if (u.toLowerCase().startsWith('5elan:')) u = u.slice('5elan:'.length);
     if (!/^wss?:\/\//.test(u)) u = 'ws://' + u;
     const m = u.match(/^wss?:\/\/([^:/]+)(?::(\d+))?/);
     if (!m) {
@@ -351,8 +381,32 @@ export default function CampaignTab() {
     }
     void joinLanPeer({ ip: m[1], port: Number(m[2] ?? LAN_BEACON_PORT), kind: 'p2p', name: u });
   };
+  /**
+   * instrada un QR scansionato (o un deep link 5ELAN:/5EP2P1: aperto dalla fotocamera
+   * di sistema): 5ELAN:.../ws://.../host:porta -> host LAN via WS diretto;
+   * 5EP2P1:... -> codice invito WebRTC. Così qualsiasi pulsante QR va bene con qualsiasi codice.
+   */
+  const routeScannedQr = (raw: string) => {
+    const s = raw.trim();
+    if (!s) return;
+    const low = s.toLowerCase();
+    if (netMode !== 'p2p') switchNetMode('p2p');
+    setP2pSub('join');
+    if (low.startsWith('5ep2p1:')) {
+      setInviteInput(s);
+      setError('');
+      return;
+    }
+    if (low.startsWith('5elan:') || /^wss?:\/\//i.test(s) || /^[a-z0-9.-]+:\d+$/i.test(s)) {
+      joinLanUrl(s);
+      return;
+    }
+    // altro: prova come codice invito (l'eventuale errore arriva da decodeBlob)
+    setInviteInput(s);
+  };
+
   const scanLanQr = async () => {
-    try { joinLanUrl(await scanQr()); } catch (e) { setError(errMsg(e)); }
+    try { routeScannedQr(await scanQr()); } catch (e) { setError(errMsg(e)); }
   };
 
   /** giocatore: un tap su un host P2P trovato in LAN → WS diretto, niente codici */
@@ -361,7 +415,7 @@ export default function CampaignTab() {
     setDiscMsg(tf('cg.p2pJoiningLan', 'Mi collego a "{name}" ({ip})…', { name: peer.name ?? 'host', ip: peer.ip }));
     try {
       const client = new P2PLanClient(peer.ip, peer.port);
-      client.onMessage = (m) => handleNetMessage(m);
+      client.onMessage = (m) => onNetMessage(m);
       p2pClientRef.current = client;
       setP2PTransport((m) => client.send(m as never));
       await client.connect();
@@ -394,7 +448,7 @@ export default function CampaignTab() {
 
   const makeP2PClient = () => {
     const client = new P2PClient();
-    client.onMessage = (m) => handleNetMessage(m);
+    client.onMessage = (m) => onNetMessage(m);
     client.onOpen = () => client.send({ t: 'join', name: name || 'Giocatore', password });
     p2pClientRef.current = client;
     setP2PTransport((m) => client.send(m as never));
@@ -479,7 +533,7 @@ export default function CampaignTab() {
     // senza WebRTC: niente SDP, si entra direttamente col join relayato
     if (!webrtcSupported()) {
       const client = new P2PRelayClient(disc, hostId);
-      client.onMessage = (m) => handleNetMessage(m);
+      client.onMessage = (m) => onNetMessage(m);
       p2pClientRef.current = client;
       setP2PTransport((m) => client.send(m as never));
       client.join(name || 'Giocatore', password);
@@ -510,26 +564,22 @@ export default function CampaignTab() {
   };
 
   const scanInvite = async () => {
-    try { setInviteInput(await scanQr()); } catch (e) { setError((e as Error).message); }
+    try { routeScannedQr(await scanQr()); } catch (e) { setError((e as Error).message); }
   };
 
   const exitP2P = () => {
-    stopDiscovery();
-    if (hostRef.current && 'close' in hostRef.current) (hostRef.current as P2PLanHost).close();
-    hostRef.current = null;
-    setHostMode('rtc');
-    setBeaconInfo(null);
-    p2pClientRef.current?.close();
-    p2pClientRef.current = null;
-    setP2PTransport(null);
-    setInvite(null);
-    setJoinerAnswer('');
-    setInviteInput('');
-    setMyAnswer('');
-    setHostNotice('');
-    setDiscMsg('');
+    teardownP2P();
     disconnect();
   };
+
+  // deep link (QR 5ELAN:/5EP2P1: aperto dalla fotocamera di sistema): instrada come una scansione
+  useEffect(() => {
+    const off = onDeepLink((raw) => { consumePendingDeepLink(); routeScannedQr(raw); });
+    const first = consumePendingDeepLink();
+    if (first) routeScannedQr(first);
+    return off;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [password, setPassword] = useState('');
   const [campaignName, setCampaignName] = useState('');
   const [joinId, setJoinId] = useState('');
