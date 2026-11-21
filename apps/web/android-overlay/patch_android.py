@@ -44,7 +44,34 @@ if "fileprovider" not in s:
         "    </application>"
     )
     s = s.replace("</application>", provider, 1)
+# cleartext: l'app gira su https://localhost e deve parlare http/ws con la LAN (server 3001, beacon 3177)
+if "usesCleartextTraffic" not in s:
+    s = s.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
 manifest.write_text(s)
+
+# 1b) icone app (d20 "candy"): launcher legacy in tutte le density + adaptive icon v26
+icons = overlay / "icons"
+res = root / "app/src/main/res"
+for dpi in ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]:
+    dst = res / f"mipmap-{dpi}"
+    dst.mkdir(parents=True, exist_ok=True)
+    shutil.copy(icons / f"ic_launcher-{dpi}.png", dst / "ic_launcher.png")
+    shutil.copy(icons / f"ic_launcher-{dpi}.png", dst / "ic_launcher_round.png")
+drawable = res / "drawable"
+drawable.mkdir(parents=True, exist_ok=True)
+shutil.copy(icons / "ic_launcher_foreground.png", drawable / "ic_launcher_foreground.png")
+shutil.copy(icons / "ic_launcher_background.png", drawable / "ic_launcher_background.png")
+v26 = res / "mipmap-anydpi-v26"
+v26.mkdir(parents=True, exist_ok=True)
+adaptive = (
+    '<?xml version="1.0" encoding="utf-8"?>\n'
+    '<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">\n'
+    '    <background android:drawable="@drawable/ic_launcher_background"/>\n'
+    '    <foreground android:drawable="@drawable/ic_launcher_foreground"/>\n'
+    '</adaptive-icon>\n'
+)
+(v26 / "ic_launcher.xml").write_text(adaptive)
+(v26 / "ic_launcher_round.xml").write_text(adaptive)
 
 # 2) copia i plugin Java e file_paths.xml
 pkg_dir = root / "app/src/main/java/com/tecmat/emanager"
@@ -94,4 +121,4 @@ for pl in plugins:
             )
 ma.write_text(t)
 
-print("android patch ok: UpdateInstaller + LanBeacon + FileProvider + permessi (INSTALL_PACKAGES, CAMERA, INTERNET, WIFI)")
+print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi")

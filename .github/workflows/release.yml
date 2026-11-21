@@ -139,6 +139,13 @@ jobs:
 
   android:
     runs-on: ubuntu-latest
+    env:
+      # firma release contro Play Protect: imposta questi 4 secret nel repo
+      # (keystore: keytool -genkeypair -keystore keystore.jks -alias 5e -keyalg RSA -keysize 2048 -validity 10000)
+      ANDROID_KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+      ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+      ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+      ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -158,13 +165,28 @@ jobs:
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       - run: cd apps/web && npx cap add android && npx cap sync
-      # overlay: plugin UpdateInstaller (download+installa APK in-app) + FileProvider + permessi
+      # overlay: plugin UpdateInstaller + LanBeacon, icone d20, FileProvider, cleartext, permessi
       - run: python3 apps/web/android-overlay/patch_android.py apps/web/android
-      - run: cd apps/web/android && ./gradlew assembleDebug
+      # firma release se il keystore è configurato (altrimenti resta debug-signed)
+      - name: Keystore da secret (opzionale)
+        if: env.ANDROID_KEYSTORE_B64 != ''
+        run: |
+          echo "$ANDROID_KEYSTORE_B64" | base64 -d > apps/web/android/keystore.jks
+          python3 apps/web/android-overlay/patch_signing.py apps/web/android
+      - name: Build APK (release se c'è il keystore, altrimenti debug)
+        run: |
+          cd apps/web/android
+          if [ -f keystore.jks ]; then
+            ./gradlew assembleRelease
+            cp app/build/outputs/apk/release/app-release.apk ../app.apk
+          else
+            ./gradlew assembleDebug
+            cp app/build/outputs/apk/debug/app-debug.apk ../app.apk
+          fi
       - uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          name: app-apk
+          path: apps/web/app.apk
       - uses: softprops/action-gh-release@v2
         with:
-          files: apps/web/android/app/build/outputs/apk/debug/app-debug.apk
+          files: apps/web/app.apk
