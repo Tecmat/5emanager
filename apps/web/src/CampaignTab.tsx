@@ -389,8 +389,10 @@ export default function CampaignTab() {
     setScanProg(null);
     setLanServers([]);
     setLanP2pHosts([]);
+    let foundCount = -1;
     try {
       const found = await scanLanPeers((d, t2) => setScanProg({ d, t: t2 }));
+      foundCount = found.length;
       const servers = found.filter((p) => p.kind === 'server');
       const p2p = found.filter((p) => p.kind === 'p2p');
       setLanServers(servers);
@@ -404,6 +406,8 @@ export default function CampaignTab() {
     const u = url.trim() || autoDiscWsUrl();
     if (u) {
       await searchHosts();
+    } else if (foundCount === 0) {
+      setDiscMsg(t('cg.p2pScanNone', 'Niente trovato sulla rete. Controlla: (1) dispositivi sulla stessa WiFi/hotspot e stessa sottorete; (2) sull\'altro dispositivo è stato premuto "Ospita su questa rete (LAN)"; (3) il firewall non blocca la porta 3177 (su Windows: Firewall → consenti "5e Manager"); (4) prova a riavviare l\'host.'));
     } else {
       setDiscMsg(t('cg.p2pNoServerScan', 'Nessun server 5emanager trovato in rete — se cerchi una campagna P2P diretta usa gli host LAN qui sotto (tap per entrare), oppure inserisci il ws:// del server remoto a mano.'));
     }
@@ -597,7 +601,7 @@ export default function CampaignTab() {
       return (
         <div className="grid" style={{ maxWidth: 560 }}>
           <div className="card">
-            <h3>{t('cg.p2pTitle', '📡 Campagna P2P — senza server')}</h3>
+            <h3><Icon name="signal" candy size={16} /> {t('cg.p2pTitle', 'Campagna P2P — senza server')}</h3>
             {!webrtcSupported() && !lanBeaconSupported() && (
               <div className="error" style={{ marginBottom: 8 }}>
                 ⚠️ {t('cg.p2pNoWebrtc', 'WebRTC non supportato su questo dispositivo: il P2P usa il trasporto relay sul server LAN — assicurati di aver impostato il ws:// del server.')}
@@ -785,7 +789,7 @@ export default function CampaignTab() {
     return (
       <div className="grid" style={{ maxWidth: 560 }}>
         <div className="card">
-          <h3>{t('cg.server', '🌐 Server')}</h3>
+          <h3><Icon name="globe" candy size={16} /> {t('cg.server', 'Server')}</h3>
           <div className="row" style={{ marginBottom: 8 }}>
             <span className="tag custom">server remoto</span>
             <button onClick={() => switchNetMode('p2p')} title="Crea la campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito"><Icon name="signal" size={14} /> {t('cg.orP2p', 'oppure P2P')}</button>
@@ -804,7 +808,7 @@ export default function CampaignTab() {
               {servers.map((s) => <option key={s} value={s} />)}
             </datalist>
             <button onClick={checkConnection} disabled={pingState.status === 'checking'} title={t('cg.checkTitle', 'Controllo manuale della connessione (puoi ripeterlo per aggiornare)')}>
-              {pingState.status === 'checking' ? t('cg.ping', 'Ping…') : t('cg.check', '🔌 Verifica connessione')}
+              {pingState.status === 'checking' ? t('cg.ping', 'Ping…') : <><Icon name="wifi" size={13} /> {t('cg.check', 'Verifica connessione')}</>}
             </button>
           </div>
           {pingState.status === 'ok' && <div className="ok" style={{ marginTop: 6 }}>{tf('cg.connected', '✅ Connesso — ping {n} ms', { n: pingState.rtt })}</div>}
@@ -820,7 +824,7 @@ export default function CampaignTab() {
         </div>
 
         <div className="card">
-          <h3>{t('cg.account', '👤 Account')}</h3>
+          <h3><Icon name="user" candy size={16} /> {t('cg.account', 'Account')}</h3>
           {auth ? (
             <>
               <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
@@ -847,10 +851,10 @@ export default function CampaignTab() {
         </div>
 
         <div className="card">
-          <h3>{t('cg.campaign', '🎲 Campagna multiplayer')}</h3>
-          <div className="row" style={{ marginBottom: 8 }}>
-            <button className={mode === 'create' ? 'primary' : ''} onClick={() => setMode('create')}>{t('cg.create', 'Crea campagna (master)')}</button>
-            <button className={mode === 'join' ? 'primary' : ''} onClick={() => setMode('join')}>{t('cg.join', 'Unisciti a una campagna')}</button>
+          <h3><Icon name="swords" candy size={16} /> {t('cg.campaign', 'Campagna multiplayer')}</h3>
+          <div className="segmented" style={{ marginBottom: 8 }}>
+            <button className={`seg ${mode === 'create' ? 'active' : ''}`} onClick={() => setMode('create')}><Icon name="plus" candy size={14} /> {t('cg.create', 'Crea campagna (master)')}</button>
+            <button className={`seg ${mode === 'join' ? 'active' : ''}`} onClick={() => setMode('join')}><Icon name="door" candy size={14} /> {t('cg.join', 'Unisciti a una campagna')}</button>
           </div>
           <label>{t('cg.yourName', 'Il tuo nome')}</label>
           <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} placeholder="Eroe" />
@@ -863,7 +867,7 @@ export default function CampaignTab() {
           {mode === 'join' && (
             <>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={refreshCampaignList}>{t('cg.refreshList', '📋 Aggiorna lista dal server')}</button>
+                <button onClick={refreshCampaignList}><Icon name="refresh" size={13} /> {t('cg.refreshList', 'Aggiorna lista dal server')}</button>
               </div>
               {savedCampaigns.length > 0 && (
                 <>
@@ -907,7 +911,7 @@ export default function CampaignTab() {
               disabled={conn.phase === 'connecting'}
               onClick={() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); }}
             >
-              {conn.phase === 'connecting' ? t('cg.connecting', 'Connessione...') : mode === 'create' ? t('cg.createEnter', 'Crea e entra') : t('cg.enter', 'Entra')}
+              {conn.phase === 'connecting' ? t('cg.connecting', 'Connessione...') : <><Icon name="play" candy size={14} /> {mode === 'create' ? t('cg.createEnter', 'Crea e entra') : t('cg.enter', 'Entra')}</>}
             </button>
           </div>
           <div className="muted" style={{ marginTop: 10 }}>
@@ -968,6 +972,11 @@ export default function CampaignTab() {
       {hostRef.current && isMaster && (hostMode === 'relay' || hostMode === 'lan') && (
         <div className="card">
           <h3>{hostMode === 'lan' ? t('cg.addPlayersLan', '🖥️ Aggiungi giocatori (host su questa rete)') : t('cg.addPlayers', '📨 Aggiungi giocatori (P2P relay)')}</h3>
+          {hostMode === 'lan' && beaconInfo && (
+            <div className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
+              {t('cg.lanFirewallHint', 'Se gli altri non ti vedono: stessa WiFi/sottorete, firewall aperto sulla porta 3177 (Windows: Impostazioni → Firewall → consenti 5e Manager), host avviato.')}
+            </div>
+          )}
           {hostMode === 'lan' && beaconInfo && (
             <div className="ok" style={{ marginBottom: 8 }}>
               📡 {tf('cg.lanBeaconOn', 'In onda su ws://{ip}:{port} — i giocatori sulla stessa rete ti trovano con "Scansiona rete" e entrano con un tap.', { ip: beaconInfo.ip, port: beaconInfo.port })}

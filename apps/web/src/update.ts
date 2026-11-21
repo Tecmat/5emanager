@@ -97,9 +97,21 @@ function toUpdateInfo(rel: ReleaseLike, via: UpdateInfo['via'], current: string,
   };
 }
 
-/** 1) proxy del server self-hosted (unico modo con repo privato, senza token nel client) */
+/** 1) proxy del server self-hosted (unico modo con repo privato, senza token nel client).
+ * Su Android, se non c'è un URL salvato, prova a trovare un server 5emanager sulla LAN (scansione). */
 async function checkViaServer(): Promise<UpdateInfo> {
-  const origin = serverOrigin();
+  let origin = serverOrigin();
+  if (!origin && detectPlatform() === 'android') {
+    try {
+      const { scanLanPeers } = await import('./lan.js');
+      const peers = await scanLanPeers();
+      const srv = peers.find((p) => p.kind === 'server');
+      if (srv) {
+        origin = `http://${srv.ip}:${srv.port}`;
+        try { localStorage.setItem('dnd5e.net.url', `ws://${srv.ip}:${srv.port}`); } catch { /* quota */ }
+      }
+    } catch { /* scansione non riuscita: si passa agli altri metodi */ }
+  }
   if (!origin) throw new Error('nessun server configurato');
   const r = await fetchWithTimeout(`${origin}/api/update`);
   if (!r.ok) throw new Error(`/api/update: HTTP ${r.status}`);
@@ -121,6 +133,30 @@ async function checkViaApi(): Promise<UpdateInfo> {
   return toUpdateInfo({ tag: j.tag_name, pageUrl: j.html_url, assets: j.assets ?? [] }, 'api', await getCurrentVersion());
 }
 
+/** 2b) fallback jsDelivr (CORS *): la versione di main == ultima release (bump a ogni release).
+ * L'asset viene poi scaricato DIRETTO da GitHub (plugin/Rust, niente CORS). */
+async function checkViaJsdelivr(): Promise<UpdateInfo> {
+  const r = await fetchWithTimeout(`https://cdn.jsdelivr.net/gh/${REPO}@main/package.json`);
+  if (!r.ok) throw new Error(`cdn.jsdelivr.net: HTTP ${r.status}`);
+  const j = (await r.json()) as { version?: string };
+  const latest = String(j.version ?? '').replace(/^v/i, '');
+  if (!latest) throw new Error('jsdelivr: version mancante');
+  const platform = detectPlatform();
+  const assetName = platform === 'android' ? 'app-debug.apk' : platform === 'desktop' ? `5e.Manager_${latest}_amd64.AppImage` : undefined;
+  const current = await getCurrentVersion();
+  return {
+    platform,
+    current,
+    latest,
+    available: isNewerVersion(latest, current),
+    pageUrl: `https://github.com/${REPO}/releases/tag/v${latest}`,
+    assetUrl: assetName ? `https://github.com/${REPO}/releases/download/v${latest}/${assetName}` : undefined,
+    assetName,
+    checkedAt: new Date().toISOString(),
+    via: 'html',
+  };
+}
+
 /** 3) fallback HTML github.com (atom + expanded_assets) — solo repo pubblico, senza rate limit */
 async function checkViaHtml(): Promise<UpdateInfo> {
   const atom = await (await fetchWithTimeout(`https://github.com/${REPO}/releases.atom`)).text();
@@ -139,7 +175,7 @@ async function checkViaHtml(): Promise<UpdateInfo> {
 /** check completo web/android: server → API → HTML, con errori dettagliati */
 export async function checkUpdateWeb(): Promise<UpdateInfo> {
   const errors: string[] = [];
-  for (const attempt of [checkViaServer, checkViaApi, checkViaHtml]) {
+  for (const attempt of [checkViaServer, checkViaApi, checkViaJsdelivr, checkViaHtml]) {
     try {
       return await attempt();
     } catch (e) {

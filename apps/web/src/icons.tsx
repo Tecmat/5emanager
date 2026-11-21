@@ -31,7 +31,8 @@ export type IconName =
   | 'dice'
   | 'key'
   | 'door'
-  | 'signal';
+  | 'signal'
+  | 'refresh';
 
 const PATHS: Record<IconName, ReactElement> = {
   home: (
@@ -256,6 +257,12 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M2.5 7.5a13.5 13.5 0 0 1 19 0" />
     </>
   ),
+  refresh: (
+    <>
+      <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+      <path d="M21 3v6h-6" />
+    </>
+  ),
 };
 
 /** gradienti "candy" (stile KDE/Breeze colorato) per icona: tile arrotondato colorato + glifo bianco */
@@ -291,6 +298,7 @@ const CANDY: Partial<Record<IconName, [string, string]>> = {
   key: ['#e17055', '#fdcb6e'],
   door: ['#00b894', '#00cec9'],
   signal: ['#a29bfe', '#e84393'],
+  refresh: ['#0984e3', '#74b9ff'],
 };
 
 export default function Icon({ name, size = 16, className = '', candy = false }: { name: IconName; size?: number; className?: string; candy?: boolean }) {

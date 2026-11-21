@@ -31,3 +31,15 @@ senza server e senza codici: scansione + un tap. Il trasporto è WebSocket diret
 - Il beacon risponde a `GET http://<ip>:3177/api/info` con `{app:"5emanager",kind:"p2p-host",name,version,port}`
 - Il traffico di gioco è WS su `ws://<ip>:3177/ws` (niente relay, niente server)
 - Su Android l'APK deve avere i permessi INTERNET (nel manifest via patch CI)
+
+## Se PC e telefono "non si vedono" (checklist rapida, es. AppImage su CachyOS + APK)
+
+1. **Stessa rete e stessa sottorete**: telefono e PC devono avere IP tipo `192.168.1.x` entrambi.
+   Attenzione: sulle reti WiFi "guest" o con **isolamento client (AP isolation)** attivo sul router,
+   i dispositivi non si parlano anche se sono sulla stessa WiFi -> usa la WiFi principale o l'hotspot del telefono.
+2. **Firewall**: la porta **3177** deve essere raggiungibile dagli altri dispositivi.
+   - Windows: Impostazioni -> Firewall -> consenti un'app -> aggiungi 5e.Manager (o la porta 3177)
+   - Linux/CachyOS: di solito nessun firewall attivo; se usi ufw: `sudo ufw allow 3177/tcp`
+3. L'host ha premuto **"Ospita su questa rete (LAN)"** e vede `ws://<suo-ip>:3177` nella sua scheda.
+4. Sul telefono: **"Scansiona rete e cerca host"** -> l'host appare con nome + IP -> tap -> il master vede la richiesta -> **Accetta**.
+5. Verifica rapida dal PC: apri nel browser `http://<ip-pc>:3177/api/info` -> deve rispondere JSON con `"kind":"p2p-host"`.
