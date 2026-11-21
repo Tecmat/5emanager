@@ -12,6 +12,27 @@ export interface TotpState {
   backupHashes: string[];
 }
 
+/** passkey WebAuthn salvata sull'account: publicKey in base64 (COSE), id in base64url */
+export interface StoredPasskey {
+  id: string;
+  publicKeyB64: string;
+  counter: number;
+  transports?: string[];
+  name: string;
+  deviceType?: string;
+  backedUp?: boolean;
+  createdAt: string;
+}
+
+/** passkey esposta all'UI (senza chiave pubblica) */
+export interface PasskeyInfo {
+  id: string;
+  name: string;
+  createdAt: string;
+  deviceType?: string;
+  backedUp?: boolean;
+}
+
 export interface TotpSetup {
   secret: string;
   otpauthUrl: string;
@@ -38,6 +59,8 @@ export interface Account {
   savedP2PCampaigns: Record<string, SavedCampaignSnapshot>;
   /** 2FA TOTP; null = non configurata */
   totp: TotpState | null;
+  /** passkey WebAuthn registrate (login passwordless) */
+  passkeys: StoredPasskey[];
 }
 
 export interface PendingRequest {
@@ -47,16 +70,16 @@ export interface PendingRequest {
 }
 
 interface AccountsFile {
-  v: 5;
+  v: 6;
   accounts: Record<string, Account>;
   pending: Record<string, PendingRequest>;
 }
 
-/** migrazione v1/v2/v3 -> v4: aggiunge role (DND5E_ADMIN_USER vince, altrimenti il primo account diventa admin) e savedP2PCampaigns */
+/** migrazione v1..v5 -> v6: aggiunge role, savedP2PCampaigns, totp e passkeys */
 function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
   let accounts: Record<string, Account>;
   let pending: Record<string, PendingRequest> = {};
-  if (raw.v === 2 || raw.v === 3 || raw.v === 4) {
+  if (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5) {
     accounts = (raw.accounts ?? {}) as Record<string, Account>;
     pending = (raw.pending ?? {}) as Record<string, PendingRequest>;
   } else {
@@ -71,9 +94,10 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
     }
     a.savedP2PCampaigns = a.savedP2PCampaigns ?? {};
     a.totp = a.totp ?? null;
+    a.passkeys = a.passkeys ?? [];
     accounts[k] = a as Account;
   }
-  return { v: 5, accounts, pending };
+  return { v: 6, accounts, pending };
 }
 
 /** sessioni attive in memoria: token -> username (si perdono al riavvio del server) */
@@ -85,13 +109,13 @@ export function loadAccountsFile(): AccountsFile {
   try {
     if (existsSync(ACCOUNTS_FILE)) {
       const raw = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-      if (raw && raw.v === 5 && raw.accounts) return raw as AccountsFile;
-      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || !raw.v)) return migrateAccounts(raw);
+      if (raw && raw.v === 6 && raw.accounts) return raw as AccountsFile;
+      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5 || !raw.v)) return migrateAccounts(raw);
     }
   } catch {
     /* file corroto: si riparte da un registro vuoto */
   }
-  return { v: 5, accounts: {}, pending: {} };
+  return { v: 6, accounts: {}, pending: {} };
 }
 
 export function saveAccountsFile(f: AccountsFile): void {
@@ -144,6 +168,7 @@ export function approveAccount(username: string): Account {
     role: ADMIN_USER && key === ADMIN_USER ? 'admin' : 'user',
     savedP2PCampaigns: {},
     totp: null,
+    passkeys: [],
   };
   f.accounts[key] = acc;
   delete f.pending[key];
@@ -306,6 +331,68 @@ export function consumeBackupCode(username: string, code: string): boolean {
   f.accounts[username.toLowerCase()] = acc;
   saveAccountsFile(f);
   return true;
+}
+
+// --- passkey WebAuthn ---
+
+export function listAccountPasskeys(username: string): PasskeyInfo[] {
+  const acc = getAccount(username);
+  return (acc?.passkeys ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    createdAt: p.createdAt,
+    deviceType: p.deviceType,
+    backedUp: p.backedUp,
+  }));
+}
+
+export function getAccountPasskey(username: string, credentialId: string): StoredPasskey | undefined {
+  return getAccount(username)?.passkeys?.find((p) => p.id === credentialId);
+}
+
+/** aggiunge una passkey all'account (cap 10 per account) */
+export function addAccountPasskey(username: string, pk: StoredPasskey): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato');
+  acc.passkeys = acc.passkeys ?? [];
+  acc.passkeys = acc.passkeys.filter((p) => p.id !== pk.id);
+  acc.passkeys.unshift(pk);
+  acc.passkeys = acc.passkeys.slice(0, 10);
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+}
+
+export function removeAccountPasskey(username: string, credentialId: string): boolean {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc?.passkeys) return false;
+  const n = acc.passkeys.length;
+  acc.passkeys = acc.passkeys.filter((p) => p.id !== credentialId);
+  if (acc.passkeys.length === n) return false;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return true;
+}
+
+/** trova a quale account appartiene una credenziale (login discoverable senza username) */
+export function findPasskeyOwner(credentialId: string): { username: string; passkey: StoredPasskey } | undefined {
+  for (const acc of Object.values(loadAccountsFile().accounts)) {
+    const passkey = (acc.passkeys ?? []).find((p) => p.id === credentialId);
+    if (passkey) return { username: acc.username, passkey };
+  }
+  return undefined;
+}
+
+/** aggiorna il counter anti-replay dopo un login passkey riuscito */
+export function updatePasskeyCounter(username: string, credentialId: string, counter: number): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  const pk = acc?.passkeys?.find((p) => p.id === credentialId);
+  if (!acc || !pk) return;
+  pk.counter = counter;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
 }
 
 export function accountCharacters(username: string): Character[] {

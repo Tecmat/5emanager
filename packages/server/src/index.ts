@@ -28,6 +28,7 @@ import {
   accountRole,
   accountSavedP2PCampaigns,
   accountTotpEnabled,
+  addAccountPasskey,
   approveAccount,
   consumeBackupCode,
   createSession,
@@ -36,10 +37,14 @@ import {
   deleteAccountP2PCampaign,
   disableAccountTotp,
   enableAccountTotp,
+  findPasskeyOwner,
   getAccount,
+  getAccountPasskey,
+  listAccountPasskeys,
   listPending,
   loadAccountsFile,
   loginAccount,
+  removeAccountPasskey,
   requestAccount,
   resetAccountPassword,
   rejectAccount,
@@ -48,8 +53,18 @@ import {
   sessionUsername,
   setAccountRole,
   setupAccountTotp,
+  updatePasskeyCounter,
   verifyAccountTotp,
+  type StoredPasskey,
 } from './accounts.js';
+import {
+  authenticationOptionsFor,
+  registrationOptionsFor,
+  rpConfigFromHost,
+  toWebAuthnCredential,
+  verifyAuthentication,
+  verifyRegistration,
+} from './passkeys.js';
 import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
 
@@ -132,6 +147,10 @@ interface Conn {
   token?: string;
   /** true dopo adminAuth riuscito */
   admin?: boolean;
+  /** header Host della richiesta WS: da qui deriviamo RP ID/origin delle passkey */
+  rpHost?: string;
+  /** challenge WebAuthn in corso su questa connessione (register/login passkey) */
+  passkeyChallenge?: { kind: 'register' | 'login'; challenge: string; username?: string };
 }
 
 const conns = new Set<Conn>();
@@ -246,7 +265,7 @@ function sendAdminState(ws: WebSocket): void {
   });
 }
 
-function handleMessage(conn: Conn, raw: string): void {
+async function handleMessage(conn: Conn, raw: string): Promise<void> {
   let msg: ClientMessage;
   try {
     msg = JSON.parse(raw);
@@ -413,6 +432,136 @@ function handleMessage(conn: Conn, raw: string): void {
         disableAccountTotp(username);
         send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: false });
         send(conn.ws, { t: 'notice', message: '2FA disattivata' });
+      }
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+    }
+    return;
+  }
+
+  // --- passkey WebAuthn (login passwordless; la registrazione richiede sessione) ---
+  if (
+    msg.t === 'passkeyRegisterStart' || msg.t === 'passkeyRegisterFinish' ||
+    msg.t === 'passkeyLoginStart' || msg.t === 'passkeyLoginFinish' ||
+    msg.t === 'passkeyList' || msg.t === 'passkeyRemove'
+  ) {
+    const rp = rpConfigFromHost(conn.rpHost);
+    const token = conn.token;
+    const username = token ? sessionUsername(token) : undefined;
+    try {
+      if (msg.t === 'passkeyRegisterStart') {
+        if (!username) {
+          send(conn.ws, { t: 'error', message: 'Devi fare login prima di registrare una passkey' });
+          return;
+        }
+        const acc = getAccount(username);
+        const options = await registrationOptionsFor(username, acc?.passkeys ?? [], rp);
+        conn.passkeyChallenge = { kind: 'register', challenge: options.challenge, username };
+        send(conn.ws, { t: 'passkeyRegisterOptions', options });
+        return;
+      }
+      if (msg.t === 'passkeyRegisterFinish') {
+        const ch = conn.passkeyChallenge;
+        if (!username || !ch || ch.kind !== 'register' || ch.username !== username) {
+          send(conn.ws, { t: 'error', message: 'Nessuna registrazione passkey in corso: ricomincia' });
+          return;
+        }
+        const pk = await verifyRegistration(
+          msg.response as never,
+          ch.challenge,
+          rp,
+          'Passkey ' + new Date().toISOString().slice(0, 10),
+        );
+        addAccountPasskey(username, pk);
+        conn.passkeyChallenge = undefined;
+        send(conn.ws, { t: 'notice', message: '🔑 Passkey registrata (' + (pk.deviceType ?? 'authenticator') + ')' });
+        send(conn.ws, { t: 'passkeyList', passkeys: listAccountPasskeys(username) });
+        return;
+      }
+      if (msg.t === 'passkeyLoginStart') {
+        const uname = msg.username?.trim();
+        let allow: StoredPasskey[] | undefined;
+        if (uname) {
+          const acc = getAccount(uname);
+          if (!acc) {
+            send(conn.ws, { t: 'error', message: 'Account non trovato: prima devi registrarti' });
+            return;
+          }
+          allow = acc.passkeys ?? [];
+          if (allow.length === 0) {
+            send(conn.ws, { t: 'error', message: 'Nessuna passkey su questo account: fai login con password e aggiungine una' });
+            return;
+          }
+        }
+        const options = await authenticationOptionsFor(rp, allow);
+        conn.passkeyChallenge = { kind: 'login', challenge: options.challenge, username: uname?.toLowerCase() };
+        send(conn.ws, { t: 'passkeyLoginOptions', options });
+        return;
+      }
+      if (msg.t === 'passkeyLoginFinish') {
+        const ch = conn.passkeyChallenge;
+        if (!ch || ch.kind !== 'login') {
+          send(conn.ws, { t: 'error', message: 'Nessun login passkey in corso: ricomincia' });
+          return;
+        }
+        const resp = msg.response as { id: string };
+        let owner: { username: string; passkey: StoredPasskey } | undefined;
+        if (ch.username) {
+          const pk = getAccountPasskey(ch.username, resp.id);
+          if (pk) owner = { username: ch.username, passkey: pk };
+        } else {
+          owner = findPasskeyOwner(resp.id);
+        }
+        if (!owner) {
+          send(conn.ws, { t: 'error', message: 'Passkey non riconosciuta (non è registrata su questo server)' });
+          return;
+        }
+        const key = 'pk:' + owner.username.toLowerCase();
+        if (totpThrottled(key)) {
+          send(conn.ws, { t: 'error', message: 'Troppi tentativi: riprova tra 60 secondi' });
+          return;
+        }
+        try {
+          // la passkey conta come secondo fattore (possesso dell'autenticatore): niente TOTP in più
+          const newCounter = await verifyAuthentication(resp as never, ch.challenge, rp, toWebAuthnCredential(owner.passkey));
+          updatePasskeyCounter(owner.username, resp.id, newCounter);
+          conn.passkeyChallenge = undefined;
+          conn.token = createSession(owner.username);
+          if (accountRole(owner.username) === 'admin') conn.admin = true;
+          send(conn.ws, {
+            t: 'auth',
+            token: conn.token,
+            username: owner.username,
+            characters: accountCharacters(owner.username),
+            savedCampaigns: accountSavedP2PCampaigns(owner.username),
+            totpEnabled: accountTotpEnabled(owner.username),
+          });
+        } catch (e) {
+          totpNoteAttempt(key);
+          throw e;
+        }
+        return;
+      }
+      if (msg.t === 'passkeyList') {
+        if (!username) {
+          send(conn.ws, { t: 'error', message: 'Devi fare login prima' });
+          return;
+        }
+        send(conn.ws, { t: 'passkeyList', passkeys: listAccountPasskeys(username) });
+        return;
+      }
+      if (msg.t === 'passkeyRemove') {
+        if (!username) {
+          send(conn.ws, { t: 'error', message: 'Devi fare login prima' });
+          return;
+        }
+        if (!removeAccountPasskey(username, msg.credentialId)) {
+          send(conn.ws, { t: 'error', message: 'Passkey non trovata' });
+          return;
+        }
+        send(conn.ws, { t: 'notice', message: 'Passkey rimossa' });
+        send(conn.ws, { t: 'passkeyList', passkeys: listAccountPasskeys(username) });
+        return;
       }
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
@@ -634,15 +783,13 @@ export function createDndServer(port = PORT, host = HOST) {
   });
   const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 * 1024 });
 
-  wss.on('connection', (ws) => {
-    const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10) };
+  wss.on('connection', (ws, req) => {
+    const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10), rpHost: String(req.headers.host ?? '') };
     conns.add(conn);
     ws.on('message', (data) => {
-      try {
-        handleMessage(conn, data.toString());
-      } catch (e) {
+      handleMessage(conn, data.toString()).catch((e) => {
         send(ws, { t: 'error', message: 'Errore interno: ' + (e as Error).message });
-      }
+      });
     });
     ws.on('close', () => {
       conns.delete(conn);

@@ -65,6 +65,34 @@ compatibile con Google Authenticator, Aegis, ecc.), implementata in purezza in `
   dell'installazione (firma confrontata con l'app installata, no downgrade, magic PK) così un
  安装 fallita su Samsung/One UI (“app non installata”) diventa un messaggio chiaro.
 
+## Passkey WebAuthn (login passwordless)
+
+Oltre alla 2FA TOTP, gli account possono registrare **passkey** (WebAuthn: impronta/PIN del
+dispositivo, chiavetta di sicurezza o password manager) con `@simplewebauthn/server` +
+`@simplewebauthn/browser` (v13). Implementazione in `packages/server/src/passkeys.ts`.
+
+- **Requisito**: WebAuthn funziona solo in **secure context** — HTTPS (o `localhost`).
+  Su LAN in chiaro (`http://192.168.x.x`) il browser blocca la API: configura HTTPS
+  (nginx reverse proxy, vedi [docs/DOCKER.md](docs/DOCKER.md)). L'app nasconde i bottoni
+  passkey quando `window.isSecureContext` è falso e mostra un avviso.
+- **RP ID / origin**: derivati dall'header `Host` della connessione WS (in locale `http://localhost:3001`,
+  dietro proxy `https://<dominio>`), con override da env:
+  - `DND5E_RP_ID` es. `dnd.example.com` (solo dominio)
+  - `DND5E_RP_ORIGIN` es. `https://dnd.example.com` (origin esatto della pagina)
+  - `DND5E_RP_NAME` nome mostrato nel prompt (default `5e Manager`)
+- **Flusso**: `passkeyRegisterStart`/`passkeyRegisterFinish` (richiede login) registra la
+  credenziale sull'account (max 10, salvata in `accounts.data` v6 come id base64url +
+  publicKey base64 + counter anti-replay). `passkeyLoginStart`/`passkeyLoginFinish` fa login
+  **senza password**: con `username` usa solo le sue passkey, senza username usa una passkey
+  *discoverable* (il server risale all'account dalla credenziale). La passkey conta come
+  **secondo fattore**: col login passkey la 2FA TOTP non viene richiesta. Throttle
+  anti-bruteforce come per la 2FA (5/min). `passkeyList`/`passkeyRemove` gestiscono le chiavi
+  dall'app (Campagna → Account).
+- **Sicurezza**: le credenziali restano in `accounts.data` → proteggi `DND5E_DATA_DIR`.
+  La verifica usa `requireUserVerification: false` (accetta anche authenticator senza PIN),
+  con `userVerification: 'preferred'` nelle options.
+- Test: `packages/server/test/passkeys.test.ts` (migrazione v6, CRUD, options, flusso WS).
+
 ## Protocollo (JSON su WebSocket)
 
 Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando
