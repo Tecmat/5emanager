@@ -2,7 +2,8 @@
 #
 #   cd docker
 #   cp .env.example .env        # opzionale: token admin e porta
-#   docker compose up -d --build
+#   docker compose up -d        # (pull_policy: build -> builda sempre dal sorgente, niente pull)
+#   # oppure dalla root del repo: docker compose up -d   (usa ../docker-compose.yml)
 #
 # Poi apri http://<ip-del-server>:3001 (web app) e usa ws://<ip-del-server>:3001 per il multiplayer.
 # Pannello admin: http://<ip-del-server>:3001/admin
@@ -15,6 +16,7 @@ services:
       context: ..
       dockerfile: docker/Dockerfile
     image: 5emanager-server:latest
+    pull_policy: build # mai pull da registry: senza immagine locale si builda dal sorgente
     container_name: 5emanager-server
     restart: unless-stopped
     ports:

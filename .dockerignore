@@ -1,0 +1,12 @@
+# build context del server Docker (docker/Dockerfile copia solo cio' che serve: niente .git, dati, certs)
+.git
+**/node_modules
+**/dist
+src-tauri/target
+apps/web/android
+apps/web/ios
+docker/data
+docker/certs
+docker/certbot-webroot
+__pycache__
+*.pyc
