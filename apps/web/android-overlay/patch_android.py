@@ -47,6 +47,14 @@ if "fileprovider" not in s:
 # cleartext: l'app gira su https://localhost e deve parlare http/ws con la LAN (server 3001, beacon 3177)
 if "usesCleartextTraffic" not in s:
     s = s.replace("<application", '<application android:usesCleartextTraffic="true"', 1)
+# camera non obbligatoria (Play Store non filtra i dispositivi senza fotocamera)
+if "uses-feature" not in s:
+    s = re.sub(
+        r"(<manifest[^>]*>)",
+        r'\1\n    <uses-feature android:name="android.hardware.camera" android:required="false" />',
+        s,
+        count=1,
+    )
 manifest.write_text(s)
 
 # 1b) icone app (d20 "candy"): launcher legacy in tutte le density + adaptive icon v26

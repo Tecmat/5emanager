@@ -46,21 +46,31 @@ public class UpdateInstallerPlugin extends Plugin {
         }
     }
 
+    /** avvia un intent dall'ACTIVITY (non dal context): Samsung/One UI blocca gli startActivity dal context */
+    private void startFromActivity(Intent intent) {
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        try {
+            if (getActivity() != null) {
+                getActivity().startActivity(intent);
+                return;
+            }
+        } catch (Exception ignored) {
+        }
+        getContext().startActivity(intent);
+    }
+
     /** apre la schermata del permesso "installa app sconosciute" (con fallback alla pagina dell'app) */
     private void openInstallPermissionSettings() {
         Intent i = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES,
                 Uri.parse("package:" + getContext().getPackageName()));
-        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         try {
-            getContext().startActivity(i);
+            startFromActivity(i);
             return;
         } catch (Exception ignored) {
         }
         try {
-            Intent d = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:" + getContext().getPackageName()));
-            d.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(d);
+            startFromActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getContext().getPackageName())));
         } catch (Exception ignored) {
         }
     }
@@ -69,10 +79,8 @@ public class UpdateInstallerPlugin extends Plugin {
     @PluginMethod
     public void openAppSettings(PluginCall call) {
         try {
-            Intent intent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
-                    Uri.parse("package:" + getContext().getPackageName()));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            getContext().startActivity(intent);
+            startFromActivity(new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                    Uri.parse("package:" + getContext().getPackageName())));
             call.resolve();
         } catch (Exception e) {
             call.reject("impossibile aprire le impostazioni: " + e.getMessage());
