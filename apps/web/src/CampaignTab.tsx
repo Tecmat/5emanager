@@ -84,6 +84,17 @@ function autoDiscWsUrl(): string {
   }
 }
 
+/** true se il server 5emanager all'URL risponde (sonda /api/info con timeout 2.5s) */
+async function serverReachable(u: string): Promise<boolean> {
+  try {
+    const http = u.replace(/^wss:\/\//, 'https://').replace(/^ws:\/\//, 'http://').replace(/\/.*$/, '');
+    const r = await fetch(`${http}/api/info`, { signal: AbortSignal.timeout(2500) });
+    return r.ok;
+  } catch {
+    return false;
+  }
+}
+
 /** vista completa (sola lettura) della scheda di un giocatore, per il master */
 function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
   const { t } = useStore();
@@ -219,6 +230,11 @@ export default function CampaignTab() {
   const startAnnounce = async (wsUrl?: string, soft = false) => {
     setError('');
     let u = (wsUrl ?? url).trim() || autoDiscWsUrl();
+    // URL salvato ma irraggiungibile (IP vecchio/morto): lo scartiamo subito invece di ritentarlo sempre
+    if (u && !(await serverReachable(u))) {
+      setUrl('');
+      u = '';
+    }
     if (!u) {
       // su app nativa (APK) senza URL salvato: prova a trovare da solo un server 5emanager sulla rete
       try {
