@@ -24,6 +24,18 @@ import {
 
 const PREFIX = '5EP2P1:';
 
+/** prefisso del QR/deep link per il codice invito BREVE (relayato dal server: niente SDP da incollare) */
+export const CODE_PREFIX = '5ECODE:';
+
+const CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // niente 0/O, 1/I/L per evitare confusione
+
+/** genera un codice invito breve formattato XXXX-XXXX */
+export function newInviteCode(): string {
+  let raw = '';
+  for (let i = 0; i < 8; i++) raw += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
+  return raw.slice(0, 4) + '-' + raw.slice(4);
+}
+
 /** WebRTC disponibile? Su WebKitGTK (AppImage Linux) spesso RTCPeerConnection manca: il P2P diretto non funziona lì */
 export function webrtcSupported(): boolean {
   return typeof RTCPeerConnection !== 'undefined';
@@ -294,6 +306,8 @@ export class P2PDiscovery {
   onOffer: (from: string, name: string, code: string) => void = () => {};
   /** l'host riceve la risposta (answer) dal joiner `from` */
   onAnswer: (from: string, code: string) => void = () => {};
+  /** il joiner ha risolto un codice invito breve in hostId (per il trasporto relay) */
+  onCodeHost?: (hostId: string, name: string) => void;
   /** relay opaque del traffico di gioco (usato quando WebRTC non è disponibile) */
   onData: (from: string, msg: any) => void = () => {};
   onStatus: (connected: boolean) => void = () => {};
@@ -315,6 +329,7 @@ export class P2PDiscovery {
         let m: AnyMsg;
         try { m = JSON.parse(ev.data); } catch { return; }
         if (m.t === 'p2pHosts') this.onHosts(m.hosts as P2PHostInfo[]);
+        else if (m.t === 'p2pCodeHost') this.onCodeHost?.(String(m.hostId), String(m.name ?? ''));
         else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from), m.name, m.password);
         else if (m.t === 'p2pOffer') this.onOffer(String(m.from), String(m.name ?? ''), String(m.code));
         else if (m.t === 'p2pAnswer') this.onAnswer(String(m.from), String(m.code));
@@ -330,8 +345,12 @@ export class P2PDiscovery {
   }
 
   announce(name: string): void { this.send({ t: 'p2pAnnounce', name }); }
+  /** annuncia un codice invito breve (l'host appare anche nella lista host) */
+  announceCode(code: string, name?: string): void { this.send({ t: 'p2pAnnounceCode', code, name }); }
   list(): void { this.send({ t: 'p2pList' }); }
   join(hostId: string, name?: string, password?: string): void { this.send({ t: 'p2pJoin', hostId, name, password }); }
+  /** unisciti a un host tramite codice invito breve (il server risolve il codice in hostId e relay la richiesta) */
+  joinByCode(code: string, name?: string, password?: string): void { this.send({ t: 'p2pJoinCode', code, name, password }); }
   offer(to: string, code: string): void { this.send({ t: 'p2pOffer', to, code }); }
   answer(to: string, code: string): void { this.send({ t: 'p2pAnswer', to, code }); }
   /** relay di un messaggio di gioco verso `to` (trasporto P2P quando WebRTC manca) */

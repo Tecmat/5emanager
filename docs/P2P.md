@@ -28,6 +28,18 @@ niente server, niente dominio, niente porte da aprire.
    dal QR**) → **1️⃣ Genera risposta** → copia/condivide la **risposta**.
 3. L'host incolla la risposta in **Incolla qui la risposta del giocatore** → **✅ Collega giocatore**.
 
+### 🔑 Codice invito breve (con un server 5emanager raggiungibile: niente SDP da incollare)
+
+Quando host e giocatore possono entrambi raggiungere lo stesso server 5emanager (LAN o remoto),
+l'host non deve più passare il codice `5EP2P1:…` (lunghissimo, ingestibile come QR):
+
+1. L'host, annunciandosi sul server, genera automaticamente un **codice breve `XXXX-XXXX`**
+   (o premi **🔑 Codice invito breve**): appare grande, con **QR `5ECODE:…`** — il giocatore lo
+   digita o lo scansiona col telefono (la fotocamera di sistema apre l'app col deep link).
+2. Il giocatore inserisce il codice in **🔑 Codice invito breve** → **Unisciti**: il server risolve
+   il codice nell'host (`p2pJoinCode` → `p2pCodeHost`) e relay offer/answer SDP in automatico.
+   Il codice resta valido 90 s (ri-annunciato ogni 30 s) ed è normalizzato (maiuscole, senza trattini).
+
 ## Fallback senza WebRTC (AppImage/WebKitGTK, browser datati)
 
 Su alcuni ambienti `RTCPeerConnection` **non esiste** (tipicamente la WebKitGTK dell'AppImage

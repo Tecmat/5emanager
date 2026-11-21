@@ -27,6 +27,9 @@ export type ClientMessage =
   | { t: 'p2pAnnounce'; name: string }
   | { t: 'p2pList' }
   | { t: 'p2pJoin'; hostId: string; name?: string; password?: string }
+  // codice invito BREVE (XXXX-XXXX): l'host lo annuncia e il giocatore lo usa al posto dell'hostId
+  | { t: 'p2pAnnounceCode'; code: string; name?: string }
+  | { t: 'p2pJoinCode'; code: string; name?: string; password?: string }
   | { t: 'p2pOffer'; to: string; code: string }
   | { t: 'p2pAnswer'; to: string; code: string }
   | { t: 'p2pData'; to: string; data: string };
@@ -49,6 +52,7 @@ export type ServerMessage =
   | { t: 'notice'; message: string }
   | { t: 'campaignDeleted'; id: string }
   | { t: 'p2pHosts'; hosts: { id: string; name: string; ip?: string }[] }
+  | { t: 'p2pCodeHost'; hostId: string; name?: string }
   | { t: 'p2pJoinRequest'; from: string; name?: string; password?: string }
   | { t: 'p2pOffer'; from: string; name: string; code: string }
   | { t: 'p2pAnswer'; from: string; code: string }

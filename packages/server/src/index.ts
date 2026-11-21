@@ -144,6 +144,20 @@ function disconnectCampaign(cid: string): void {
 const p2pHosts = new Map<string, { name: string; at: number; ip?: string }>();
 const P2P_HOST_TTL_MS = 90_000;
 
+/** codici invito brevi: code normalizzato -> { connId, at } (in memoria, TTL 90s) */
+const p2pCodes = new Map<string, { connId: string; at: number }>();
+const P2P_CODE_TTL_MS = 90_000;
+
+/** normalizza un codice invito: maiuscole, senza trattini/spazi */
+function normalizeP2PCode(c: unknown): string {
+  return String(c ?? '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function p2pCleanCodes(): void {
+  const now = Date.now();
+  for (const [c, v] of p2pCodes) if (now - v.at > P2P_CODE_TTL_MS) p2pCodes.delete(c);
+}
+
 /** IP LAN del client dal socket del WebSocket (sans prefisso ::ffff:) */
 function connIp(conn: Conn): string | undefined {
   const remote = (conn.ws as unknown as { _socket?: { remoteAddress?: string } })._socket?.remoteAddress;
@@ -240,6 +254,40 @@ function handleMessage(conn: Conn, raw: string): void {
     }
     // relay della richiesta con nome/password: in modalità relay (senza WebRTC) l'host risponde direttamente via p2pData
     p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    return;
+  }
+  if (msg.t === 'p2pAnnounceCode') {
+    const code = normalizeP2PCode(msg.code);
+    if (code.length < 6) {
+      send(conn.ws, { t: 'error', message: 'Codice invito troppo corto (min 6 caratteri)' });
+      return;
+    }
+    p2pCleanCodes();
+    // un host ha un solo codice attivo alla volta
+    for (const [c, v] of p2pCodes) if (v.connId === conn.id) p2pCodes.delete(c);
+    p2pCodes.set(code, { connId: conn.id, at: Date.now() });
+    // l'host entra anche nella lista normale (così appare anche lì)
+    p2pHosts.set(conn.id, { name: String(msg.name || 'Host P2P'), at: Date.now(), ip: connIp(conn) });
+    broadcastP2PHosts();
+    send(conn.ws, { t: 'notice', message: 'Codice invito attivo: ' + code });
+    return;
+  }
+  if (msg.t === 'p2pJoinCode') {
+    const code = normalizeP2PCode(msg.code);
+    p2pCleanCodes();
+    const entry = p2pCodes.get(code);
+    if (!entry) {
+      send(conn.ws, { t: 'error', message: 'Codice invito non valido o scaduto (chiedi un nuovo codice all\'host)' });
+      return;
+    }
+    const host = [...conns].find((c) => c.id === entry.connId);
+    if (!host || host.ws.readyState !== WebSocket.OPEN) {
+      send(conn.ws, { t: 'error', message: 'Host non raggiungibile (si è disconnesso)' });
+      return;
+    }
+    // risolvi il codice in hostId per il client (serve al trasporto relay) e relay la richiesta
+    send(conn.ws, { t: 'p2pCodeHost', hostId: host.id, name: p2pHosts.get(host.id)?.name });
+    p2pRelay(conn, host.id, { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
     return;
   }
   if (msg.t === 'p2pData') {
@@ -461,6 +509,7 @@ export function createDndServer(port = PORT, host = HOST) {
     ws.on('close', () => {
       conns.delete(conn);
       if (p2pHosts.delete(conn.id)) broadcastP2PHosts();
+      for (const [c, v] of p2pCodes) if (v.connId === conn.id) p2pCodes.delete(c);
       if (conn.campaignId && conn.playerId) {
         const c = campaigns.get(conn.campaignId);
         if (c) {
