@@ -159,27 +159,42 @@ ma = pkg_dir / "MainActivity.java"
 t = ma.read_text()
 plugins = ["UpdateInstallerPlugin", "LanBeaconPlugin"]
 for pl in plugins:
-    if pl not in t:
-        imp = "import com.tecmat.emanager." + pl + ";"
-        if "import com.getcapacitor.BridgeActivity;" in t:
-            t = t.replace("import com.getcapacitor.BridgeActivity;",
-                          "import com.getcapacitor.BridgeActivity;\n" + imp, 1)
-        else:
-            t = re.sub(r"(package [^;]+;)", r"\1\n" + imp, t, count=1)
-        reg = "registerPlugin(" + pl + ".class);"
-        # IMPORTANTE: registerPlugin() va chiamato PRIMA di super.onCreate(): il bridge costruisce
-        # PluginHeaders durante super.onCreate, e i plugin custom registrati dopo non sono visibili
-        # alla WebView (isPluginAvailable falso, chiamate "not implemented")
-        if "super.onCreate(savedInstanceState);" in t:
-            t = t.replace("super.onCreate(savedInstanceState);",
-                          "        " + reg + "\n        super.onCreate(savedInstanceState);", 1)
-        else:
-            t = re.sub(
-                r"(public class MainActivity extends BridgeActivity \{)",
-                r"\1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        super.onCreate(savedInstanceState);\n        " + reg + "\n    }",
-                t,
-                count=1,
-            )
+    if pl in t:
+        continue  # già patchato (idempotente)
+    imp = "import com.tecmat.emanager." + pl + ";"
+    if "import com.getcapacitor.BridgeActivity;" in t:
+        t = t.replace("import com.getcapacitor.BridgeActivity;",
+                      "import com.getcapacitor.BridgeActivity;\n" + imp, 1)
+    else:
+        t = re.sub(r"(package [^;]+;)", r"\1\n" + imp, t, count=1)
+    reg = "registerPlugin(" + pl + ".class);"
+    # IMPORTANTE: registerPlugin() va chiamato PRIMA di super.onCreate(): il bridge costruisce
+    # PluginHeaders durante super.onCreate, e i plugin custom registrati dopo non sono visibili
+    # alla WebView (chiamate "not implemented" -> "plugin mancante").
+    # NOTA: il template Capacitor 7 genera MainActivity SENZA onCreate (classe vuota): in quel
+    # caso creiamo onCreate noi con registerPlugin PRIMA di super.onCreate (non dopo!).
+    if re.search(r"super\.onCreate\(\s*savedInstanceState\s*\)\s*;", t):
+        t = re.sub(r"super\.onCreate\(\s*savedInstanceState\s*\)\s*;",
+                   "        " + reg + "\n        super.onCreate(savedInstanceState);", t, count=1)
+    else:
+        t = re.sub(
+            r"(public class MainActivity extends BridgeActivity\s*\{)",
+            r"\1\n    @Override\n    public void onCreate(android.os.Bundle savedInstanceState) {\n        " + reg + "\n        super.onCreate(savedInstanceState);\n    }",
+            t,
+            count=1,
+        )
 ma.write_text(t)
+
+# 3b) verifica: ogni registerPlugin deve stare PRIMA di super.onCreate, altrimenti la build
+# viene fermata qui (CI) invece di spedire un APK con i plugin invisibili alla WebView
+t = ma.read_text()
+i_super = t.find("super.onCreate(")
+for m in re.finditer(r"registerPlugin\(", t):
+    if i_super == -1 or m.start() > i_super:
+        raise SystemExit(
+            "ERRORE patch_android: registerPlugin() risulta DOPO super.onCreate() in MainActivity.java: "
+            "i plugin custom (UpdateInstaller/LanBeacon) sarebbero invisibili alla WebView"
+        )
+print("  MainActivity ok: registerPlugin prima di super.onCreate")
 
 print("android patch ok: UpdateInstaller + LanBeacon + icone d20 + FileProvider + cleartext + permessi + deep-link 5elan/5ep2p1/5ecode + version " + _ver)

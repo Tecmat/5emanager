@@ -66,15 +66,18 @@ export function migrateCampaign(c: Campaign): Campaign {
 
 /**
  * Prepara una campagna P2P salvata in locale per essere ripresa dall'host:
- * nuovo id, solo il master come giocatore, niente schede/combattimento delle
- * sessioni passate (i giocatori rientrano con un id nuovo e ricaricano la scheda).
- * La password NON viene salvata su disco: va reinserita e diventa la nuova passwordHash.
+ * **stesso id** (così resta una sola voce nella lista delle salvate e la scheda
+ * "campagna:<id>" del master resta collegata), solo il master come giocatore,
+ * niente schede/combattimento delle sessioni passate (i giocatori rientrano con
+ * un id nuovo e ricaricano la scheda).
+ * La password NON viene salvata su disco: è facoltativa — quella passata diventa
+ * la nuova passwordHash (stringa vuota = anyone can join).
  * Restano: nome, house-rules, custom, note, inventario/tesoro di gruppo, createdAt.
  */
 export function resumeCampaign(saved: Campaign, password: string, master: PlayerInfo): Campaign {
   return {
     ...migrateCampaign(saved),
-    id: Math.random().toString(36).slice(2, 10),
+    id: saved.id,
     passwordHash: password,
     players: [master],
     characters: {},

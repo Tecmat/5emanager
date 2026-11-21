@@ -23,15 +23,18 @@ function savedCampaign(): Campaign {
 }
 
 describe('resumeCampaign (P2P host riprende da snapshot locale)', () => {
-  it('nuovo id, solo il master, niente schede/combattimento vecchi, password reinserita', () => {
+  it('stesso id (una sola voce nella lista salvati), solo il master, niente schede/combattimento vecchi', () => {
     const master = { id: 'host-new', name: 'Master', role: 'master' as const };
     const c = resumeCampaign(savedCampaign(), 'segreto', master);
-    expect(c.id).not.toBe('old-id');
-    expect(c.id).toMatch(/^[a-z0-9]+$/);
+    expect(c.id).toBe('old-id');
     expect(c.passwordHash).toBe('segreto');
     expect(c.players).toEqual([master]);
     expect(c.characters).toEqual({});
     expect(c.combat).toBeNull();
+  });
+  it('password facoltativa: stringa vuota resta vuota (nessun controllo al join)', () => {
+    const c = resumeCampaign(savedCampaign(), '', { id: 'm', name: 'M', role: 'master' });
+    expect(c.passwordHash).toBe('');
   });
   it('conserva nome, note, tesoro/inventario di gruppo e createdAt', () => {
     const c = resumeCampaign(savedCampaign(), 'pw', { id: 'm', name: 'M', role: 'master' });

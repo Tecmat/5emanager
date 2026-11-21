@@ -383,10 +383,7 @@ export default function CampaignTab() {
       setError(t('cg.p2pSavedMissing', 'Campagna salvata non trovata (forse eliminata).'));
       return { abort: true };
     }
-    if (!password.trim()) {
-      setError(t('cg.p2pResumeNeedPw', 'Per riprendere la campagna reinserisci la password: non viene salvata sul dispositivo.'));
-      return { abort: true };
-    }
+    // la password è facoltativa e non viene salvata: quella che metti ora (anche vuota) è la nuova
     setCampaignName(saved.name);
     return { existing: saved.campaign };
   };
@@ -913,8 +910,8 @@ export default function CampaignTab() {
               <>
                 <label>{t('cg.campaignName', 'Nome campagna')}</label>
                 <input value={campaignName} onChange={(e) => setCampaignName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="La tomba perduta" />
-                <label>{t('cg.password', 'Password campagna')}</label>
-                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(startP2PHost)} />
+                <label>{t('cg.p2pPassword', 'Password campagna (facoltativa)')}</label>
+                <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder={t('cg.p2pPasswordPh', 'vuota = aperta a chi ha codice/indirizzo')} />
                 <label>{t('cg.yourName', 'Il tuo nome')} (master)</label>
                 <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(startP2PHost)} placeholder="Master" />
                 <label className="row" style={{ marginTop: 8 }}>
@@ -989,6 +986,7 @@ export default function CampaignTab() {
                 <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={onEnter(searchHosts)} placeholder="Eroe" />
                 <label>{t('cg.password', 'Password campagna')}</label>
                 <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(searchHosts)} />
+                <div className="muted" style={{ fontSize: 11 }}>{t('cg.p2pPasswordHint', 'Facoltativa: se l\'host non l\'ha impostata, lascia vuoto.')}</div>
 
                 <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
                   <b>{t('cg.p2pFindHosts', '🔍 Trova host sulla stessa rete')}</b>
