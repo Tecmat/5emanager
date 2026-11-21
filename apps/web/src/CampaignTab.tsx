@@ -337,6 +337,24 @@ export default function CampaignTab() {
     }
   };
 
+  /** joueur: incolla/scansiona l'indirizzo dell'host LAN (ws://ip:porta o 5ELAN:...) → WS diretto */
+  const [lanUrl, setLanUrl] = useState('');
+  const joinLanUrl = (raw: string) => {
+    setError('');
+    let u = raw.trim();
+    if (u.startsWith('5ELAN:')) u = u.slice('5ELAN:'.length);
+    if (!/^wss?:\/\//.test(u)) u = 'ws://' + u;
+    const m = u.match(/^wss?:\/\/([^:/]+)(?::(\d+))?/);
+    if (!m) {
+      setError(t('cg.lanInvalid', 'Indirizzo non valido: usa ws://<ip>:<porta> (es. ws://192.168.1.76:3177)'));
+      return;
+    }
+    void joinLanPeer({ ip: m[1], port: Number(m[2] ?? LAN_BEACON_PORT), kind: 'p2p', name: u });
+  };
+  const scanLanQr = async () => {
+    try { joinLanUrl(await scanQr()); } catch (e) { setError(errMsg(e)); }
+  };
+
   /** giocatore: un tap su un host P2P trovato in LAN → WS diretto, niente codici */
   const joinLanPeer = async (peer: LanPeer) => {
     setError('');
@@ -748,6 +766,28 @@ export default function CampaignTab() {
                   )}
                 </div>
 
+                <div style={{ marginTop: 12, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
+                  <b><Icon name="monitor" candy size={15} /> {t('cg.lanManualTitle', 'Collegati a un host LAN a mano (QR o indirizzo)')}</b>
+                  <div className="muted" style={{ fontSize: 12, marginTop: 2 }}>
+                    {t('cg.lanManualHint', "Se la scansione automatica non trova l'host: sull'host c'è un QR con l'indirizzo — scancialo qui, oppure incollalo sotto.")}
+                  </div>
+                  <div className="row" style={{ marginTop: 6 }}>
+                    <input
+                      value={lanUrl}
+                      onChange={(e) => setLanUrl(e.target.value)}
+                      onKeyDown={onEnter(() => joinLanUrl(lanUrl))}
+                      placeholder="ws://192.168.1.76:3177 oppure 5ELAN:ws://…"
+                      style={{ flex: 1 }}
+                    />
+                    <button className="primary" disabled={!lanUrl.trim()} onClick={() => joinLanUrl(lanUrl)}>
+                      <Icon name="play" candy size={13} /> {t('cg.lanConnect', 'Connetti')}
+                    </button>
+                    <button onClick={scanLanQr} title={t('cg.p2pScanTitle', "Scansiona il QR mostrato dall'host")}>
+                      <Icon name="qr" size={14} /> {t('cg.p2pScan', 'QR')}
+                    </button>
+                  </div>
+                </div>
+
                 {webrtcSupported() && (
                 <div style={{ marginTop: 12 }}>
                   <b>{t('cg.p2pManual', "✍️ Oppure incolla il codice invito dell'host")}</b>
@@ -984,9 +1024,18 @@ export default function CampaignTab() {
             </div>
           )}
           {hostMode === 'lan' && beaconInfo && (
-            <div className="ok" style={{ marginBottom: 8 }}>
-              📡 {tf('cg.lanBeaconOn', 'In onda su ws://{ip}:{port} — i giocatori sulla stessa rete ti trovano con "Scansiona rete" e entrano con un tap.', { ip: beaconInfo.ip, port: beaconInfo.port })}
-            </div>
+            <>
+              <div className="ok" style={{ marginBottom: 8 }}>
+                {tf('cg.lanBeaconOn', 'In onda su ws://{ip}:{port} — i giocatori sulla stessa rete ti trovano con "Scansiona rete" e entrano con un tap.', { ip: beaconInfo.ip, port: beaconInfo.port })}
+              </div>
+              <div className="row" style={{ marginBottom: 8, alignItems: 'flex-start' }}>
+                <QrBox text={`5ELAN:ws://${beaconInfo.ip}:${beaconInfo.port}`} />
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {t('cg.lanQrHint', 'Fallback sicuro: gli altri scansionano questo QR (o copiano l\'indirizzo) e entrano direttamente, anche se la scansione automatica non trova nulla.')}
+                  <div style={{ marginTop: 4 }}><code>ws://{beaconInfo.ip}:{beaconInfo.port}</code></div>
+                </div>
+              </div>
+            </>
           )}
           {hostMode === 'relay' && (discState === 'on' ? (
             <div className="ok" style={{ marginBottom: 8 }}>

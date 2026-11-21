@@ -1,130 +1,604 @@
 [
-  {
-    "id": "human",
-    "name": "Umano",
-    "speed": 30,
+ {
+  "id": "human",
+  "name": "Umano",
+  "speed": 30,
+  "abilityBonuses": {},
+  "traits": [
+   {
+    "id": "human-versatility",
+    "name": "Versatilità Umana",
+    "description": "+1 a due caratteristiche a scelta (variante) e competenza in un'abilità."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "human-standard",
+    "name": "Umano Standard",
+    "abilityBonuses": {
+     "str": 1,
+     "dex": 1,
+     "con": 1,
+     "int": 1,
+     "wis": 1,
+     "cha": 1
+    },
+    "traits": []
+   },
+   {
+    "id": "human-variant",
+    "name": "Variante Umana",
     "abilityBonuses": {},
-    "traits": [{ "id": "human-versatility", "name": "Versatilità Umana", "description": "+1 a due caratteristiche a scelta (variante) e competenza in un'abilità." }],
-    "subraces": [
-      { "id": "human-standard", "name": "Umano Standard", "abilityBonuses": { "str": 1, "dex": 1, "con": 1, "int": 1, "wis": 1, "cha": 1 }, "traits": [] },
-      { "id": "human-variant", "name": "Variante Umana", "abilityBonuses": {}, "traits": [{ "id": "variant-feat", "name": "Talento", "description": "Ottieni un talento al 1° livello." }] }
-    ],
-    "source": "srd"
-  },
-  {
-    "id": "elf",
-    "name": "Elfo",
-    "speed": 30,
-    "abilityBonuses": { "dex": 2 },
     "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." },
-      { "id": "fey-ancestry", "name": "Ascendente Fatato", "description": "Vantaggio contro ammaliamento, non puoi essere addormentato magicamente." },
-      { "id": "trance", "name": "Trance", "description": "4 ore di meditazione equivalgono a un riposo lungo." }
-    ],
-    "subraces": [
-      { "id": "high-elf", "name": "Alto Elfo", "abilityBonuses": { "int": 1 }, "traits": [{ "id": "elf-cantrip", "name": "Truchetto Elfico", "description": "Conosci un truchetto del mago." }, { "id": "extra-language", "name": "Lingua Extra", "description": "Conosci una lingua extra." }] },
-      { "id": "wood-elf", "name": "Elfo dei Boschi", "abilityBonuses": { "wis": 1 }, "traits": [{ "id": "fleet-of-foot", "name": "Piede Lesto", "description": "Velocità 35 ft." }, { "id": "mask-of-the-wild", "name": "Maschera della Natura", "description": "Puoi nasconderti anche solo coprendoti con la natura." }] },
-      { "id": "drow", "name": "Drow", "abilityBonuses": { "cha": 1 }, "traits": [{ "id": "superior-darkvision", "name": "Scurovisione Superiore", "description": "Scurovisione 36 m." }, { "id": "drow-magic", "name": "Magia Drow", "description": "Trucchetti e incantesimi drow." }, { "id": "sunlight-sensitivity", "name": "Sensibilità alla Luce", "description": "Svantaggio in luce solare diretta." }] }
-    ],
-    "source": "srd"
+     {
+      "id": "variant-feat",
+      "name": "Talento",
+      "description": "Ottieni un talento al 1° livello."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "elf",
+  "name": "Elfo",
+  "speed": 30,
+  "abilityBonuses": {
+   "dex": 2
   },
-  {
-    "id": "dwarf",
-    "name": "Nano",
-    "speed": 25,
-    "abilityBonuses": { "con": 2 },
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   },
+   {
+    "id": "fey-ancestry",
+    "name": "Ascendente Fatato",
+    "description": "Vantaggio contro ammaliamento, non puoi essere addormentato magicamente."
+   },
+   {
+    "id": "trance",
+    "name": "Trance",
+    "description": "4 ore di meditazione equivalgono a un riposo lungo."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "high-elf",
+    "name": "Alto Elfo",
+    "abilityBonuses": {
+     "int": 1
+    },
     "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m (grigio)." },
-      { "id": "dwarven-resilience", "name": "Resilienza Nanica", "description": "Vantaggio contro veleno, resistenza ai danni da veleno." },
-      { "id": "stonecunning", "name": "Intuito della Pietra", "description": "Competenza raddoppiata nei tiri di Storia relativi alla pietra." }
-    ],
-    "subraces": [
-      { "id": "hill-dwarf", "name": "Nano delle Colline", "abilityBonuses": { "wis": 1 }, "traits": [{ "id": "dwarven-toughness", "name": "Robustezza Nanica", "description": "+1 PF per livello." }] },
-      { "id": "mountain-dwarf", "name": "Nano delle Montagne", "abilityBonuses": { "str": 2 }, "traits": [{ "id": "dwarven-armor", "name": "Addestramento con l'Armatura", "description": "Competenza con armature leggere e medie." }] }
-    ],
-    "source": "srd"
+     {
+      "id": "elf-cantrip",
+      "name": "Truchetto Elfico",
+      "description": "Conosci un truchetto del mago."
+     },
+     {
+      "id": "extra-language",
+      "name": "Lingua Extra",
+      "description": "Conosci una lingua extra."
+     }
+    ]
+   },
+   {
+    "id": "wood-elf",
+    "name": "Elfo dei Boschi",
+    "abilityBonuses": {
+     "wis": 1
+    },
+    "traits": [
+     {
+      "id": "fleet-of-foot",
+      "name": "Piede Lesto",
+      "description": "Velocità 35 ft."
+     },
+     {
+      "id": "mask-of-the-wild",
+      "name": "Maschera della Natura",
+      "description": "Puoi nasconderti anche solo coprendoti con la natura."
+     }
+    ]
+   },
+   {
+    "id": "drow",
+    "name": "Drow",
+    "abilityBonuses": {
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "superior-darkvision",
+      "name": "Scurovisione Superiore",
+      "description": "Scurovisione 36 m."
+     },
+     {
+      "id": "drow-magic",
+      "name": "Magia Drow",
+      "description": "Trucchetti e incantesimi drow."
+     },
+     {
+      "id": "sunlight-sensitivity",
+      "name": "Sensibilità alla Luce",
+      "description": "Svantaggio in luce solare diretta."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "dwarf",
+  "name": "Nano",
+  "speed": 25,
+  "abilityBonuses": {
+   "con": 2
   },
-  {
-    "id": "halfling",
-    "name": "Halfling",
-    "speed": 25,
-    "abilityBonuses": { "dex": 2 },
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m (grigio)."
+   },
+   {
+    "id": "dwarven-resilience",
+    "name": "Resilienza Nanica",
+    "description": "Vantaggio contro veleno, resistenza ai danni da veleno."
+   },
+   {
+    "id": "stonecunning",
+    "name": "Intuito della Pietra",
+    "description": "Competenza raddoppiata nei tiri di Storia relativi alla pietra."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "hill-dwarf",
+    "name": "Nano delle Colline",
+    "abilityBonuses": {
+     "wis": 1
+    },
     "traits": [
-      { "id": "lucky", "name": "Fortunato", "description": "Tiri 1 sul d20: rilancia e usi il nuovo risultato." },
-      { "id": "brave", "name": "Coraggioso", "description": "Vantaggio contro la paura." },
-      { "id": "halfling-nimbleness", "name": "Agilità Halfling", "description": "Puoi muoverti attraverso lo spazio di creature più grandi." }
-    ],
-    "subraces": [
-      { "id": "lightfoot", "name": "Piedeleggero", "abilityBonuses": { "cha": 1 }, "traits": [{ "id": "naturally-stealthy", "name": "Furtività Naturale", "description": "Puoi nasconderti dietro creature più grandi." }] },
-      { "id": "stout", "name": "Tarchiato", "abilityBonuses": { "con": 1 }, "traits": [{ "id": "stout-resilience", "name": "Resilienza Tarchiata", "description": "Vantaggio contro veleno e resistenza ai danni da veleno." }] }
-    ],
-    "source": "srd"
+     {
+      "id": "dwarven-toughness",
+      "name": "Robustezza Nanica",
+      "description": "+1 PF per livello."
+     }
+    ]
+   },
+   {
+    "id": "mountain-dwarf",
+    "name": "Nano delle Montagne",
+    "abilityBonuses": {
+     "str": 2
+    },
+    "traits": [
+     {
+      "id": "dwarven-armor",
+      "name": "Addestramento con l'Armatura",
+      "description": "Competenza con armature leggere e medie."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "halfling",
+  "name": "Halfling",
+  "speed": 25,
+  "abilityBonuses": {
+   "dex": 2
   },
-  {
-    "id": "dragonborn",
-    "name": "Dragonide",
-    "speed": 30,
-    "abilityBonuses": { "str": 2, "cha": 1 },
+  "traits": [
+   {
+    "id": "lucky",
+    "name": "Fortunato",
+    "description": "Tiri 1 sul d20: rilancia e usi il nuovo risultato."
+   },
+   {
+    "id": "brave",
+    "name": "Coraggioso",
+    "description": "Vantaggio contro la paura."
+   },
+   {
+    "id": "halfling-nimbleness",
+    "name": "Agilità Halfling",
+    "description": "Puoi muoverti attraverso lo spazio di creature più grandi."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "lightfoot",
+    "name": "Piedeleggero",
+    "abilityBonuses": {
+     "cha": 1
+    },
     "traits": [
-      { "id": "draconic-ancestry", "name": "Ascendente Draconico", "description": "Soffio e resistenza elementale in base al drago antenato." },
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." }
-    ],
-    "subraces": [],
-    "source": "srd"
+     {
+      "id": "naturally-stealthy",
+      "name": "Furtività Naturale",
+      "description": "Puoi nasconderti dietro creature più grandi."
+     }
+    ]
+   },
+   {
+    "id": "stout",
+    "name": "Tarchiato",
+    "abilityBonuses": {
+     "con": 1
+    },
+    "traits": [
+     {
+      "id": "stout-resilience",
+      "name": "Resilienza Tarchiata",
+      "description": "Vantaggio contro veleno e resistenza ai danni da veleno."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "dragonborn",
+  "name": "Dragonide",
+  "speed": 30,
+  "abilityBonuses": {
+   "str": 2,
+   "cha": 1
   },
-  {
-    "id": "gnome",
-    "name": "Gnomo",
-    "speed": 25,
-    "abilityBonuses": { "int": 2 },
+  "traits": [
+   {
+    "id": "draconic-ancestry",
+    "name": "Ascendente Draconico",
+    "description": "Soffio e resistenza elementale in base al drago antenato."
+   },
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "dragonborn-black",
+    "name": "Dragonide Nero",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
     "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." },
-      { "id": "gnome-cunning", "name": "Scaltrezza Gnoma", "description": "Vantaggio su TS Int, Wis, Cha contro magia." }
-    ],
-    "subraces": [
-      { "id": "forest-gnome", "name": "Gnomo della Foresta", "abilityBonuses": { "dex": 1 }, "traits": [{ "id": "natural-illusionist", "name": "Illusionista Naturale", "description": "Conosci il trucco illusione minore." }] },
-      { "id": "rock-gnome", "name": "Gnomo delle Rocce", "abilityBonuses": { "con": 1 }, "traits": [{ "id": "artificers-lore", "name": "Conoscenza dell'Artigiano", "description": "Competenza raddoppiata su Tari storia sugli oggetti magici." }] }
-    ],
-    "source": "srd"
+     {
+      "id": "draconic-black",
+      "name": "Antenato Nero",
+      "description": "Resistenza al danno da acido. A liv 3 ottieni il soffio (acido, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-blue",
+    "name": "Dragonide Blu",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-blue",
+      "name": "Antenato Blu",
+      "description": "Resistenza al danno da fulmine. A liv 3 ottieni il soffio (fulmine, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-brass",
+    "name": "Dragonide Ottone",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-brass",
+      "name": "Antenato Ottone",
+      "description": "Resistenza al danno da fuoco. A liv 3 ottieni il soffio (fuoco, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-bronze",
+    "name": "Dragonide Bronzo",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-bronze",
+      "name": "Antenato Bronzo",
+      "description": "Resistenza al danno da fulmine. A liv 3 ottieni il soffio (fulmine, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-copper",
+    "name": "Dragonide Rame",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-copper",
+      "name": "Antenato Rame",
+      "description": "Resistenza al danno da acido. A liv 3 ottieni il soffio (acido, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-gold",
+    "name": "Dragonide Oro",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-gold",
+      "name": "Antenato Oro",
+      "description": "Resistenza al danno da fuoco. A liv 3 ottieni il soffio (fuoco, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-green",
+    "name": "Dragonide Verde",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-green",
+      "name": "Antenato Verde",
+      "description": "Resistenza al danno da veleno. A liv 3 ottieni il soffio (veleno, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-red",
+    "name": "Dragonide Rosso",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-red",
+      "name": "Antenato Rosso",
+      "description": "Resistenza al danno da fuoco. A liv 3 ottieni il soffio (fuoco, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-silver",
+    "name": "Dragonide Argento",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-silver",
+      "name": "Antenato Argento",
+      "description": "Resistenza al danno da freddo. A liv 3 ottieni il soffio (freddo, 2d6)."
+     }
+    ]
+   },
+   {
+    "id": "dragonborn-white",
+    "name": "Dragonide Bianco",
+    "abilityBonuses": {
+     "str": 2,
+     "cha": 1
+    },
+    "traits": [
+     {
+      "id": "draconic-white",
+      "name": "Antenato Bianco",
+      "description": "Resistenza al danno da freddo. A liv 3 ottieni il soffio (freddo, 2d6)."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "gnome",
+  "name": "Gnomo",
+  "speed": 25,
+  "abilityBonuses": {
+   "int": 2
   },
-  {
-    "id": "half-elf",
-    "name": "Mezzelfo",
-    "speed": 30,
-    "abilityBonuses": { "cha": 2 },
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   },
+   {
+    "id": "gnome-cunning",
+    "name": "Scaltrezza Gnoma",
+    "description": "Vantaggio su TS Int, Wis, Cha contro magia."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "forest-gnome",
+    "name": "Gnomo della Foresta",
+    "abilityBonuses": {
+     "dex": 1
+    },
     "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." },
-      { "id": "fey-ancestry", "name": "Ascendente Fatato", "description": "Vantaggio contro ammaliamento." },
-      { "id": "skill-versatility", "name": "Versatilità nelle Abilità", "description": "Competenza in due abilità a scelta." }
-    ],
-    "subraces": [],
-    "source": "srd"
+     {
+      "id": "natural-illusionist",
+      "name": "Illusionista Naturale",
+      "description": "Conosci il trucco illusione minore."
+     }
+    ]
+   },
+   {
+    "id": "rock-gnome",
+    "name": "Gnomo delle Rocce",
+    "abilityBonuses": {
+     "con": 1
+    },
+    "traits": [
+     {
+      "id": "artificers-lore",
+      "name": "Conoscenza dell'Artigiano",
+      "description": "Competenza raddoppiata su Tari storia sugli oggetti magici."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ },
+ {
+  "id": "half-elf",
+  "name": "Mezzelfo",
+  "speed": 30,
+  "abilityBonuses": {
+   "cha": 2
   },
-  {
-    "id": "half-orc",
-    "name": "Mezzorco",
-    "speed": 30,
-    "abilityBonuses": { "str": 2, "con": 1 },
-    "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." },
-      { "id": "menacing", "name": "Minaccioso", "description": "Competenza in Intimidazione." },
-      { "id": "relentless-endurance", "name": "Resistenza Infaticabile", "description": "A 1 PF invece di 0, una volta per riposo lungo." },
-      { "id": "savage-attacks", "name": "Attacchi Selvaggi", "description": "Dado danno extra sui critici con arma corpo a corpo." }
-    ],
-    "subraces": [],
-    "source": "srd"
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   },
+   {
+    "id": "fey-ancestry",
+    "name": "Ascendente Fatato",
+    "description": "Vantaggio contro ammaliamento."
+   },
+   {
+    "id": "skill-versatility",
+    "name": "Versatilità nelle Abilità",
+    "description": "Competenza in due abilità a scelta."
+   }
+  ],
+  "subraces": [],
+  "source": "srd"
+ },
+ {
+  "id": "half-orc",
+  "name": "Mezzorco",
+  "speed": 30,
+  "abilityBonuses": {
+   "str": 2,
+   "con": 1
   },
-  {
-    "id": "tiefling",
-    "name": "Tiefling",
-    "speed": 30,
-    "abilityBonuses": { "int": 1, "cha": 2 },
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   },
+   {
+    "id": "menacing",
+    "name": "Minaccioso",
+    "description": "Competenza in Intimidazione."
+   },
+   {
+    "id": "relentless-endurance",
+    "name": "Resistenza Infaticabile",
+    "description": "A 1 PF invece di 0, una volta per riposo lungo."
+   },
+   {
+    "id": "savage-attacks",
+    "name": "Attacchi Selvaggi",
+    "description": "Dado danno extra sui critici con arma corpo a corpo."
+   }
+  ],
+  "subraces": [],
+  "source": "srd"
+ },
+ {
+  "id": "tiefling",
+  "name": "Tiefling",
+  "speed": 30,
+  "abilityBonuses": {
+   "int": 1,
+   "cha": 2
+  },
+  "traits": [
+   {
+    "id": "darkvision",
+    "name": "Scurovisione",
+    "description": "Vedi al buio entro 18 m."
+   },
+   {
+    "id": "hellish-resistance",
+    "name": "Resistenza Infernale",
+    "description": "Resistenza ai danni da fuoco."
+   },
+   {
+    "id": "infernal-legacy",
+    "name": "Eredità Infernale",
+    "description": "Trucchetto, incantesimo al 3° e al 5° livello."
+   }
+  ],
+  "subraces": [
+   {
+    "id": "tiefling-abyssal",
+    "name": "Tiefling Abissale",
+    "abilityBonuses": {
+     "int": 1,
+     "cha": 2
+    },
     "traits": [
-      { "id": "darkvision", "name": "Scurovisione", "description": "Vedi al buio entro 18 m." },
-      { "id": "hellish-resistance", "name": "Resistenza Infernale", "description": "Resistenza ai danni da fuoco." },
-      { "id": "infernal-legacy", "name": "Eredità Infernale", "description": "Trucchetto, incantesimo al 3° e al 5° livello." }
-    ],
-    "subraces": [],
-    "source": "srd"
-  }
+     {
+      "id": "legacy-abyssal",
+      "name": "Eredità Abissale",
+      "description": "Trucchetto e incantesimo dell'eredità Abissale (a liv 3, 5 con Int)."
+     }
+    ]
+   },
+   {
+    "id": "tiefling-chthonic",
+    "name": "Tiefling Ctonia",
+    "abilityBonuses": {
+     "int": 1,
+     "cha": 2
+    },
+    "traits": [
+     {
+      "id": "legacy-chthonic",
+      "name": "Eredità Ctonia",
+      "description": "Trucchetto e incantesimo dell'eredità Ctonia (a liv 3, 5 con Int)."
+     }
+    ]
+   },
+   {
+    "id": "tiefling-infernal",
+    "name": "Tiefling Infernale",
+    "abilityBonuses": {
+     "int": 1,
+     "cha": 2
+    },
+    "traits": [
+     {
+      "id": "legacy-infernal",
+      "name": "Eredità Infernale",
+      "description": "Trucchetto e incantesimo dell'eredità Infernale (a liv 3, 5 con Int)."
+     }
+    ]
+   }
+  ],
+  "source": "srd"
+ }
 ]

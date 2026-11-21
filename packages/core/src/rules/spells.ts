@@ -34,9 +34,28 @@ export function castersOf(char: Character, reg: Registry): CasterSummary[] {
 }
 
 /** incantesimi che il personaggio può conoscere/preparare in base alle sue classi */
+/** livello massimo degli slot incantesimo del PG (0 = solo trucchetti) */
+export function maxSpellSlotLevel(char: Character): number {
+  let max = 0;
+  for (const [lvl, s] of Object.entries(char.spellSlots ?? {})) {
+    if (s && s.total > 0 && Number(lvl) > max) max = Number(lvl);
+  }
+  return max;
+}
+
+/** quanti trucchetti il PG conosce ora */
+export function knownCantripCount(char: Character, reg: Registry): number {
+  return char.spellsKnown.filter((id) => (reg.spells.get(id)?.level ?? 0) === 0).length;
+}
+
 export function learnableSpells(char: Character, reg: Registry): SpellDef[] {
   const classIds = new Set(char.classLevels.map((c) => c.classId));
-  return [...reg.spells.values()].filter((s) => !s.classes || s.classes.some((c) => classIds.has(c)));
+  // non si possono imparare incantesimi di livello superiore agli slot disponibili (RAW)
+  const maxSlot = char.houseRules.bypassSpellLimit ? 9 : maxSpellSlotLevel(char);
+  return [...reg.spells.values()].filter((s) => {
+    if (s.classes && !s.classes.some((c) => classIds.has(c))) return false;
+    return s.level <= maxSlot;
+  });
 }
 
 export function isSpellKnown(char: Character, spellId: string): boolean {
@@ -65,10 +84,24 @@ export function addSpellKnown(char: Character, spellId: string, reg: Registry): 
   const spell = reg.spells.get(spellId);
   if (!spell) return { character: char, error: 'Incantesimo non trovato: ' + spellId };
   if (char.spellsKnown.includes(spellId)) return { character: char, error: 'Incantesimo già conosciuto' };
-  if (spell.level > 0 && !char.houseRules.bypassSpellLimit) {
-    const max = maxSpellsKnown(char, reg);
-    if (max !== Infinity && knownSpellCount(char, reg) >= max) {
-      return { character: char, error: `Limite raggiunto: ${knownSpellCount(char, reg)}/${max} incantesimi conosciuti (dimenticane uno o attiva l'house-rule)` };
+  if (!char.houseRules.bypassSpellLimit) {
+    if (spell.level > 0) {
+      // RAW: niente incantesimi di livello superiore al proprio slot massimo
+      const maxSlot = maxSpellSlotLevel(char);
+      if (spell.level > maxSlot) {
+        return { character: char, error: `Non puoi imparare un incantesimo di ${spell.level}° livello: i tuoi slot vanno fino al ${maxSlot}° (livella ancora)` };
+      }
+      const max = maxSpellsKnown(char, reg);
+      if (max !== Infinity && knownSpellCount(char, reg) >= max) {
+        return { character: char, error: `Limite raggiunto: ${knownSpellCount(char, reg)}/${max} incantesimi conosciuti (dimenticane uno o attiva l'house-rule)` };
+      }
+    } else {
+      // limite trucchetti per classe
+      const ck = cantripsKnown(char, reg);
+      const cur = knownCantripCount(char, reg);
+      if (cur >= ck) {
+        return { character: char, error: `Limite trucchetti raggiunto: ${cur}/${ck} (dimenticane uno, livella, o attiva l'house-rule)` };
+      }
     }
   }
   const next = { ...char, spellsKnown: [...char.spellsKnown, spellId], updatedAt: new Date().toISOString() };
@@ -115,6 +148,10 @@ export function prepareSpellForClass(char: Character, spellId: string, classId: 
   if (!sc?.prepare) return { character: char, error: `${cls?.name ?? classId} non prepara incantesimi` };
   const list = preparedSpellsOfClass(char, classId);
   if (list.includes(spellId)) return { character: char, error: 'Incantesimo già preparato per questa classe' };
+  // RAW: non si prepara un incantesimo di livello superiore ai propri slot
+  if (!char.houseRules.bypassSpellLimit && spell.level > maxSpellSlotLevel(char)) {
+    return { character: char, error: `Non puoi preparare un incantesimo di ${spell.level}° livello: i tuoi slot vanno fino al ${maxSpellSlotLevel(char)}°` };
+  }
   const byClass = { ...(char.spellsPreparedByClass ?? {}) };
   // un incantesimo può essere preparato da una sola classe alla volta
   for (const k of Object.keys(byClass)) byClass[k] = byClass[k].filter((s) => s !== spellId);

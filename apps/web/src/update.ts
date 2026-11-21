@@ -17,6 +17,9 @@ import { isNewerVersion, parseAssetUrlsFromExpandedAssets, parseLatestTagFromAto
 export const REPO = 'Tecmat/5emanager';
 export type Platform = 'web' | 'desktop' | 'android';
 
+// iniettata da vite (define) con la versione del package.json della webapp
+declare const __APP_VERSION__: string;
+
 /** Tauri rigetta le Err(String) dei comandi come stringa semplice, non come Error: normalizza */
 export function errMsg(e: unknown): string {
   if (typeof e === 'string') return e;
@@ -41,13 +44,16 @@ export function detectPlatform(): Platform {
   return (window as unknown as { __TAURI_INTERNALS__?: unknown }).__TAURI_INTERNALS__ ? 'desktop' : 'web';
 }
 
-/** versione della build corrente (dal version.json servito con l'app) */
+/** versione della build corrente: prima /version.json servito con l'app, poi la versione compilata nel bundle (mai più 0.0.0) */
 export async function getCurrentVersion(): Promise<string> {
   try {
     const r = await fetch('/version.json', { cache: 'no-store' });
-    if (r.ok) return ((await r.json()).version as string) ?? '0.0.0';
+    if (r.ok) {
+      const v = (await r.json()).version as string;
+      if (v && v !== '0.0.0') return v;
+    }
   } catch { /* offline */ }
-  return '0.0.0';
+  return typeof __APP_VERSION__ !== 'undefined' ? __APP_VERSION__ : '0.0.0';
 }
 
 async function fetchWithTimeout(url: string, ms = 9000): Promise<Response> {

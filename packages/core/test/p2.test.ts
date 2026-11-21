@@ -66,8 +66,10 @@ describe('P1: upcast del danno', () => {
 
   it('il diario registra upcast nel lancio', () => {
     let c = makeChar('wizard');
+    c = { ...c, spellSlots: { ...c.spellSlots, 5: { total: 2, used: 0 } } }; // slot 5° prima di imparare
     const r = addSpellKnown(c, 'fireball', reg);
-    c = { ...r.character, spellSlots: { ...r.character.spellSlots, 5: { total: 2, used: 0 } } };
+    expect(r.error).toBeUndefined();
+    c = r.character;
     const before = Object.values(c.spellSlots).reduce((s, v) => s + v.used, 0);
     const cast = castSpell(c, 'fireball', 5, reg);
     expect(cast.error).toBeUndefined();
@@ -91,6 +93,7 @@ describe('P1: preferiti incantesimi', () => {
 describe('P2: oggetti che lanciano incantesimi (pergamene/bacchette)', () => {
   it('castItemSpell consuma 1 carica, non usa slot, imposta concentration', () => {
     let c = makeChar('wizard');
+    c = { ...c, spellSlots: { ...c.spellSlots, 3: { total: 1, used: 0 } } }; // slot 3° per haste
     c = addSpellKnown(c, 'haste', reg).character;
     c = addItem(c, { name: 'Pergamena di Velocità', kind: 'treasure', quantity: 1, weight: 0, equipped: false, magic: true, attuned: false, spellId: 'haste', charges: { current: 1, max: 1 } }).character;
     const item = c.inventory[0];

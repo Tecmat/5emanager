@@ -200,3 +200,21 @@ button .candy-icon, .tag .candy-icon { margin-right: 5px; }
 header.top { padding-top: calc(10px + env(safe-area-inset-top, 0px)); }
 main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 .modal-bg { padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+
+/* modali più carine: blur, bordo gradiente, ombra, animazione */
+.modal-bg {
+  background: rgba(8, 8, 14, 0.6);
+  backdrop-filter: blur(4px);
+  animation: fadeIn 0.15s ease;
+}
+.modal {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, var(--panel), var(--panel2));
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.55), 0 0 0 1px rgba(122, 90, 248, 0.18);
+  animation: popIn 0.18s cubic-bezier(0.2, 0.9, 0.3, 1.2);
+}
+.modal h2 { color: var(--accent); letter-spacing: 0.02em; }
+.modal .row button.primary { min-width: 90px; }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: none; } }

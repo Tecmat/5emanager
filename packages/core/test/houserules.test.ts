@@ -12,7 +12,12 @@ import {
   createCharacter,
   type Character,
   type Registry,
-} from '../src/index.js';
+
+  maxSpellSlotLevel,
+  knownCantripCount,
+  learnableSpells,
+  cantripsKnown,
+  prepareSpell} from '../src/index.js';
 import { createSrdRegistry } from '@dnd5e/data-srd';
 
 function makeWizard(reg: Registry): Character {
@@ -23,6 +28,14 @@ function makeWizard(reg: Registry): Character {
   }, reg);
   if (!res.character) throw new Error(res.errors.join(', '));
   return res.character;
+}
+
+/** wizard con slot fino al 9° (per testare i limiti senza il gate del livello slot) */
+function makeWizardSlots(reg: Registry): Character {
+  const c = makeWizard(reg);
+  const slots: Record<number, { total: number; used: number }> = {};
+  for (let l = 1; l <= 9; l++) slots[l] = { total: 1, used: 0 };
+  return { ...c, spellSlots: slots };
 }
 
 function makeRogue(reg: Registry): Character {
@@ -36,8 +49,8 @@ function makeRogue(reg: Registry): Character {
 
 describe('limite incantesimi appresi', () => {
   const reg = createSrdRegistry();
-  it('il mago livello 1 con Int 17 conoce al massimo 1+3=4 incantesimi (non trucchetti)', () => {
-    const c = makeWizard(reg); // int 16 +1 alto elfo = 17 -> +3
+  it('il mago livello 1 con Int 17 conosce al massimo 1+3=4 incantesimi (non trucchetti)', () => {
+    const c = makeWizardSlots(reg); // int 16 +1 alto elfo = 17 -> +3 (slot alti per non colpire il gate di livello)
     expect(maxSpellsKnown(c, reg)).toBe(4);
     const spells = ['magic-missile', 'shield', 'burning-hands', 'sleep', 'fireball'];
     let ch = c;
@@ -152,5 +165,49 @@ describe('migrazione schede vecchie', () => {
     const migrated = migrateCharacter(old as Character);
     expect(migrated.houseRules).toEqual(DEFAULT_HOUSE_RULES);
     expect(migrated.name).toBe('Elara');
+  });
+});
+
+describe('gate livello slot e limite trucchetti (RAW)', () => {
+  const reg = createSrdRegistry();
+  it("un PG di 1° (solo slot 1°) non può imparare incantesimi di livello superiore", () => {
+    const c = makeWizard(reg); // liv 1 -> max slot 1
+    expect(maxSpellSlotLevel(c)).toBe(1);
+    const r = addSpellKnown(c, 'fireball', reg); // 3° livello
+    expect(r.error).toContain('slot');
+    expect(r.character.spellsKnown).not.toContain('fireball');
+    // ma uno di 1° sì
+    const ok = addSpellKnown(c, 'magic-missile', reg);
+    expect(ok.error).toBeUndefined();
+  });
+  it('learnableSpells filtra gli incantesimi oltre il livello degli slot', () => {
+    const c = makeWizard(reg);
+    const list = learnableSpells(c, reg).map((s) => s.id);
+    expect(list).toContain('magic-missile');
+    expect(list).not.toContain('fireball');
+  });
+  it('limite trucchetti: il mago di 1° ne conosce al massimo 3', () => {
+    let c = makeWizard(reg);
+    expect(cantripsKnown(c, reg)).toBe(3);
+    for (const id of ['fire-bolt', 'mage-hand', 'light']) {
+      const r = addSpellKnown(c, id, reg);
+      expect(r.error).toBeUndefined();
+      c = r.character;
+    }
+    expect(knownCantripCount(c, reg)).toBe(3);
+    const fourth = addSpellKnown(c, 'prestidigitation', reg);
+    expect(fourth.error).toContain('trucchetti');
+    // dimenticando uno, si puo' imparare il quarto
+    c = forgetSpell(c, 'light').character;
+    const r2 = addSpellKnown(c, 'prestidigitation', reg);
+    expect(r2.error).toBeUndefined();
+  });
+  it('non si prepara un incantesimo di livello superiore agli slot', () => {
+    const c = makeWizardSlots(reg);
+    const learned = addSpellKnown(c, 'fireball', reg);
+    expect(learned.error).toBeUndefined();
+    const low = { ...learned.character, spellSlots: { 1: { total: 2, used: 0 } } }; // solo slot 1°
+    const r = prepareSpell(low, 'fireball', reg);
+    expect(r.error).toContain('slot');
   });
 });

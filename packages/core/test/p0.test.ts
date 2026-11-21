@@ -30,7 +30,8 @@ import {
   unprepareSpellForClass,
   useCharge,
   type Character,
-} from '../src/index.js';
+
+  maxSpellSlotLevel} from '../src/index.js';
 import { createSrdRegistry } from '@dnd5e/data-srd';
 
 const reg = createSrdRegistry();
@@ -207,8 +208,11 @@ describe('fix dati: tutte le classi lancianti hanno incantesimi imparabili', () 
     for (const classId of ['bard', 'sorcerer', 'druid', 'ranger', 'wizard', 'cleric']) {
       const c = makeChar(classId);
       const learnable = learnableSpells(c, reg);
-      expect(learnable.length).toBeGreaterThan(10);
-      const first = learnable.find((s) => s.level === 1)!;
+      // gate RAW: mai incantesimi oltre il livello degli slot del PG (i trucchetti sono liv 0)
+      expect(learnable.every((s) => s.level <= maxSpellSlotLevel(c))).toBe(true);
+      if (classId !== 'ranger') expect(learnable.length).toBeGreaterThan(3); // il ranger lancia dal 2° livello
+      const first = learnable.find((s) => s.level === 1) ?? learnable[0];
+      if (!first) continue;
       const r = addSpellKnown(c, first.id, reg);
       expect(r.error).toBeUndefined();
       expect(r.character.spellsKnown).toContain(first.id);
