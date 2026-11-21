@@ -33,6 +33,7 @@ export type IconName =
   | 'door'
   | 'signal'
   | 'refresh'
+  | 'search'
   | 'save';
 
 const PATHS: Record<IconName, ReactElement> = {
@@ -264,6 +265,12 @@ const PATHS: Record<IconName, ReactElement> = {
       <path d="M21 3v6h-6" />
     </>
   ),
+  search: (
+    <>
+      <circle cx="11" cy="11" r="7" />
+      <path d="m21 21-4.3-4.3" />
+    </>
+  ),
   save: (
     <>
       <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z" />
@@ -308,6 +315,7 @@ const CANDY: Partial<Record<IconName, [string, string]>> = {
   signal: ['#a29bfe', '#e84393'],
   save: ['#0984e3', '#74b9ff'],
   refresh: ['#0984e3', '#74b9ff'],
+  search: ['#0984e3', '#74b9ff'],
 };
 
 export default function Icon({ name, size = 16, className = '', candy = false }: { name: IconName; size?: number; className?: string; candy?: boolean }) {

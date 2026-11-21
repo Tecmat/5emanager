@@ -1369,7 +1369,14 @@ export default function CampaignTab() {
           )}
           <label>{t('cg.password', 'Password campagna')}</label>
           <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} onKeyDown={onEnter(() => { setError(''); connect({ mode, password, campaignName, joinId, asMaster }); })} />
-          {error && <div className="error">{error}</div>}
+          {error && (
+            <div className="error row" style={{ justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+              <span>{error}</span>
+              <button onClick={() => setError('')} aria-label={t('cg.errClose', 'Chiudi errore')} title={t('cg.errClose', 'Chiudi errore')} style={{ flexShrink: 0 }}>
+                <Icon name="x" size={12} />
+              </button>
+            </div>
+          )}
           <div style={{ marginTop: 10 }}>
             <button
               className="primary"

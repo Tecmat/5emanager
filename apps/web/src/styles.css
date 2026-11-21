@@ -218,3 +218,16 @@ main { padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
 .modal .row button.primary { min-width: 90px; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes popIn { from { opacity: 0; transform: scale(0.95) translateY(8px); } to { opacity: 1; transform: none; } }
+
+/* --- polish v0.1.61: skeleton, palette comandi, onboarding --- */
+.skeleton { border-radius: 6px; background: linear-gradient(90deg, var(--panel2) 25%, var(--border) 37%, var(--panel2) 63%); background-size: 400% 100%; animation: skelShimmer 1.2s ease infinite; }
+.skel-line { height: 14px; margin-bottom: 8px; }
+.skel-line.short { width: 60%; }
+.skel-box { height: 90px; }
+@keyframes skelShimmer { 0% { background-position: 100% 0; } 100% { background-position: 0 0; } }
+.kbd { font-size: 10px; border: 1px solid var(--border); border-radius: 4px; padding: 0 4px; color: var(--muted); }
+.cmdk-item { display: flex; width: 100%; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 12px; background: transparent; border: none; color: inherit; text-align: left; cursor: pointer; font-size: 13px; }
+.ob-scores { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+.ob-ab { background: var(--panel2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 4px; text-align: center; }
+.ob-ab b { display: block; font-size: 10px; color: var(--muted); }
+.ob-ab span { font-size: 16px; font-weight: 600; }

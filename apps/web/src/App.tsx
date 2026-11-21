@@ -4,6 +4,8 @@ import { useStore, isCampaignSheetId } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
 import { hasPendingDeepLink, onDeepLink, queueDeepLink } from './deepLink.js';
 import CreateForm from './CreateForm.js';
+import Onboarding, { ONBOARD_KEY } from './Onboarding.js';
+import CommandPalette, { type Command } from './CommandPalette.js';
 import UpdateButton from './UpdateButton.js';
 import Icon, { type IconName } from './icons.js';
 import { requestResume } from './p2pSaved.js';
@@ -52,7 +54,7 @@ function loadLock(): LockRec {
 }
 
 export default function App() {
-  const { char, sheets, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
+  const { char, sheets, ready, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
   const { conn } = useNet();
   // page null = auto: pagina scheda se c'è una scheda attiva, altrimenti home
   const [page, setPage] = useState<Page | null>(null);
@@ -64,6 +66,10 @@ export default function App() {
   const [unlocked, setUnlocked] = useState(() => !loadLock().enabled);
   const [lockPw, setLockPw] = useState('');
   const [lockErr, setLockErr] = useState('');
+  const [onboarded, setOnboarded] = useState(() => {
+    try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return true; }
+  });
+  const [paletteOpen, setPaletteOpen] = useState(false);
 
   const createdRef = useRef(false);
   // deep link (QR scansionato con la fotocamera di sistema): vai subito alla pagina Campagna
@@ -99,11 +105,16 @@ export default function App() {
   // pagina effettiva: senza scheda attiva la pagina scheda non esiste -> home
   const effPage: Page = page === 'scheda' && !char ? 'home' : page ?? (char ? 'scheda' : 'home');
 
-  // scorciatoie da tastiera: 1-3 pagine del menu / 1-4 tab della pagina scheda, "e" edit on/off, Ctrl/Cmd+Z annulla
+  // scorciatoie da tastiera: 1-4 pagine/tab, "e" edit on/off, Ctrl/Cmd+Z annulla, Ctrl/Cmd+K palette comandi
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement | null;
       const typing = !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.tagName === 'SELECT');
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') {
+        e.preventDefault();
+        setPaletteOpen((v) => !v);
+        return;
+      }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z') {
         if (!typing || true) { e.preventDefault(); undo(); }
         return;
@@ -121,6 +132,7 @@ export default function App() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [char, viewChar, undo, effPage]);
+
   useEffect(() => {
     if (conn.phase !== 'online' && viewChar) setViewChar(null);
   }, [conn.phase, viewChar, setViewChar]);
@@ -131,6 +143,16 @@ export default function App() {
     localStorage.setItem('dnd5e-theme', t2);
     document.documentElement.dataset.theme = t2;
   };
+
+  // comandi della palette (Ctrl/Cmd+K)
+  const commands: Command[] = [
+    ...MAIN_PAGES.map((p, i) => ({ id: 'nav-' + p.id, label: t(p.key, p.fb), hint: `${i + 1}`, run: () => setPage(p.id) })),
+    ...(char ? [{ id: 'nav-scheda', label: `${t('app.openSheet', 'Scheda')}: ${char.name}`, run: () => setPage('scheda') }] : []),
+    { id: 'new', label: `${t('app.new', 'Nuovo')} — ${t('cf.title', 'Nuovo personaggio')}`, run: () => setCreating(true) },
+    { id: 'theme', label: t('app.theme', 'Cambia tema'), run: () => toggleTheme() },
+    { id: 'lang', label: 'IT / EN', hint: t('app.lang', 'Lingua'), run: () => setLang(lang === 'it' ? 'en' : 'it') },
+    ...(canUndo ? [{ id: 'undo', label: t('app.undo', 'Annulla'), hint: '⌘Z', run: () => undo() }] : []),
+  ];
 
   const tryUnlock = async () => {
     const hash = await sha256Hex(lockPw);
@@ -225,10 +247,21 @@ export default function App() {
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
           <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN"><Icon name="globe" size={14} /> {lang.toUpperCase()}</button>
           <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? <Icon name="moon" size={14} /> : <Icon name="sun" size={14} />}</button>
+          <button onClick={() => setPaletteOpen(true)} title={t('cmd.open', 'Comandi rapidi (Ctrl+K)')} aria-label={t('cmd.open', 'Comandi rapidi')}>
+            <Icon name="search" size={14} /> <span className="kbd">⌘K</span>
+          </button>
           <UpdateButton />
         </span>
       </header>
       <main>
+        {!ready && (
+          <div className="grid" style={{ maxWidth: 860 }} aria-label="caricamento">
+            <div className="card"><div className="skeleton skel-line" /><div className="skeleton skel-line short" /></div>
+            <div className="cols3 grid">
+              {[0, 1, 2].map((i) => <div key={i} className="card"><div className="skeleton skel-box" /></div>)}
+            </div>
+          </div>
+        )}
         {viewChar && (
           <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent2)' }}>
             <Icon name="eye" size={13} /> {t('app.viewBanner1', 'Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in Campagna (azioni). Torna alla tua scheda con "mia scheda" in alto.')}
@@ -274,7 +307,7 @@ export default function App() {
               ))}
             </nav>
             <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
-              {effPage === 'home' && (
+              {ready && effPage === 'home' && (
                 <HomeTab
                   onCreate={() => setCreating(true)}
                   onOnline={() => {
@@ -301,6 +334,17 @@ export default function App() {
           </>
         )}
       </main>
+      {ready && !creating && sheets.length === 0 && !onboarded && !viewChar && (
+        <Onboarding
+          onDone={() => setOnboarded(true)}
+          onOpenCreate={() => {
+            try { localStorage.setItem(ONBOARD_KEY, '1'); } catch { /* quota */ }
+            setOnboarded(true);
+            setCreating(true);
+          }}
+        />
+      )}
+      {paletteOpen && <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)} />}
     </>
   );
 }

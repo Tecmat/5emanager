@@ -49,6 +49,7 @@ function setInput(input: HTMLInputElement, value: string) {
 
 describe('App: montaje + creazione scheda (no crash)', () => {
   it('monta, crea una scheda e mostra la pagina scheda senza errori', async () => {
+    localStorage.setItem('dnd5e.onboarded.v1', '1'); // salta l'onboarding: qui testiamo il form
     const { StoreProvider } = await import('../src/store.js');
     const { NetProvider } = await import('../src/netStore.js');
     const App = (await import('../src/App.js')).default;
