@@ -27,11 +27,15 @@ import {
   accountCharacters,
   accountRole,
   accountSavedP2PCampaigns,
+  accountTotpEnabled,
   approveAccount,
+  consumeBackupCode,
   createSession,
   deleteAccount,
   deleteAccountCharacter,
   deleteAccountP2PCampaign,
+  disableAccountTotp,
+  enableAccountTotp,
   getAccount,
   listPending,
   loadAccountsFile,
@@ -43,6 +47,8 @@ import {
   saveAccountP2PCampaign,
   sessionUsername,
   setAccountRole,
+  setupAccountTotp,
+  verifyAccountTotp,
 } from './accounts.js';
 import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
@@ -201,6 +207,21 @@ function broadcast(campaign: Campaign): void {
 
 const STARTED_AT = new Date();
 
+// throttle tentativi 2FA: max 5 codici/minuto per username (in memoria)
+const totpAttempts = new Map<string, number[]>();
+function totpThrottled(username: string): boolean {
+  const now = Date.now();
+  const arr = (totpAttempts.get(username) ?? []).filter((t) => now - t < 60_000);
+  totpAttempts.set(username, arr);
+  return arr.length >= 5;
+}
+function totpNoteAttempt(username: string): void {
+  const now = Date.now();
+  const arr = (totpAttempts.get(username) ?? []).filter((t) => now - t < 60_000);
+  arr.push(now);
+  totpAttempts.set(username, arr);
+}
+
 function sendAdminState(ws: WebSocket): void {
   const accounts = Object.values(loadAccountsFile().accounts);
   const pending = listPending();
@@ -329,10 +350,70 @@ function handleMessage(conn: Conn, raw: string): void {
   if (msg.t === 'login') {
     try {
       const acc = loginAccount(msg.username.trim(), msg.password);
+      // 2FA attiva: la password è ok ma serve anche il codice TOTP (nessuna sessione ancora)
+      if (accountTotpEnabled(acc.username)) {
+        send(conn.ws, { t: 'totpRequired', username: acc.username });
+        return;
+      }
       conn.token = createSession(acc.username);
       // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
       if (accountRole(acc.username) === 'admin') conn.admin = true;
-      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username) });
+      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username), totpEnabled: false });
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+    }
+    return;
+  }
+
+  // login 2FA: password + codice TOTP (o codice di backup monouso), con throttle anti-bruteforce
+  if (msg.t === 'loginTotp' || msg.t === 'loginTotpBackup') {
+    const key = msg.username.trim().toLowerCase();
+    if (totpThrottled(key)) {
+      send(conn.ws, { t: 'error', message: 'Troppi tentativi 2FA: riprova tra 60 secondi' });
+      return;
+    }
+    try {
+      const acc = loginAccount(msg.username.trim(), msg.password);
+      const ok = msg.t === 'loginTotp' ? verifyAccountTotp(acc.username, msg.code) : consumeBackupCode(acc.username, msg.backupCode);
+      totpNoteAttempt(key);
+      if (!ok) {
+        send(conn.ws, { t: 'error', message: msg.t === 'loginTotp' ? 'Codice 2FA non valido (controlla che l\'ora del telefono sia automatica)' : 'Codice di backup non valido o già usato' });
+        return;
+      }
+      conn.token = createSession(acc.username);
+      if (accountRole(acc.username) === 'admin') conn.admin = true;
+      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username), totpEnabled: true });
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+    }
+    return;
+  }
+
+  // gestione 2FA (richiede sessione login)
+  if (msg.t === 'setupTotp' || msg.t === 'enableTotp' || msg.t === 'disableTotp') {
+    const token = conn.token;
+    const username = token ? sessionUsername(token) : undefined;
+    if (!token || !username) {
+      send(conn.ws, { t: 'error', message: 'Devi fare login prima di gestire la 2FA' });
+      return;
+    }
+    try {
+      if (msg.t === 'setupTotp') {
+        const s = setupAccountTotp(username, '5e Manager');
+        send(conn.ws, { t: 'totpSetup', secret: s.secret, otpauthUrl: s.otpauthUrl, backupCodes: s.backupCodes });
+      } else if (msg.t === 'enableTotp') {
+        if (!enableAccountTotp(username, msg.code)) {
+          send(conn.ws, { t: 'error', message: 'Codice non valido (±30 s di tolleranza): controlla l\'ora del telefono' });
+          return;
+        }
+        send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: true });
+        send(conn.ws, { t: 'notice', message: '🔐 2FA attivata' });
+      } else {
+        loginAccount(username, msg.password); // verifica password prima di disattivare
+        disableAccountTotp(username);
+        send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: false });
+        send(conn.ws, { t: 'notice', message: '2FA disattivata' });
+      }
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -487,7 +568,7 @@ function handleMessage(conn: Conn, raw: string): void {
         send(conn.ws, { t: 'error', message: (e as Error).message });
         return;
       }
-      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username) });
+      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: accountTotpEnabled(username) });
       return;
     }
     if (!conn.campaignId || !conn.playerId) {

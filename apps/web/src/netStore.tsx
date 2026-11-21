@@ -17,6 +17,14 @@ export interface AuthState {
   characters: Character[];
   /** campagne P2P salvate sull'account e sincronizzate col server */
   savedCampaigns: SavedCampaignSnapshot[];
+  /** 2FA TOTP attiva sull'account */
+  totpEnabled: boolean;
+}
+
+export interface TotpSetupMsg {
+  secret: string;
+  otpauthUrl: string;
+  backupCodes: string[];
 }
 
 export type PingState =
@@ -85,6 +93,14 @@ interface NetCtx {
   doRegister: (username: string, password: string) => Promise<void>;
   doLogin: (username: string, password: string) => Promise<void>;
   logout: () => void;
+  /** 2FA: username in attesa di codice TOTP dopo password ok, e dati del setup (QR/secret/backup) */
+  totpPending: string | null;
+  totpSetup: TotpSetupMsg | null;
+  doLoginTotp: (username: string, password: string, code: string) => Promise<void>;
+  doLoginTotpBackup: (username: string, password: string, backupCode: string) => Promise<void>;
+  setupTotp: () => Promise<void>;
+  enableTotp: (code: string) => Promise<void>;
+  disableTotp: (password: string) => Promise<void>;
 }
 
 const Ctx = createContext<NetCtx | null>(null);
@@ -102,6 +118,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [lastUsername, setLastUsername] = useState('');
   const [servers, setServers] = useState<string[]>(loadServers);
   const [savedCampaigns, setSavedCampaigns] = useState<SavedCampaign[]>(loadJoined);
+  const [totpPending, setTotpPending] = useState<string | null>(null);
+  const [totpSetup, setTotpSetup] = useState<TotpSetupMsg | null>(null);
   const urlRef = useRef(url);
   const nameRef = useRef(name);
   const lastUsernameRef = useRef(lastUsername);
@@ -150,8 +168,15 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'campaigns') {
       setCampaignList(m.list);
     } else if (m.t === 'auth') {
-      setAuth({ token: m.token, username: m.username, characters: m.characters, savedCampaigns: m.savedCampaigns ?? [] });
+      setAuth({ token: m.token, username: m.username, characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
       setLastUsername(m.username);
+      setTotpPending(null);
+    } else if (m.t === 'totpRequired') {
+      // password ok, serve il codice 2FA
+      setTotpPending(m.username);
+      setError('');
+    } else if (m.t === 'totpSetup') {
+      setTotpSetup({ secret: m.secret, otpauthUrl: m.otpauthUrl, backupCodes: m.backupCodes ?? [] });
     } else if (m.t === 'kicked') {
       // espulso dal master (campagna server) o dall'admin: chiudi tutto
       setConn({ phase: 'offline' });
@@ -255,6 +280,59 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     setAuth(null);
     setLastUsername('');
+    setTotpPending(null);
+    setTotpSetup(null);
+  };
+
+  // --- 2FA TOTP ---
+  const doLoginTotp = async (username: string, password: string, code: string) => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'loginTotp', username: username.trim(), password, code: code.trim() });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const doLoginTotpBackup = async (username: string, password: string, backupCode: string) => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'loginTotpBackup', username: username.trim(), password, backupCode: backupCode.trim() });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const setupTotp = async () => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'setupTotp' });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const enableTotp = async (code: string) => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'enableTotp', code: code.trim() });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const disableTotp = async (password: string) => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'disableTotp', password });
+    } catch (e) {
+      setError((e as Error).message);
+    }
   };
 
   const connect = async (opts: ConnectOpts) => {
@@ -294,6 +372,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
     send, act, setConn, handleNetMessage: (m: any) => handleMsg(m), setP2PTransport,
     connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout,
+    totpPending, totpSetup, doLoginTotp, doLoginTotpBackup, setupTotp, enableTotp, disableTotp,
   };
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

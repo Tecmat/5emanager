@@ -86,7 +86,7 @@ Il server gira anche **in Docker con docker compose** ([docs/DOCKER.md](docs/DOC
 
 `npm run build -w @dnd5e/web && npm run server` → apre http://localhost:3001 con web app + WebSocket: campagne condivise master/giocatori, combattimento live con action economy (vedi [docs/SERVER.md](docs/SERVER.md)).
 
-Account con **ruoli admin/user** (primo account o `DND5E_ADMIN_USER` è admin) e pannello `/admin`: approva utenti, promuovi/declassa, reset password, gestione campagne con **espelli giocatore**. **Libreria schede sincronizzata sull'account** (☁️ in Home) e **campagne P2P sincronizzabili** col server (tab 💾 Campagne P2P → ☁️).
+Ogni account può attivare la **2FA TOTP** (app authenticator, codici di backup) — vedi [docs/SERVER.md](docs/SERVER.md). Account con **ruoli admin/user** (primo account o `DND5E_ADMIN_USER` è admin) e pannello `/admin`: approva utenti, promuovi/declassa, reset password, gestione campagne con **espelli giocatore**. **Libreria schede sincronizzata sull'account** (☁️ in Home) e **campagne P2P sincronizzabili** col server (tab 💾 Campagne P2P → ☁️).
 
 ## PWA (installabile da browser)
 
@@ -120,4 +120,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 126/126 verdi.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 132/132 verdi (root) + 1/1 UI jsdom.

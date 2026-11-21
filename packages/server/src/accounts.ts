@@ -3,6 +3,20 @@ import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Character, SavedCampaignSnapshot } from '@dnd5e/core';
 import { DATA_DIR, ensureDataDir, hashPassword } from './campaign.js';
+import { generateBackupCodes, generateTotpSecret, hashBackupCode, otpauthUrl, verifyTotp } from './totp.js';
+
+/** 2FA TOTP (app authenticator): il secret è salvato lato server (proteggi DND5E_DATA_DIR), i backup solo come hash */
+export interface TotpState {
+  secret: string;
+  enabled: boolean;
+  backupHashes: string[];
+}
+
+export interface TotpSetup {
+  secret: string;
+  otpauthUrl: string;
+  backupCodes: string[];
+}
 
 // dentro la data dir ma SENZA estensione .json, così listCampaigns() non la scambia per una campagna
 export const ACCOUNTS_FILE = process.env.DND5E_ACCOUNTS_FILE ?? join(DATA_DIR, 'accounts.data');
@@ -22,6 +36,8 @@ export interface Account {
   role: AccountRole;
   /** campagne P2P salvate dall'host e sincronizzate su questo account (senza password) */
   savedP2PCampaigns: Record<string, SavedCampaignSnapshot>;
+  /** 2FA TOTP; null = non configurata */
+  totp: TotpState | null;
 }
 
 export interface PendingRequest {
@@ -31,7 +47,7 @@ export interface PendingRequest {
 }
 
 interface AccountsFile {
-  v: 4;
+  v: 5;
   accounts: Record<string, Account>;
   pending: Record<string, PendingRequest>;
 }
@@ -40,7 +56,7 @@ interface AccountsFile {
 function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
   let accounts: Record<string, Account>;
   let pending: Record<string, PendingRequest> = {};
-  if (raw.v === 2 || raw.v === 3) {
+  if (raw.v === 2 || raw.v === 3 || raw.v === 4) {
     accounts = (raw.accounts ?? {}) as Record<string, Account>;
     pending = (raw.pending ?? {}) as Record<string, PendingRequest>;
   } else {
@@ -54,9 +70,10 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
       a.role = ADMIN_USER ? (k.toLowerCase() === ADMIN_USER ? 'admin' : 'user') : (k === first ? 'admin' : 'user');
     }
     a.savedP2PCampaigns = a.savedP2PCampaigns ?? {};
+    a.totp = a.totp ?? null;
     accounts[k] = a as Account;
   }
-  return { v: 4, accounts, pending };
+  return { v: 5, accounts, pending };
 }
 
 /** sessioni attive in memoria: token -> username (si perdono al riavvio del server) */
@@ -68,13 +85,13 @@ export function loadAccountsFile(): AccountsFile {
   try {
     if (existsSync(ACCOUNTS_FILE)) {
       const raw = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-      if (raw && raw.v === 4 && raw.accounts) return raw as AccountsFile;
-      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || !raw.v)) return migrateAccounts(raw);
+      if (raw && raw.v === 5 && raw.accounts) return raw as AccountsFile;
+      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || !raw.v)) return migrateAccounts(raw);
     }
   } catch {
     /* file corroto: si riparte da un registro vuoto */
   }
-  return { v: 4, accounts: {}, pending: {} };
+  return { v: 5, accounts: {}, pending: {} };
 }
 
 export function saveAccountsFile(f: AccountsFile): void {
@@ -126,6 +143,7 @@ export function approveAccount(username: string): Account {
     createdAt: new Date().toISOString(),
     role: ADMIN_USER && key === ADMIN_USER ? 'admin' : 'user',
     savedP2PCampaigns: {},
+    totp: null,
   };
   f.accounts[key] = acc;
   delete f.pending[key];
@@ -228,6 +246,66 @@ export function deleteAccountP2PCampaign(username: string, id: string): void {
 
 export function accountSavedP2PCampaigns(username: string): SavedCampaignSnapshot[] {
   return Object.values(getAccount(username)?.savedP2PCampaigns ?? {}).sort((a, b) => (b.savedAt ?? '').localeCompare(a.savedAt ?? ''));
+}
+
+// --- 2FA TOTP ---
+
+export function accountTotpEnabled(username: string): boolean {
+  return !!getAccount(username)?.totp?.enabled;
+}
+
+/** genera (o rigenera) il secret TOTP + codici di backup: l'UI mostra QR/secret/codici UNA volta sola */
+export function setupAccountTotp(username: string, issuer: string): TotpSetup {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato');
+  const secret = generateTotpSecret();
+  const backupCodes = generateBackupCodes(8);
+  acc.totp = { secret, enabled: false, backupHashes: backupCodes.map(hashBackupCode) };
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return { secret, otpauthUrl: otpauthUrl(secret, issuer, acc.username), backupCodes };
+}
+
+/** attiva la 2FA solo se il codice TOTP è valido (±1 step) */
+export function enableAccountTotp(username: string, code: string): boolean {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc?.totp?.secret) throw new Error('Nessun secret TOTP: fai prima setupTotp');
+  if (!verifyTotp(acc.totp.secret, code)) return false;
+  acc.totp.enabled = true;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return true;
+}
+
+export function disableAccountTotp(username: string): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato');
+  acc.totp = null;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+}
+
+export function verifyAccountTotp(username: string, code: string): boolean {
+  const acc = getAccount(username);
+  if (!acc?.totp?.enabled) return false;
+  return verifyTotp(acc.totp.secret, code);
+}
+
+/** un codice di backup vale una volta sola */
+export function consumeBackupCode(username: string, code: string): boolean {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc?.totp?.enabled) return false;
+  const norm = hashBackupCode(code);
+  const i = acc.totp.backupHashes.indexOf(norm);
+  if (i < 0) return false;
+  acc.totp.backupHashes.splice(i, 1);
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return true;
 }
 
 export function accountCharacters(username: string): Character[] {

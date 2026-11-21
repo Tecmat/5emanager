@@ -9,6 +9,13 @@ export type ClientMessage =
   // account: register crea una RICHIESTA che l'admin approva; login verifica la password lato server (hash sha256)
   | { t: 'register'; username: string; password: string }
   | { t: 'login'; username: string; password: string }
+  // 2FA TOTP: login in due passi (password -> totpRequired -> loginTotp/loginTotpBackup)
+  | { t: 'loginTotp'; username: string; password: string; code: string }
+  | { t: 'loginTotpBackup'; username: string; password: string; backupCode: string }
+  // gestione 2FA (richiede login): setupTotp genera secret+QR+codici backup, enableTotp conferma col codice
+  | { t: 'setupTotp' }
+  | { t: 'enableTotp'; code: string }
+  | { t: 'disableTotp'; password: string }
   | { t: 'ping'; id: string }
   // pannello admin del server (LAN): se DND5E_ADMIN_TOKEN e' impostato, adminAuth deve contenerlo
   | { t: 'adminAuth'; token: string }
@@ -43,7 +50,9 @@ export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
   | { t: 'campaigns'; list: { id: string; name: string; players: number }[] }
   | { t: 'state'; campaign: Campaign }
-  | { t: 'auth'; token: string; username: string; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[] }
+  | { t: 'auth'; token: string; username: string; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean }
+  | { t: 'totpRequired'; username: string }
+  | { t: 'totpSetup'; secret: string; otpauthUrl: string; backupCodes: string[] }
   | { t: 'pong'; id: string; serverTime: number }
   | {
       t: 'adminState';
