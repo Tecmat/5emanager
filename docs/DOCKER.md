@@ -1,5 +1,10 @@
 # 5e Manager — Server in Docker (docker compose)
 
+> ⚠️ **Non modificare i file tracciati** (`docker-compose*.yml`, `Dockerfile`, `docker/nginx/*`):
+> le personalizzazioni vanno in `docker/.env` (non tracciato). Se li modifichi, `git pull` va in conflitto:
+> backup (`cp file /tmp/`) + `git checkout -- <path>` + `git pull`.
+
+
 Il server (web app + WebSocket multiplayer + pannello `/admin` + account con **libreria schede
 sincronizzata** e **campagne salvate su disco**) gira in un container. I dati persistono nel
 volume `docker/data` (campagne, account, schede degli utenti).
