@@ -70,6 +70,7 @@ function buildCampaign(opts: { campaignName: string; password: string; masterNam
       groupInventory: [],
       groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
       notes: '',
+      chat: [],
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },

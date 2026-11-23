@@ -93,6 +93,7 @@ export function createCampaign(name: string, password: string, master: PlayerInf
     groupInventory: [],
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
+    chat: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -114,6 +115,7 @@ export function createCampaignAdmin(name: string, password: string): Campaign {
     groupInventory: [],
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
+    chat: [],
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

@@ -161,6 +161,35 @@ export default function CampaignTab() {
     passkeys, passkeyLogin, passkeyRegister, refreshPasskeys, removePasskey,
   } = useNet();
   const [mode, setMode] = useState<'create' | 'join'>('create');
+  const [chatText, setChatText] = useState('');
+  const [soundOn, setSoundOn] = useState(() => {
+    try { return localStorage.getItem('dnd5e.turnSound') !== 'off'; } catch { return true; }
+  });
+  /** beep breve (WebAudio, niente asset) quando inizia il tuo turno */
+  const turnBeep = () => {
+    try {
+      if (localStorage.getItem('dnd5e.turnSound') === 'off') return;
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.frequency.value = 880;
+      g.gain.value = 0.08;
+      o.connect(g);
+      g.connect(ctx.destination);
+      o.start();
+      o.stop(ctx.currentTime + 0.18);
+      window.setTimeout(() => { void ctx.close().catch(() => {}); }, 400);
+    } catch { /* audio non disponibile */ }
+  };
+  const toggleSound = () => {
+    setSoundOn((v) => {
+      const next = !v;
+      try { localStorage.setItem('dnd5e.turnSound', next ? 'on' : 'off'); } catch { /* quota */ }
+      return next;
+    });
+  };
   const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
   const [p2pSub, setP2pSub] = useState<'host' | 'join'>('host');
   const [invite, setInvite] = useState<{ key: string; code: string } | null>(null);
@@ -883,6 +912,10 @@ export default function CampaignTab() {
     if (conn.phase === 'online' && conn.campaign.combat) {
       setTimerLeft(timerSec);
       setTimerOn(true);
+      // turno evidente: beep quando inizia il TUO turno
+      const cb = conn.campaign.combat;
+      const c0 = cb.combatants[cb.turnIndex];
+      if (c0?.isPlayer && char && c0.id === char.id) turnBeep();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [combatTurnKey]);
@@ -1878,8 +1911,13 @@ export default function CampaignTab() {
 
       {combat && (
         <div className="card">
-          <h3>⚔️ {tf('cg.combat', '⚔️ Combattimento — Round {n}', { n: combat.round })} {cur && <span className="tag custom"> {tf('cb.turn', 'turno: {name}', { name: cur.name })}</span>}</h3>
+          <h3>⚔️ {tf('cg.combat', '⚔️ Combattimento — Round {n}', { n: combat.round })} {cur && <span className="tag custom"> {tf('cb.turn', 'turno: {name}', { name: cur.name })}</span>}
+            {isMyTurn && <span className="tag my-turn-tag">⚔️ {t('cg.myTurn', 'È il tuo turno!')}</span>}
+          </h3>
           <div className="row" style={{ marginBottom: 8 }}>
+            <button onClick={toggleSound} title={soundOn ? t('cg.soundOff', 'Disattiva il suono di turno') : t('cg.soundOn', 'Attiva il suono quando inizia il tuo turno')}>
+              {soundOn ? '🔔' : '🔕'} {t('cg.sound', 'suono turno')}
+            </button>
             {isMaster && (
               <>
                 <select value={enemyId} onChange={(e) => setEnemyId(e.target.value)} style={{ width: 140 }}>
@@ -1961,7 +1999,7 @@ export default function CampaignTab() {
             </thead>
             <tbody>
               {combat.combatants.map((c, i) => (
-                <tr key={c.id} style={i === combat.turnIndex ? { background: 'var(--panel2)' } : undefined}>
+                <tr key={c.id} className={i === combat.turnIndex ? 'turn-active' : undefined} style={i === combat.turnIndex ? { background: 'var(--panel2)' } : undefined}>
                   <td><b>{c.initiative}</b></td>
                   <td>
                     {c.name} {c.isPlayer && <span className="tag">{t('cb.player', 'PG')}</span>}
@@ -2025,6 +2063,40 @@ export default function CampaignTab() {
           </div>
         </div>
       )}
+
+      <div className="card">
+        <h3>💬 {t('cg.chatTitle', 'Chat di campagna')}</h3>
+        <div className="chat-box">
+          {(campaign.chat ?? []).length === 0 ? (
+            <div className="muted">{t('cg.chatEmpty', 'Nessun messaggio: scrivi il primo!')}</div>
+          ) : (
+            (campaign.chat ?? []).slice(-60).map((m) => (
+              <div key={m.id} className="chat-msg">
+                <b>{m.fromId === you.id ? t('cg.you', 'tu') : m.from}</b>
+                <span className="muted"> {m.at.slice(11, 16)}</span>
+                <div style={{ whiteSpace: 'pre-wrap' }}>{m.text}</div>
+              </div>
+            ))
+          )}
+        </div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <input
+            value={chatText}
+            onChange={(e) => setChatText(e.target.value)}
+            onKeyDown={onEnter(() => { const txt = chatText.trim(); if (txt) { act({ kind: 'chat', text: txt }); setChatText(''); } })}
+            placeholder={t('cg.chatPh', 'Scrivi un messaggio alla campagna…')}
+            maxLength={500}
+            style={{ flex: 1 }}
+          />
+          <button
+            className="primary"
+            disabled={!chatText.trim()}
+            onClick={() => { const txt = chatText.trim(); if (txt) { act({ kind: 'chat', text: txt }); setChatText(''); } }}
+          >
+            {t('cg.chatSend', 'Invia')}
+          </button>
+        </div>
+      </div>
 
       {!combat && !isMaster && (
         <div className="card"><h3>{t('cg.waiting', '⏳ In attesa...')}</h3><div className="muted">{t('cg.waitingHint', 'Il master avvierà il combattimento. Assicurati di aver caricato la tua scheda.')}</div></div>
