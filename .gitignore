@@ -11,3 +11,9 @@ apps/web/public/version.json
 
 __pycache__/
 *.pyc
+
+# docker runtime: .env con i secret e le dir dati/certificati restano solo sul server
+docker/.env
+docker/data/
+docker/certs/
+docker/certbot-webroot/
