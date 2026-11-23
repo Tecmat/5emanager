@@ -857,6 +857,12 @@ export function createDndServer(port = PORT, host = HOST) {
 
 const isMain = process.argv[1] && import.meta.url.endsWith(process.argv[1].replace(/\\/g, '/').split('/').pop() ?? '');
 export function lanAddresses(port: number): string[] {
+  // In Docker networkInterfaces() vede solo l'IP del bridge (172.x): override da env.
+  //  DND5E_LAN_IPS="ip1:3001,ip2:3001" (lista completa host:port) oppure DND5E_LAN_IP="192.168.1.36"
+  const ipsEnv = (process.env.DND5E_LAN_IPS ?? '').trim();
+  if (ipsEnv) return ipsEnv.split(',').map((x) => x.trim()).filter(Boolean);
+  const ipEnv = (process.env.DND5E_LAN_IP ?? '').trim();
+  if (ipEnv) return [`${ipEnv}:${port}`];
   const out: string[] = [];
   for (const ifaces of Object.values(networkInterfaces())) {
     for (const i of ifaces ?? []) {
