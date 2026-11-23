@@ -115,6 +115,20 @@ docker compose -f docker-compose.external-nginx.yml up -d --build
   `X-Forwarded-Proto: https`, con `proxy_read_timeout` alto per le sessioni WS lunghe.
 - Se preferisci nginx dentro Docker (tutto in un container): resta `docker-compose.nginx.yml` (sezione 2).
 
+### Accesso anche dalla LAN (oltre a https dal tuo nginx)
+
+Di default il compose external pubblica `3001` solo su `127.0.0.1` (per il tuo nginx). Per far trovare
+il server anche alle app in LAN (scansione rete → `ws://192.168.1.36:3001`), avvia con l'override:
+
+```bash
+# in docker/.env deve esserci gia': DND5E_LAN_IP=192.168.1.36
+docker compose -f docker-compose.external-nginx.yml -f docker-compose.lan.yml up -d --build
+docker ps   # 5emanager-server mostrera' sia 127.0.0.1:3001 che 192.168.1.36:3001
+```
+
+Il bind è solo sull'IP LAN: la 3001 resta chiusa verso Internet (da remoto si passa solo da
+`https://<dominio>`). Se non ti serve l'accesso LAN diretto, non usare l'override.
+
 ## 3) Deploy remoto passo-passo (VPS + dominio + HTTPS con nginx)
 
 Prerequisiti: un dominio con **record A** che punta all'IP pubblico del server, porte **80 e 443 aperte**
