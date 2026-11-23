@@ -22,14 +22,16 @@ docker compose up -d     # builda 5emanager-server:latest dal sorgente locale: n
 
 ### Dalla cartella `docker/`
 
-C'è già un **`docker/.env` precompilato** committato: basta
+Il template **`docker/.env.example`** va copiato in `docker/.env` (che **non** è tracciato: i tuoi
+secret restano solo sul server, nessun conflitto ai `git pull`):
 
 ```bash
 cd docker
+cp .env.example .env        # in LAN puoi anche saltarlo: i default vanno bene
 docker compose up -d --build
 ```
 
-(se vuoi modificarlo: `PORT`, `DND5E_ADMIN_TOKEN`; il file `.env.example` resta come riferimento)
+(se vuoi modificarlo: `PORT`, `DND5E_ADMIN_TOKEN`)
 
 - Web app: `http://<ip-server>:3001`
 - Multiplayer (dalle app): `ws://<ip-server>:3001` — le app lo trovano da sole con "🔍 Scansiona rete"
@@ -40,7 +42,7 @@ docker compose up -d --build
 
 ```bash
 cd docker
-# .env è già precompilato: modifica solo DND5E_DOMAIN (es. dnd.tuosito.it) e DND5E_ADMIN_TOKEN
+# cp .env.example .env   # poi modifica solo DND5E_DOMAIN (es. dnd.tuosito.it) e DND5E_ADMIN_TOKEN
 mkdir -p certs data certbot-webroot
 # certificati (esempio con certbot/acme):
 #   certbot certonly --webroot -w docker/certbot-webroot -d dnd.tuosito.it
@@ -76,6 +78,7 @@ Prerequisiti: un dominio con **record A** che punta all'IP pubblico del server, 
 ```bash
 # 1) dominio e token
 cd /opt/5emanager/docker
+cp -n .env.example .env   # -n: non sovrascrivere se esiste già
 sed -i 's/^DND5E_DOMAIN=.*/DND5E_DOMAIN=dnd.tuosito.it/' .env
 sed -i 's/^DND5E_ADMIN_TOKEN=.*/DND5E_ADMIN_TOKEN=<token-lungo-casuale>/' .env
 # opzionale: primo admin bootstrap
