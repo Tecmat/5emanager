@@ -33,11 +33,15 @@
 <header>
   <h1>🛠 5e Manager — Admin server</h1>
   <span class="row">
+    <a href="/" class="tag" style="text-decoration:none" title="Torna all'app (le tue schede personali)">⬅️ App</a>
     <span id="status" class="tag">disconnesso</span>
     <button id="refresh">🔄 Aggiorna</button>
   </span>
 </header>
 <main>
+  <div class="card" id="setup-banner" style="display:none; border-color:var(--accent)">
+    <b>⚠️ Primo avvio:</b> non ci sono ancora account — <a href="/setup">vai a /setup</a> per creare il primo admin.
+  </div>
   <div class="card">
     <h2>Connessione</h2>
     <div class="row">
@@ -85,7 +89,7 @@
       <button id="newcamp">＋ Crea campagna</button>
     </div>
     <table>
-      <thead><tr><th>ID</th><th>Nome</th><th>Giocatori</th><th>Combattimento</th><th>Creata</th><th>Aggiornata</th><th></th></tr></thead>
+      <thead><tr><th>ID</th><th>Nome</th><th>Giocatori</th><th>Schede</th><th>Combattimento</th><th>Creata</th><th>Aggiornata</th><th></th></tr></thead>
       <tbody id="campaigns"></tbody>
     </table>
     <div class="muted" style="margin-top:6px">"Dettagli" mostra i giocatori collegati (con espelli) anche delle campagne in memoria.</div>
@@ -95,7 +99,7 @@
   <div class="card">
     <h2>Account</h2>
     <table>
-      <thead><tr><th>Username</th><th>Ruolo</th><th>Schede in libreria</th><th>Creato</th><th></th></tr></thead>
+      <thead><tr><th>Username</th><th>Ruolo</th><th>Schede</th><th>2FA</th><th>🔑</th><th>☁️ P2P</th><th>Login</th><th>Ultimo login</th><th>Creato</th><th></th></tr></thead>
       <tbody id="accounts"></tbody>
     </table>
     <div id="accounts-empty" class="muted">Nessun account registrato.</div>
@@ -145,7 +149,7 @@ function render(state) {
   if (state.server) {
     const s = state.server;
     const up = Math.floor(s.uptimeSec / 3600) + 'h ' + Math.floor((s.uptimeSec % 3600) / 60) + 'm';
-    si.innerHTML = 'Avviato: <b>' + fmtDate(s.startedAt) + '</b> · uptime <b>' + up + '</b> · campagne <b>' + s.campaigns + '</b> · account <b>' + s.accounts + '</b> · richieste in attesa <b>' + s.pending + '</b>' +
+    si.innerHTML = 'Avviato: <b>' + fmtDate(s.startedAt) + '</b> · uptime <b>' + up + '</b> · campagne <b>' + s.campaigns + '</b> · account <b>' + s.accounts + '</b> · schede in libreria <b>' + (s.characters ?? 0) + '</b> · campagne P2P salvate <b>' + (s.p2pCampaigns ?? 0) + '</b> · richieste in attesa <b>' + s.pending + '</b>' +
       (s.lan.length ? '<br>LAN: ' + s.lan.map((a) => '<code>' + esc(a) + '</code>').join(' ') : '');
   }
   // richieste in attesa
@@ -175,7 +179,7 @@ function render(state) {
   document.getElementById('campaigns-empty').style.display = state.campaigns.length ? 'none' : 'block';
   for (const c of state.campaigns) {
     const tr = document.createElement('tr');
-    tr.innerHTML = '<td><code>' + esc(c.id) + '</code></td><td>' + esc(c.name) + '</td><td>' + c.players + '</td>' +
+    tr.innerHTML = '<td><code>' + esc(c.id) + '</code></td><td>' + esc(c.name) + '</td><td>' + c.players + '</td><td>' + (c.characters ?? 0) + '</td>' +
       '<td>' + (c.inCombat ? '⚔️ in corso' : '—') + '</td><td class="muted">' + fmtDate(c.createdAt) + '</td><td class="muted">' + fmtDate(c.updatedAt) + '</td>';
     const td = document.createElement('td');
     td.className = 'row';
@@ -209,7 +213,9 @@ function render(state) {
   for (const a of state.accounts) {
     const tr = document.createElement('tr');
     const roleTag = a.role === 'admin' ? '<span class="tag" style="border-color:var(--accent);color:var(--accent)">👑 admin</span>' : '<span class="tag">user</span>';
-    tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + roleTag + '</td><td>' + a.characters + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
+    tr.innerHTML = '<td><b>' + esc(a.username) + '</b></td><td>' + roleTag + '</td><td>' + a.characters + '</td>' +
+      '<td>' + (a.totp ? '🔐 on' : '—') + '</td><td>' + (a.passkeys || 0) + '</td><td>' + (a.p2p || 0) + '</td>' +
+      '<td>' + (a.loginCount ?? 0) + '</td><td class="muted">' + (a.lastLoginAt ? fmtDate(a.lastLoginAt) : '—') + '</td><td class="muted">' + fmtDate(a.createdAt) + '</td>';
     const td = document.createElement('td');
     td.className = 'row';
     const roleBtn = document.createElement('button');
@@ -230,6 +236,20 @@ function render(state) {
     const sheets = document.createElement('button');
     sheets.textContent = '📄 Schede';
     sheets.onclick = () => ws.send(JSON.stringify({ t: 'adminAccountDetail', username: a.username }));
+    if (a.totp) {
+      const tfa = document.createElement('button');
+      tfa.textContent = '🔓 2FA off';
+      tfa.title = 'Disattiva la 2FA di questo utente (admin)';
+      tfa.onclick = () => { if (confirm('Disattivare la 2FA di "' + a.username + '"?')) ws.send(JSON.stringify({ t: 'adminDisableTotp', username: a.username })); };
+      td.appendChild(tfa);
+    }
+    if (a.passkeys > 0) {
+      const pk = document.createElement('button');
+      pk.textContent = '🔑❌ passkey';
+      pk.title = 'Rimuovi tutte le passkey di questo utente (admin)';
+      pk.onclick = () => { if (confirm('Rimuovere tutte le passkey (' + a.passkeys + ') di "' + a.username + '"?')) ws.send(JSON.stringify({ t: 'adminClearPasskeys', username: a.username })); };
+      td.appendChild(pk);
+    }
     const btn = document.createElement('button');
     btn.className = 'danger';
     btn.textContent = 'Elimina';
@@ -356,6 +376,9 @@ document.getElementById('newcamp').onclick = () => {
   document.getElementById('newcamp-name').value = '';
   document.getElementById('newcamp-pw').value = '';
 };
+fetch('/api/setup').then((r) => r.json()).then((j) => {
+  if (j.setupRequired) document.getElementById('setup-banner').style.display = 'block';
+}).catch(() => {});
 connect();
 </script>
 </body>

@@ -135,6 +135,20 @@ Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`,
   uniti al set SRD nel registry del server — la campagna può avere il "suo set di regole, classi e razze"
 - Le house-rules della campagna sono nel modello (`campaign.houseRules`)
 
+## Setup iniziale (primo avvio)
+
+- In **Docker** l'entrypoint (`docker/entrypoint.sh`) genera `DND5E_ADMIN_TOKEN` se mancante:
+  lo stampa nei log del container e lo salva in `/data/admin-token.txt` (chmod 600).
+  ```bash
+  docker compose -f docker-compose.external-nginx.yml logs 5emanager | grep -A3 'Token admin'
+  # oppure: docker exec 5emanager-server cat /data/admin-token.txt
+  ```
+- Con **zero account**, `/setup` (pagina) + `POST /api/setup` creano il primo account (sempre
+  **admin**). `/api/setup` è abilitato solo finché non esistono account; se `DND5E_ADMIN_TOKEN`
+  è impostato richiede l'header `x-admin-token` (niente race su server pubblici appena esposti).
+  Il pannello `/admin` mostra un banner verso `/setup` finché non c'è nessun account.
+- Il token admin protegge anche `POST /api/update/apply` (self-update web) e i messaggi `adminAuth`.
+
 ## Pannello admin del server (`/admin`)
 
 Il server serve una pagina di amministrazione su `http://<server>:3001/admin` (funziona anche
@@ -143,6 +157,12 @@ eliminazione. I comandi admin viaggiano sullo stesso WebSocket (`adminAuth`/`adm
 `adminDeleteCampaign`/`adminDeleteAccount`). Se la variabile d'ambiente
 **`DND5E_ADMIN_TOKEN`** è impostata, `adminAuth` deve contenere quel token; se non è
 impostata l'accesso è libero (ok per LAN — vedi sotto).
+
+Il pannello mostra ora anche **statistiche**: per account numero login e ultimo login, 2FA attiva,
+passkey registrate, campagne P2P salvate, schede in libreria; per campagna numero di schede caricate;
+totali del server (schede, campagne P2P). Azioni admin extra: **2FA off** e **rimuovi passkey** per utente.
+Dall'app, chi è loggato con ruolo **admin** vede il pulsante 🛡️ "Pannello admin" ( apre `/admin` in una
+nuova scheda); dal pannello il link "⬅️ App" torna all'app con le proprie schede. `auth` ora include `role`.
 
 ## Pannello master nell'app
 

@@ -50,6 +50,8 @@ export interface CampaignSummary {
   name: string;
   players: number;
   inCombat: boolean;
+  /** numero di personaggi caricati nella campagna (statistica pannello admin) */
+  characters: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -62,7 +64,7 @@ export function listCampaignsDetailed(): CampaignSummary[] {
       try {
         const c = loadCampaign(f.replace(/\.json$/, ''));
         return c && typeof c.id === 'string'
-          ? { id: c.id, name: c.name, players: c.players.length, inCombat: !!c.combat, createdAt: c.createdAt, updatedAt: c.updatedAt }
+          ? { id: c.id, name: c.name, players: c.players.length, inCombat: !!c.combat, characters: Object.keys(c.characters ?? {}).length, createdAt: c.createdAt, updatedAt: c.updatedAt }
           : null;
       } catch {
         return null;

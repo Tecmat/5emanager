@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5e Manager — Setup iniziale</title>
+<style>
+  :root { --bg:#14161c; --panel:#1d2029; --panel2:#262a36; --border:#333947; --text:#e8e6e0; --muted:#9a97a3; --accent:#e0b34c; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 system-ui, sans-serif; }
+  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:18px; max-width:440px; margin:60px auto; }
+  h1 { font-size:17px; color:var(--accent); margin:0 0 6px; }
+  input, button { font:inherit; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:7px 10px; width:100%; margin-top:8px; }
+  button.primary { background:var(--accent); color:#14161c; font-weight:600; border-color:var(--accent); cursor:pointer; }
+  .muted { color:var(--muted); font-size:12px; }
+  .error { color:#e08080; font-size:12px; margin-top:8px; white-space:pre-line; }
+  .ok { color:#7fc97f; font-size:13px; margin-top:10px; }
+  a { color:var(--accent); }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🎲 5e Manager — Setup iniziale</h1>
+  <div class="muted" id="desc">Crea il primo account <b>admin</b> del server. Poi apri il <a href="/admin">pannello admin</a> e l'<a href="/">app</a>.</div>
+  <div id="token-row" style="display:none">
+    <div class="muted" style="margin-top:10px">Il server ha un <code>DND5E_ADMIN_TOKEN</code> (generato da Docker nei log / in <code>admin-token.txt</code>): inseriscilo per autorizzare il setup.</div>
+    <input id="token" type="password" placeholder="Token admin (x-admin-token)">
+  </div>
+  <input id="username" placeholder="Username admin (3-24: lettere, numeri, _ -)" autocomplete="username">
+  <input id="password" type="password" placeholder="Password (min 4 caratteri)" autocomplete="new-password">
+  <button id="go" class="primary">Crea account admin</button>
+  <div id="msg"></div>
+  <div class="muted" style="margin-top:10px">Già configurato? Vai al <a href="/">app</a> o al <a href="/admin">pannello admin</a>.</div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+async function init() {
+  try {
+    const r = await fetch('/api/setup');
+    const j = await r.json();
+    if (j.tokenRequired) $('token-row').style.display = 'block';
+    if (!j.setupRequired) {
+      $('desc').innerHTML = 'Setup già completato: esistono già account. Vai al <a href="/">app</a> o al <a href="/admin">pannello admin</a>.';
+      $('go').disabled = true;
+    }
+  } catch { /* ignora */ }
+}
+$('go').onclick = async () => {
+  $('msg').innerHTML = '';
+  const body = { username: $('username').value.trim(), password: $('password').value };
+  const headers = { 'content-type': 'application/json' };
+  const tok = $('token').value;
+  if (tok) headers['x-admin-token'] = tok;
+  try {
+    const r = await fetch('/api/setup', { method: 'POST', headers, body: JSON.stringify(body) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    $('msg').innerHTML = '<div class="ok">✅ Account admin <b>' + j.username + '</b> creato. Vai al <a href="/admin">pannello admin</a> o all\'<a href="/">app</a> (login con queste credenziali).</div>';
+    $('go').disabled = true;
+    $('username').disabled = true;
+    $('password').disabled = true;
+  } catch (e) {
+    $('msg').innerHTML = '<div class="error">❌ ' + String(e.message).replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</div>';
+  }
+};
+init();
+</script>
+</body>
+</html>

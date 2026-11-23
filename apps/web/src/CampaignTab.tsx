@@ -1184,6 +1184,18 @@ export default function CampaignTab() {
               <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
               <div className="row" style={{ marginTop: 6 }}>
                 <button onClick={logout}>{t('cg.logout', 'Esci dall\'account')}</button>
+                {auth.role === 'admin' && (
+                  <a
+                    className="tag"
+                    href="/admin"
+                    target="_blank"
+                    rel="noreferrer"
+                    style={{ textDecoration: 'none', padding: '4px 10px', cursor: 'pointer', borderColor: 'var(--accent)', color: 'var(--accent)' }}
+                    title={t('cg.adminPanelTitle', 'Apri il pannello admin del server in una nuova scheda (da lì torna qui con il link “App”)')}
+                  >
+                    🛡️ {t('cg.adminPanel', 'Pannello admin')}
+                  </a>
+                )}
                 {auth.totpEnabled ? (
                   <>
                     <span className="ok">🔐 {t('cg.2faOn', '2FA attiva')}</span>

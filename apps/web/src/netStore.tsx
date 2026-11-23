@@ -14,6 +14,8 @@ export type ConnState =
 export interface AuthState {
   token: string;
   username: string;
+  /** ruolo dell'account sul server (admin vede il pulsante per il pannello /admin) */
+  role: 'admin' | 'user';
   characters: Character[];
   /** campagne P2P salvate sull'account e sincronizzate col server */
   savedCampaigns: SavedCampaignSnapshot[];
@@ -204,7 +206,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'campaigns') {
       setCampaignList(m.list);
     } else if (m.t === 'auth') {
-      setAuth({ token: m.token, username: m.username, characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
+      setAuth({ token: m.token, username: m.username, role: m.role ?? 'user', characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
       setLastUsername(m.username);
       setTotpPending(null);
     } else if (m.t === 'totpRequired') {
