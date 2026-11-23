@@ -17,6 +17,7 @@ function savedCampaign(): Campaign {
     groupInventory: [{ id: 'i1', name: 'Pozione', quantity: 2 } as never],
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 10, pp: 0 },
     notes: 'note di sessione',
+    chat: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
   };
@@ -72,6 +73,7 @@ describe('kickPlayer', () => {
     groupInventory: [],
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
+    chat: [],
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
@@ -101,5 +103,61 @@ describe('migrateCampaign', () => {
     expect(c.groupCurrency.gp).toBe(0);
     expect(c.notes).toBe('');
     expect(c.passwordHash).toBe('h');
+  });
+});
+
+describe('chat di campagna', () => {
+  const reg = createRegistry();
+  const camp = (): Campaign => ({
+    id: 'c1',
+    name: 'Test',
+    passwordHash: 'x',
+    houseRules: { ...DEFAULT_HOUSE_RULES },
+    custom: {},
+    players: [
+      { id: 'm', name: 'Master', role: 'master' },
+      { id: 'p1', name: 'Eroe', role: 'player' },
+    ],
+    characters: {},
+    combat: null,
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
+    chat: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('aggiunge messaggi con autore e timestamp,拒绝 vuoti e sanifica', () => {
+    let c = camp();
+    [c] = applyCampaignAction(c, 'p1', reg, { kind: 'chat', text: '  ciao a tutti!  ' });
+    expect(c.chat).toHaveLength(1);
+    expect(c.chat[0]).toMatchObject({ fromId: 'p1', from: 'Eroe', text: 'ciao a tutti!' });
+    expect(typeof c.chat[0].at).toBe('string');
+
+    const [c2, err] = applyCampaignAction(c, 'p1', reg, { kind: 'chat', text: '   ' });
+    expect(err).toMatch(/vuoto/);
+    expect(c2.chat).toHaveLength(1);
+
+    const long = 'x'.repeat(600);
+    const [c3] = applyCampaignAction(c, 'p1', reg, { kind: 'chat', text: long });
+    expect(c3.chat[1].text).toHaveLength(500);
+  });
+
+  it('tiene solo gli ultimi 200 messaggi', () => {
+    let c = camp();
+    for (let i = 0; i < 205; i++) {
+      [c] = applyCampaignAction(c, 'p1', reg, { kind: 'chat', text: 'm' + i });
+    }
+    expect(c.chat).toHaveLength(200);
+    expect(c.chat[0].text).toBe('m5');
+    expect(c.chat[199].text).toBe('m204');
+  });
+
+  it('migrateCampaign riempie chat mancante', () => {
+    const old = camp() as Partial<Campaign>;
+    delete old.chat;
+    const m = migrateCampaign(old as Campaign);
+    expect(m.chat).toEqual([]);
   });
 });

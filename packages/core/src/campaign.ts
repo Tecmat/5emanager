@@ -32,6 +32,15 @@ export interface PlayerInfo {
   characterId?: string;
 }
 
+/** messaggio della chat di campagna */
+export interface ChatMessage {
+  id: string;
+  fromId: string;
+  from: string;
+  text: string;
+  at: string;
+}
+
 export interface Campaign {
   id: string;
   name: string;
@@ -48,6 +57,8 @@ export interface Campaign {
   groupCurrency: Currency;
   /** note di sessione condivise (visibili a tutti, modificabili dal master) */
   notes: string;
+  /** chat di campagna (ultimi messaggi, cap 200) */
+  chat: ChatMessage[];
   createdAt: string;
   updatedAt: string;
 }
@@ -70,6 +81,7 @@ export function migrateCampaign(c: Campaign): Campaign {
     groupInventory: c.groupInventory ?? [],
     groupCurrency: c.groupCurrency ?? { ...ZERO_CURRENCY },
     notes: c.notes ?? '',
+    chat: c.chat ?? [],
   };
 }
 
@@ -131,6 +143,7 @@ export type ClientAction =
   | { kind: 'deleteCampaign' }
   | { kind: 'masterAddXpAll'; amount: number }
   | { kind: 'groupAddItem'; item: { name: string; quantity?: number; weight?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean; spellId?: string } }
+  | { kind: 'chat'; text: string }
   | { kind: 'groupRemoveItem'; itemId: string }
   | { kind: 'groupGiveItem'; itemId: string; playerId: string }
   | { kind: 'groupAddCurrency'; amount: Partial<Currency> }
@@ -156,6 +169,14 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
       c.characters[playerId] = action.character;
       player.characterId = action.character.id;
       return [c];
+
+    case 'chat': {
+      const text = String(action.text ?? '').replace(/[\u0000-\u001f\u007f]/g, ' ').trim().slice(0, 500);
+      if (!text) return [c, 'Messaggio vuoto'];
+      const msg: ChatMessage = { id: uid('msg'), fromId: playerId, from: player.name, text, at: new Date().toISOString() };
+      c.chat = [...(c.chat ?? []), msg].slice(-200);
+      return [c];
+    }
 
     case 'leave':
       c.players = c.players.filter((x) => x.id !== playerId);
