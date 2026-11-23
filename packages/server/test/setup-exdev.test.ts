@@ -151,3 +151,17 @@ describe('setup iniziale + role admin + statistiche login', () => {
     ws.close();
   });
 });
+
+describe('lanAddresses: override da env (Docker bridge)', () => {
+  it('DND5E_LAN_IP vince sull auto-rilevamento; DND5E_LAN_IPS lista completa', async () => {
+    const mod = await import('../src/index.js');
+    process.env.DND5E_LAN_IP = '192.168.1.36';
+    expect(mod.lanAddresses(3001)).toEqual(['192.168.1.36:3001']);
+    delete process.env.DND5E_LAN_IP;
+    process.env.DND5E_LAN_IPS = '10.0.0.5:3001, 10.0.0.6:3001';
+    expect(mod.lanAddresses(3001)).toEqual(['10.0.0.5:3001', '10.0.0.6:3001']);
+    delete process.env.DND5E_LAN_IPS;
+    // senza env: auto (nel sandbox puo' essere vuoto o con IP, non assertiamo il valore)
+    expect(Array.isArray(mod.lanAddresses(3001))).toBe(true);
+  });
+});

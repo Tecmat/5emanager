@@ -28,6 +28,8 @@ services:
       DND5E_DATA_DIR: /data
       DND5E_STATIC_DIR: /app/apps/web/dist
       DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # IP LAN reale dell'host (in Docker il bridge 172.x non serve): es. DND5E_LAN_IP=192.168.1.36
+      DND5E_LAN_IP: ${DND5E_LAN_IP:-}
       # passkey WebAuthn (HTTPS terminated dal tuo nginx): dominio e origin pubblici
       DND5E_RP_ID: ${DND5E_DOMAIN:?imposta DND5E_DOMAIN nel .env, es. dnd.tuosito.it}
       DND5E_RP_ORIGIN: https://${DND5E_DOMAIN:?imposta DND5E_DOMAIN nel .env}
