@@ -7,7 +7,8 @@
 #   PORT (default 3001), HOST (default 0.0.0.0)
 #   DND5E_DATA_DIR    -> /data (volume persistente: campagne, account, schede in libreria)
 #   DND5E_STATIC_DIR  -> /app/apps/web/dist (web app buildata dentro l'immagine)
-#   DND5E_ADMIN_TOKEN -> protegge il pannello /admin (consigliato in produzione)
+#   DND5E_ADMIN_TOKEN -> protegge /admin, /api/setup e self-update. Se MANCA, l'entrypoint
+#                        ne genera uno sicuro (log + /data/admin-token.txt, chmod 600)
 #   GITHUB_TOKEN      -> opzionale, solo se il repo GitHub fosse privato (check update)
 
 FROM node:22-alpine AS build
@@ -27,6 +28,8 @@ FROM node:22-alpine
 ENV NODE_ENV=production
 WORKDIR /app
 COPY --from=build /app /app
+COPY docker/entrypoint.sh /app/docker/entrypoint.sh
+RUN chmod +x /app/docker/entrypoint.sh
 ENV PORT=3001
 ENV HOST=0.0.0.0
 ENV DND5E_STATIC_DIR=/app/apps/web/dist
@@ -35,4 +38,5 @@ EXPOSE 3001
 VOLUME ["/data"]
 # /api/info risponde {app:"5emanager",...}: usato anche dalla scansione LAN delle app
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s CMD wget -qO- http://127.0.0.1:${PORT:-3001}/api/info >/dev/null 2>&1 || exit 1
-CMD ["npx", "tsx", "packages/server/src/index.ts"]
+# entrypoint: genera DND5E_ADMIN_TOKEN se mancante (setup iniziale), poi avvia il server
+CMD ["sh", "/app/docker/entrypoint.sh"]

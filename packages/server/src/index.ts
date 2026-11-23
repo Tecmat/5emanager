@@ -29,6 +29,8 @@ import {
   accountSavedP2PCampaigns,
   accountTotpEnabled,
   addAccountPasskey,
+  adminClearPasskeys,
+  adminDisableTotp,
   approveAccount,
   consumeBackupCode,
   createSession,
@@ -44,6 +46,7 @@ import {
   listPending,
   loadAccountsFile,
   loginAccount,
+  noteLogin,
   removeAccountPasskey,
   requestAccount,
   resetAccountPassword,
@@ -67,6 +70,7 @@ import {
 } from './passkeys.js';
 import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
+import { handleSetupApi, serveSetupPage } from './setup-api.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -88,11 +92,26 @@ const MIME: Record<string, string> = {
 };
 
 function serveStatic(req: IncomingMessage, res: ServerResponse): void {
+  serveStaticNext(req, res);
+}
+
+function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
   // check-update lato server (funziona anche con repo privato se GITHUB_TOKEN è impostato)
   // /api/update/apply aggiorna la web app servita da questo server (POST, niente terminale)
   if (rawPath === '/api/update' || rawPath === '/api/update/asset' || rawPath === '/api/update/apply') {
     void handleUpdateApi(req, res);
+    return;
+  }
+  if (rawPath === '/api/setup') {
+    void handleSetupApi(req, res).then((handled) => { if (!handled) serveStaticNext(req, res); });
+    return;
+  }
+  if (rawPath === '/setup' || rawPath === '/setup.html') {
+    if (!serveSetupPage(res)) {
+      res.writeHead(404);
+      res.end('setup page non trovata');
+    }
     return;
   }
   if (rawPath === '/admin' || rawPath === '/admin.html') {
@@ -241,25 +260,46 @@ function totpNoteAttempt(username: string): void {
   totpAttempts.set(username, arr);
 }
 
+/** manda il messaggio auth completo (con ruolo) dopo un login riuscito */
+function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: boolean): void {
+  send(ws, {
+    t: 'auth',
+    token,
+    username,
+    role: accountRole(username) ?? 'user',
+    characters: accountCharacters(username),
+    savedCampaigns: accountSavedP2PCampaigns(username),
+    totpEnabled,
+  });
+}
+
 function sendAdminState(ws: WebSocket): void {
   const accounts = Object.values(loadAccountsFile().accounts);
   const pending = listPending();
+  const campaigns = listCampaignsDetailed();
   send(ws, {
     t: 'adminState',
-    campaigns: listCampaignsDetailed(),
+    campaigns,
     accounts: accounts.map((a) => ({
       username: a.username,
       role: accountRole(a.username) ?? 'user',
       characters: Object.keys(a.characters).length,
       createdAt: a.createdAt,
+      lastLoginAt: a.lastLoginAt,
+      loginCount: a.loginCount ?? 0,
+      totp: !!a.totp?.enabled,
+      passkeys: a.passkeys?.length ?? 0,
+      p2p: Object.keys(a.savedP2PCampaigns ?? {}).length,
     })),
     pending: pending.map((p) => ({ username: p.username, requestedAt: p.requestedAt })),
     server: {
       startedAt: STARTED_AT.toISOString(),
       uptimeSec: Math.floor((Date.now() - STARTED_AT.getTime()) / 1000),
-      campaigns: listCampaignsDetailed().length,
+      campaigns: campaigns.length,
       accounts: accounts.length,
       pending: pending.length,
+      characters: accounts.reduce((n, a) => n + Object.keys(a.characters).length, 0),
+      p2pCampaigns: accounts.reduce((n, a) => n + Object.keys(a.savedP2PCampaigns ?? {}).length, 0),
       lan: lanAddresses(PORT),
     },
   });
@@ -377,7 +417,8 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       conn.token = createSession(acc.username);
       // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
       if (accountRole(acc.username) === 'admin') conn.admin = true;
-      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username), totpEnabled: false });
+      noteLogin(acc.username);
+      sendAuth(conn.ws, conn.token, acc.username, false);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -401,7 +442,8 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       }
       conn.token = createSession(acc.username);
       if (accountRole(acc.username) === 'admin') conn.admin = true;
-      send(conn.ws, { t: 'auth', token: conn.token, username: acc.username, characters: accountCharacters(acc.username), savedCampaigns: accountSavedP2PCampaigns(acc.username), totpEnabled: true });
+      noteLogin(acc.username);
+      sendAuth(conn.ws, conn.token, acc.username, true);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -425,12 +467,13 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
           send(conn.ws, { t: 'error', message: 'Codice non valido (±30 s di tolleranza): controlla l\'ora del telefono' });
           return;
         }
-        send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: true });
+        noteLogin(username);
+        sendAuth(conn.ws, token, username, true);
         send(conn.ws, { t: 'notice', message: '🔐 2FA attivata' });
       } else {
         loginAccount(username, msg.password); // verifica password prima di disattivare
         disableAccountTotp(username);
-        send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: false });
+        sendAuth(conn.ws, token, username, false);
         send(conn.ws, { t: 'notice', message: '2FA disattivata' });
       }
     } catch (e) {
@@ -528,14 +571,8 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
           conn.passkeyChallenge = undefined;
           conn.token = createSession(owner.username);
           if (accountRole(owner.username) === 'admin') conn.admin = true;
-          send(conn.ws, {
-            t: 'auth',
-            token: conn.token,
-            username: owner.username,
-            characters: accountCharacters(owner.username),
-            savedCampaigns: accountSavedP2PCampaigns(owner.username),
-            totpEnabled: accountTotpEnabled(owner.username),
-          });
+          noteLogin(owner.username);
+          sendAuth(conn.ws, conn.token, owner.username, accountTotpEnabled(owner.username));
         } catch (e) {
           totpNoteAttempt(key);
           throw e;
@@ -579,7 +616,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminResetPassword' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -605,6 +642,8 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
       if (msg.t === 'adminSetRole') setAccountRole(msg.username, msg.role === 'admin' ? 'admin' : 'user');
       if (msg.t === 'adminResetPassword') resetAccountPassword(msg.username, msg.password);
+      if (msg.t === 'adminDisableTotp') adminDisableTotp(msg.username);
+      if (msg.t === 'adminClearPasskeys') adminClearPasskeys(msg.username);
       if (msg.t === 'adminCampaignDetail') {
         const c = campaigns.get(msg.id) ?? loadCampaign(msg.id);
         if (!c) throw new Error('Campagna non trovata: ' + msg.id);
@@ -717,7 +756,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         send(conn.ws, { t: 'error', message: (e as Error).message });
         return;
       }
-      send(conn.ws, { t: 'auth', token, username, characters: accountCharacters(username), savedCampaigns: accountSavedP2PCampaigns(username), totpEnabled: accountTotpEnabled(username) });
+      sendAuth(conn.ws, token, username, accountTotpEnabled(username));
       return;
     }
     if (!conn.campaignId || !conn.playerId) {

@@ -37,6 +37,8 @@ export type ClientMessage =
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
   | { t: 'adminSetRole'; username: string; role: 'admin' | 'user' }
   | { t: 'adminResetPassword'; username: string; password: string }
+  | { t: 'adminDisableTotp'; username: string }
+  | { t: 'adminClearPasskeys'; username: string }
   | { t: 'adminCampaignDetail'; id: string }
   | { t: 'adminKickPlayer'; campaignId: string; playerId: string }
   | { t: 'adminBroadcast'; message: string }
@@ -57,7 +59,7 @@ export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
   | { t: 'campaigns'; list: { id: string; name: string; players: number }[] }
   | { t: 'state'; campaign: Campaign }
-  | { t: 'auth'; token: string; username: string; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean }
+  | { t: 'auth'; token: string; username: string; role: 'admin' | 'user'; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean }
   | { t: 'totpRequired'; username: string }
   | { t: 'totpSetup'; secret: string; otpauthUrl: string; backupCodes: string[] }
   | { t: 'passkeyRegisterOptions'; options: unknown }
@@ -66,10 +68,10 @@ export type ServerMessage =
   | { t: 'pong'; id: string; serverTime: number }
   | {
       t: 'adminState';
-      campaigns: { id: string; name: string; players: number; inCombat: boolean; createdAt: string; updatedAt: string }[];
-      accounts: { username: string; role: 'admin' | 'user'; characters: number; createdAt: string }[];
+      campaigns: { id: string; name: string; players: number; inCombat: boolean; characters: number; createdAt: string; updatedAt: string }[];
+      accounts: { username: string; role: 'admin' | 'user'; characters: number; createdAt: string; lastLoginAt?: string; loginCount?: number; totp: boolean; passkeys: number; p2p: number }[];
       pending: { username: string; requestedAt: string }[];
-      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; lan: string[] };
+      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[] };
     }
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
   | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }

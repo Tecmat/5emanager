@@ -61,6 +61,9 @@ export interface Account {
   totp: TotpState | null;
   /** passkey WebAuthn registrate (login passwordless) */
   passkeys: StoredPasskey[];
+  /** statistiche per il pannello admin */
+  lastLoginAt?: string;
+  loginCount?: number;
 }
 
 export interface PendingRequest {
@@ -428,6 +431,74 @@ export function createSession(username: string): string {
   const token = randomUUID();
   sessions.set(token, username);
   return token;
+}
+
+/** registra un login riuscito (statistiche pannello admin) */
+export function noteLogin(username: string): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) return;
+  acc.loginCount = (acc.loginCount ?? 0) + 1;
+  acc.lastLoginAt = new Date().toISOString();
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+}
+
+// --- setup iniziale (primo admin) ---
+
+/** true se non esiste ancora nessun account: il server mostra /setup per crearne uno */
+export function setupRequired(): boolean {
+  const f = loadAccountsFile();
+  return Object.keys(f.accounts).length === 0 && Object.keys(f.pending).length === 0;
+}
+
+/** crea il primo account (sempre admin): consentito SOLO mentre non esistono account */
+export function createFirstAdmin(username: string, password: string): Account {
+  const f = loadAccountsFile();
+  if (Object.keys(f.accounts).length > 0 || Object.keys(f.pending).length > 0) {
+    throw new Error('Setup gia completato: esistono gia account (usa /admin per gestirli)');
+  }
+  const uname = username.trim();
+  if (!USERNAME_RE.test(uname)) throw new Error('Username non valido (3-24 caratteri: lettere, numeri, _ e -)');
+  if (!password || password.length < 4) throw new Error('Password troppo corta (min 4 caratteri)');
+  const acc: Account = {
+    username: uname,
+    passwordHash: hashPassword(password),
+    characters: {},
+    createdAt: new Date().toISOString(),
+    role: 'admin',
+    savedP2PCampaigns: {},
+    totp: null,
+    passkeys: [],
+    loginCount: 0,
+  };
+  f.accounts[uname.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return acc;
+}
+
+// --- azioni admin sugli account (pannello /admin) ---
+
+/** l'admin fuerza la disattivazione della 2FA di un utente */
+export function adminDisableTotp(username: string): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato: ' + username);
+  acc.totp = null;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+}
+
+/** l'admin rimuove tutte le passkey di un utente */
+export function adminClearPasskeys(username: string): number {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato: ' + username);
+  const n = acc.passkeys?.length ?? 0;
+  acc.passkeys = [];
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return n;
 }
 
 export function sessionUsername(token: string): string | undefined {

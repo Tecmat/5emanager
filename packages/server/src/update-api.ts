@@ -1,7 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { inflateRawSync } from 'node:zlib';
-import { existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { hostname } from 'node:os';
 
@@ -93,6 +93,24 @@ async function proxyAsset(name: string, res: ServerResponse): Promise<void> {
   Readable.fromWeb(r.body as import('node:stream/web').ReadableStream).pipe(res);
 }
 
+/**
+ * sposta una directory src -> dst. Su overlayfs (immagini Docker) il rename di una directory che
+ * vive nei layer inferiori dell'immagine fallisce con EXDEV ("cross-device link not permitted"):
+ * in quel caso si fa copia ricorsiva + rimozione (il backup di dist/ deve funzionare sempre).
+ */
+export function moveDir(src: string, dst: string, renameFn: typeof renameSync = renameSync): void {
+  try {
+    renameFn(src, dst);
+    return;
+  } catch (e) {
+    const code = (e as NodeJS.ErrnoException).code;
+    if (code !== 'EXDEV' && code !== 'EBUSY' && code !== 'EPERM' && code !== 'ENOTEMPTY') throw e;
+  }
+  rmSync(dst, { recursive: true, force: true });
+  cpSync(src, dst, { recursive: true });
+  rmSync(src, { recursive: true, force: true });
+}
+
 /** unzip minimale (entry stored + deflate), con guard contro path traversal */
 export function unzipTo(buf: Buffer, destDir: string): void {
   let eocd = -1;
@@ -157,7 +175,7 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
     const bak = STATIC_DIR + '.bak';
     if (existsSync(STATIC_DIR)) {
       rmSync(bak, { recursive: true, force: true });
-      renameSync(STATIC_DIR, bak);
+      moveDir(STATIC_DIR, bak); // EXDEV-safe: su Docker overlayfs copia invece di rename
     }
     try {
       mkdirSync(STATIC_DIR, { recursive: true });
@@ -165,7 +183,7 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
       if (!existsSync(join(STATIC_DIR, 'index.html'))) throw new Error('lo zip non contiene index.html');
     } catch (e) {
       rmSync(STATIC_DIR, { recursive: true, force: true });
-      if (existsSync(bak)) renameSync(bak, STATIC_DIR); // ripristina la vecchia build
+      if (existsSync(bak)) moveDir(bak, STATIC_DIR); // ripristina la vecchia build
       throw e;
     }
     return void json(200, { ok: true, version: rel.tag });

@@ -160,7 +160,7 @@ docker compose -f docker-compose.nginx.yml ps
 | `PORT` / `HOST` | `3001` / `0.0.0.0` | porta e bind del server |
 | `DND5E_DATA_DIR` | `/data` | dove salva campagne, account e schede (volume persistente) |
 | `DND5E_STATIC_DIR` | `/app/apps/web/dist` | web app servita (buildata dentro l'immagine) |
-| `DND5E_ADMIN_TOKEN` | *(vuoto)* | token richiesto dal pannello `/admin` e da `POST /api/update/apply` — **impostalo in produzione** |
+| `DND5E_ADMIN_TOKEN` | *(vuoto)* | token per `/admin`, `/api/setup` e `POST /api/update/apply`. Se mancante, l'entrypoint Docker ne genera uno (log + `/data/admin-token.txt`) — **impostalo o prendilo dai log in produzione** |
 | `GITHUB_TOKEN` | *(vuoto)* | solo se il repo GitHub fosse privato: sblocca check-update e self-update |
 | `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https (impostati in automatico dal compose nginx dal `DND5E_DOMAIN`) |
 | `DND5E_ADMIN_USER` | *(vuoto)* | username che diventa admin a prescindere dal file (bootstrap primo admin) |
