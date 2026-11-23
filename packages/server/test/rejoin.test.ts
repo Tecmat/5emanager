@@ -79,7 +79,7 @@ function makeChar(name: string): Character {
     abilityScores: { str: 16, dex: 14, con: 15, int: 10, wis: 12, cha: 8 },
   }, reg);
   if (!res.character) throw new Error(res.errors.join(','));
-  return addItem(res.character, { name: 'Spada lunga', kind: 'weapon' }).character;
+  return addItem(res.character, { name: 'Spada lunga', kind: 'weapon', quantity: 1, weight: 3, equipped: true, magic: false, attuned: false }).character;
 }
 
 describe('riconnessione automatica (token di rientro)', () => {

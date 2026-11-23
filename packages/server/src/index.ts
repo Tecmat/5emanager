@@ -16,6 +16,7 @@ import {
   createCampaignAdmin,
   deleteCampaign,
   ensureDataDir,
+  hashPassword,
   listCampaigns,
   listCampaignsDetailed,
   loadCampaign,
@@ -28,6 +29,14 @@ import {
   accountRole,
   accountSavedP2PCampaigns,
   accountTotpEnabled,
+  ADMIN_USER,
+  USERNAME_RE,
+  createRememberToken,
+  deleteSession,
+  loginByRememberToken,
+  registrationMode,
+  setRegistrationMode,
+  type Account,
   addAccountPasskey,
   adminClearPasskeys,
   adminDisableTotp,
@@ -50,6 +59,7 @@ import {
   removeAccountPasskey,
   requestAccount,
   resetAccountPassword,
+  saveAccountsFile,
   rejectAccount,
   saveAccountCharacter,
   saveAccountP2PCampaign,
@@ -74,6 +84,58 @@ import { handleSetupApi, serveSetupPage } from './setup-api.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
+/**
+ * DND5E_REQUIRE_AUTH=true: la webapp servita da questo server (es. Docker) richiede un account:
+ * senza cookie di sessione valido si serve solo la pagina di login, e sui WS create/join/action
+ * serve la sessione. Le app native (Tauri/Capacitor) non passano da qui: restano indipendenti.
+ */
+const REQUIRE_AUTH = (process.env.DND5E_REQUIRE_AUTH ?? '').trim().toLowerCase() === 'true';
+const ADMIN_USER_ENV = ADMIN_USER;
+/** messaggi WS sempre permessi anche con REQUIRE_AUTH (sono l'autenticazione stessa) */
+const AUTH_FREE_MSGS = new Set(['login', 'loginToken', 'register', 'loginTotp', 'loginTotpBackup', 'ping', 'passkeyLoginStart', 'passkeyLoginFinish']);
+const SESSION_COOKIE = 'dnd5e_session';
+
+/** parse dei cookie della richiesta HTTP */
+function cookieOf(req: IncomingMessage, name: string): string | undefined {
+  const raw = String(req.headers.cookie ?? '');
+  for (const part of raw.split(';')) {
+    const [k, ...v] = part.trim().split('=');
+    if (k === name) return decodeURIComponent(v.join('='));
+  }
+  return undefined;
+}
+
+/** token di sessione valido dalla richiesta (cookie di sessione in memoria o token "mantieni l'accesso") */
+function sessionTokenOf(req: IncomingMessage): string | undefined {
+  const tok = cookieOf(req, SESSION_COOKIE);
+  if (!tok) return undefined;
+  if (sessionUsername(tok)) return tok;
+  const acc = loginByRememberToken(tok);
+  if (acc) {
+    const t = createSession(acc.username);
+    return t; // il token remember vale come sessione; la cookie resta il remember token
+  }
+  return undefined;
+}
+
+/** setta il cookie di sessione (remember -> 30 giorni, altrimenti cookie di sessione) */
+function setSessionCookie(res: ServerResponse, token: string, remember: boolean): void {
+  const parts = [`${SESSION_COOKIE}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
+  if (remember) parts.push(`Max-Age=${30 * 24 * 3600}`);
+  res.setHeader('Set-Cookie', parts.join('; '));
+}
+
+/** path pubblici anche con REQUIRE_AUTH (login, setup, info, update check, admin con proprio token) */
+function isPublicPath(path: string): boolean {
+  return (
+    path === '/login' || path === '/login.html' ||
+    path === '/api/login' || path === '/api/login-token' || path === '/api/register' ||
+    path === '/api/logout' || path === '/api/me' || path === '/api/info' ||
+    path === '/api/setup' || path === '/setup' || path === '/setup.html' ||
+    path === '/version.json' || path === '/api/update' || path === '/api/update/asset' ||
+    path === '/admin' || path === '/admin.html'
+  );
+}
 const STATIC_DIR = process.env.DND5E_STATIC_DIR ?? join(process.cwd(), 'apps', 'web', 'dist');
 const ADMIN_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'admin.html');
 /** se impostata, il pannello admin (/admin) richiede questo token nei messaggi adminAuth */
@@ -97,6 +159,11 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 
 function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  // DND5E_REQUIRE_AUTH: senza sessione valida si serve SOLO la pagina di login (niente app)
+  if (REQUIRE_AUTH && req.method === 'GET' && !isPublicPath(rawPath) && !sessionTokenOf(req)) {
+    serveLoginPage(res);
+    return;
+  }
   // check-update lato server (funziona anche con repo privato se GITHUB_TOKEN è impostato)
   // /api/update/apply aggiorna la web app servita da questo server (POST, niente terminale)
   if (rawPath === '/api/update' || rawPath === '/api/update/asset' || rawPath === '/api/update/apply') {
@@ -300,7 +367,7 @@ function totpNoteAttempt(username: string): void {
 }
 
 /** manda il messaggio auth completo (con ruolo) dopo un login riuscito */
-function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: boolean): void {
+function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: boolean, rememberToken?: string): void {
   send(ws, {
     t: 'auth',
     token,
@@ -309,7 +376,138 @@ function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: b
     characters: accountCharacters(username),
     savedCampaigns: accountSavedP2PCampaigns(username),
     totpEnabled,
+    rememberToken,
   });
+}
+
+/** corpo JSON di risposta auth riutilizzato anche dall'API HTTP /api/login */
+function authJson(token: string, username: string, rememberToken?: string) {
+  return {
+    ok: true,
+    token,
+    username,
+    role: accountRole(username) ?? 'user',
+    totpEnabled: accountTotpEnabled(username),
+    rememberToken,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// API HTTP di autenticazione (usate dalla pagina di login servita con DND5E_REQUIRE_AUTH)
+// ---------------------------------------------------------------------------
+
+function readJsonBody(req: IncomingMessage, limit = 64 * 1024): Promise<Record<string, unknown>> {
+  return new Promise((resolve, reject) => {
+    const chunks: Buffer[] = [];
+    let size = 0;
+    req.on('data', (c: Buffer) => {
+      size += c.length;
+      if (size > limit) { reject(new Error('body troppo grande')); req.destroy(); return; }
+      chunks.push(c);
+    });
+    req.on('end', () => {
+      try { resolve(JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}')); }
+      catch { reject(new Error('JSON non valido')); }
+    });
+    req.on('error', reject);
+  });
+}
+
+/** gestisce /api/login, /api/login-token, /api/register, /api/logout, /api/me. Ritorna true se servita. */
+async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  const path = new URL(req.url ?? '/', 'http://localhost').pathname;
+  if (!['/api/login', '/api/login-token', '/api/register', '/api/logout', '/api/me'].includes(path)) return false;
+  const json = (code: number, obj: unknown, token?: string, remember = false) => {
+    if (token) setSessionCookie(res, token, remember);
+    res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(obj));
+  };
+
+  if (path === '/api/me') {
+    const tok = sessionTokenOf(req) ?? cookieOf(req, SESSION_COOKIE);
+    const username = tok ? (sessionUsername(tok) ?? loginByRememberToken(tok)?.username) : undefined;
+    if (!username) return void json(401, { error: 'non autenticato' }), true;
+    return void json(200, { username, role: accountRole(username) ?? 'user', totpEnabled: accountTotpEnabled(username), requireAuth: REQUIRE_AUTH, registration: registrationMode() }), true;
+  }
+
+  if (path === '/api/logout') {
+    const tok = cookieOf(req, SESSION_COOKIE);
+    if (tok) deleteSession(tok);
+    res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+    return void json(200, { ok: true }), true;
+  }
+
+  if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
+
+  try {
+    const body = await readJsonBody(req);
+    if (path === '/api/login-token') {
+      const acc = loginByRememberToken(String(body.token ?? ''));
+      if (!acc) return void json(401, { error: 'Token non valido o revocato' }), true;
+      const remember = body.remember === true;
+      const token = createSession(acc.username);
+      noteLogin(acc.username);
+      return void json(200, authJson(token, acc.username, remember ? createRememberToken(acc.username) : undefined), remember ? String(body.token) : token, remember), true;
+    }
+    if (path === '/api/register') {
+      const username = String(body.username ?? '').trim();
+      const password = String(body.password ?? '');
+      if (registrationMode() === 'open') {
+        // registrazione aperta: account creato subito (role user, a meno di DND5E_ADMIN_USER)
+        const f = loadAccountsFile();
+        const key = username.toLowerCase();
+        if (!USERNAME_RE.test(username)) return void json(400, { error: 'Username non valido (3-24 caratteri: lettere, numeri, _ e -)' }), true;
+        if (f.accounts[key]) return void json(400, { error: 'Username gia registrato' }), true;
+        const acc: Account = {
+          username, passwordHash: hashPassword(password), characters: {},
+          createdAt: new Date().toISOString(),
+          role: ADMIN_USER_ENV && key === ADMIN_USER_ENV ? 'admin' : 'user',
+          savedP2PCampaigns: {}, totp: null, passkeys: [], loginCount: 0,
+        };
+        f.accounts[key] = acc;
+        delete f.pending[key];
+        saveAccountsFile(f);
+        const remember = body.remember === true;
+        const token = createSession(acc.username);
+        noteLogin(acc.username);
+        const remTok = remember ? createRememberToken(acc.username) : undefined;
+        return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
+      }
+      requestAccount(username, password);
+      return void json(200, { pending: true, message: 'Richiesta inviata: attendi l\'approvazione dell\'admin' }), true;
+    }
+    if (path === '/api/login') {
+      const username = String(body.username ?? '').trim();
+      const password = String(body.password ?? '');
+      const acc = loginAccount(username, password);
+      if (accountTotpEnabled(acc.username)) {
+        const code = String(body.code ?? '').trim();
+        if (!code) return void json(401, { totpRequired: true, username: acc.username }), true;
+        if (!verifyAccountTotp(acc.username, code)) return void json(401, { error: 'Codice 2FA non valido' }), true;
+      }
+      const remember = body.remember === true;
+      const token = createSession(acc.username);
+      noteLogin(acc.username);
+      const remTok = remember ? createRememberToken(acc.username) : undefined;
+      return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
+    }
+    return false;
+  } catch (e) {
+    return void json(400, { error: (e as Error).message }), true;
+  }
+}
+
+
+/** pagina di login standalone servita al posto dell'app quando DND5E_REQUIRE_AUTH=true e senza sessione */
+const LOGIN_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'login.html');
+function serveLoginPage(res: ServerResponse): void {
+  try {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    res.end(readFileSync(LOGIN_PAGE));
+  } catch {
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+    res.end('<h1>5e Manager</h1><p>Login richiesto (DND5E_REQUIRE_AUTH). Pagina di login mancante: ricrea il build.</p>');
+  }
 }
 
 function sendAdminState(ws: WebSocket): void {
@@ -340,6 +538,8 @@ function sendAdminState(ws: WebSocket): void {
       characters: accounts.reduce((n, a) => n + Object.keys(a.characters).length, 0),
       p2pCampaigns: accounts.reduce((n, a) => n + Object.keys(a.savedP2PCampaigns ?? {}).length, 0),
       lan: lanAddresses(PORT),
+      requireAuth: REQUIRE_AUTH,
+      registration: registrationMode(),
     },
   });
 }
@@ -349,6 +549,12 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   try {
     msg = JSON.parse(raw);
   } catch {
+    return;
+  }
+
+  // DND5E_REQUIRE_AUTH: le operazioni dell'app richiedono la sessione (login o cookie)
+  if (REQUIRE_AUTH && !conn.token && !AUTH_FREE_MSGS.has(msg.t)) {
+    send(conn.ws, { t: 'error', message: 'Login richiesto su questo server (DND5E_REQUIRE_AUTH): accedi prima dal sito' });
     return;
   }
 
@@ -435,10 +641,52 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   }
 
   if (msg.t === 'register') {
-    // la registrazione crea solo una RICHIESTA: l'admin la approva dal pannello /admin
     try {
-      requestAccount(msg.username.trim(), msg.password);
-      send(conn.ws, { t: 'notice', message: 'Richiesta di registrazione inviata per "' + msg.username.trim() + '": attendi l\'approvazione dell\'admin.' });
+      const username = msg.username.trim();
+      if (registrationMode() === 'open') {
+        // registrazione APERTA: account creato subito e login immediato
+        const f = loadAccountsFile();
+        const key = username.toLowerCase();
+        if (!USERNAME_RE.test(username)) throw new Error('Username non valido (3-24 caratteri: lettere, numeri, _ e -)');
+        if (!msg.password || msg.password.length < 4) throw new Error('Password troppo corta (min 4 caratteri)');
+        if (f.accounts[key]) throw new Error('Username gia registrato');
+        const acc: Account = {
+          username, passwordHash: hashPassword(msg.password), characters: {},
+          createdAt: new Date().toISOString(),
+          role: ADMIN_USER_ENV && key === ADMIN_USER_ENV ? 'admin' : 'user',
+          savedP2PCampaigns: {}, totp: null, passkeys: [], loginCount: 0,
+        };
+        f.accounts[key] = acc;
+        delete f.pending[key];
+        saveAccountsFile(f);
+        conn.token = createSession(acc.username);
+        if (accountRole(acc.username) === 'admin') conn.admin = true;
+        noteLogin(acc.username);
+        sendAuth(conn.ws, conn.token, acc.username, false);
+        send(conn.ws, { t: 'notice', message: 'Account "' + acc.username + '" creato (registrazione aperta): sei dentro.' });
+        return;
+      }
+      // registrazione con APPROVAZIONE: crea solo una RICHIESTA, l'admin la approva dal pannello /admin
+      requestAccount(username, msg.password);
+      send(conn.ws, { t: 'notice', message: 'Richiesta di registrazione inviata per "' + username + '": attendi l\'approvazione dell\'admin.' });
+    } catch (e) {
+      send(conn.ws, { t: 'error', message: (e as Error).message });
+    }
+    return;
+  }
+
+  // login automatico con token "mantieni l'accesso" (persistito dal client in localStorage)
+  if (msg.t === 'loginToken') {
+    try {
+      const acc = loginByRememberToken(String(msg.token ?? ''));
+      if (!acc) {
+        send(conn.ws, { t: 'error', message: 'Token "mantieni l\'accesso" non valido o revocato: rifai il login' });
+        return;
+      }
+      conn.token = createSession(acc.username);
+      if (accountRole(acc.username) === 'admin') conn.admin = true;
+      noteLogin(acc.username);
+      sendAuth(conn.ws, conn.token, acc.username, accountTotpEnabled(acc.username), msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -457,7 +705,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
       if (accountRole(acc.username) === 'admin') conn.admin = true;
       noteLogin(acc.username);
-      sendAuth(conn.ws, conn.token, acc.username, false);
+      sendAuth(conn.ws, conn.token, acc.username, false, msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -482,7 +730,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       conn.token = createSession(acc.username);
       if (accountRole(acc.username) === 'admin') conn.admin = true;
       noteLogin(acc.username);
-      sendAuth(conn.ws, conn.token, acc.username, true);
+      sendAuth(conn.ws, conn.token, acc.username, true, msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
@@ -655,7 +903,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -680,6 +928,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       if (msg.t === 'adminRejectAccount') rejectAccount(msg.username);
       if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
       if (msg.t === 'adminSetRole') setAccountRole(msg.username, msg.role === 'admin' ? 'admin' : 'user');
+      if (msg.t === 'adminSetRegistration') setRegistrationMode(msg.mode === 'open' ? 'open' : 'approval');
       if (msg.t === 'adminResetPassword') resetAccountPassword(msg.username, msg.password);
       if (msg.t === 'adminDisableTotp') adminDisableTotp(msg.username);
       if (msg.t === 'adminClearPasskeys') adminClearPasskeys(msg.username);
@@ -889,12 +1138,19 @@ export function createDndServer(port = PORT, host = HOST) {
   let infoHandler: (req: IncomingMessage, res: ServerResponse) => boolean = () => false;
   const http = createServer((req, res) => {
     if (infoHandler(req, res)) return;
-    serveStatic(req, res);
+    void handleAuthApi(req, res).then((handled) => { if (!handled) serveStatic(req, res); });
   });
   const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 * 1024 });
 
   wss.on('connection', (ws, req) => {
     const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10), rpHost: String(req.headers.host ?? '') };
+    // con REQUIRE_AUTH il browser manda il cookie di sessione sull'upgrade WS: vale come login
+    const tok = sessionTokenOf(req);
+    if (tok) {
+      conn.token = tok;
+      const uname = sessionUsername(tok);
+      if (uname && accountRole(uname) === 'admin') conn.admin = true;
+    }
     conns.add(conn);
     ws.on('message', (data) => {
       handleMessage(conn, data.toString()).catch((e) => {

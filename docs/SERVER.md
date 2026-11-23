@@ -110,9 +110,31 @@ Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`,
 (token + libreria schede dell'account), `pong` (risposta al ping, con `serverTime`),
 `campaignDeleted` (la campagna è stata eliminata), `error`
 
+## Login richiesto per il sito (DND5E_REQUIRE_AUTH)
+
+Con `DND5E_REQUIRE_AUTH=true` (default nei compose Docker) la webapp servita dal server **richiede un account**:
+senza cookie di sessione valido (`dnd5e_session`, impostato da `POST /api/login` o `/api/login-token`) ogni GET
+serve una pagina di login standalone (`public/login.html`) al posto dell'app; `/api/info`, `/api/setup`, `/setup`,
+`/api/login`, `/api/register`, `/api/logout`, `/api/me`, `/version.json`, `/api/update*` e `/admin` restano pubblici.
+Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messaggi P2P richiedono la sessione
+(il browser la passa via cookie sull'upgrade; le app native fanno `login`/`loginToken` a mano). Le app native
+(AppImage/APK/desktop) non passano dal sito servito: restano fully standalone, il login sul server è facoltativo.
+
+## Registrazione: aperta o con approvazione
+
+- `DND5E_REGISTRATION=approval` (default): `register` crea solo una *richiesta* approvata dall'admin in `/admin`.
+- `DND5E_REGISTRATION=open`: `register` crea subito l'account (e fa login immediato); via HTTP `POST /api/register`.
+- L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data` v7); `/api/info` espone `registration` e `requireAuth`.
+
+## Mantieni l'accesso (remember me)
+
+`login`/`loginTotp`/`loginTotpBackup` con `remember: true` ritornano in `auth` un `rememberToken` persistente
+(hash salvato sull'account, max 10); il client lo tiene in localStorage e al prossimo avvio manda
+`loginToken { token }` per rientrare senza password. Stesso flusso via HTTP: `POST /api/login-token`.
+
 ## Account, richieste e libreria schede
 
-- `register { username, password }` **non crea subito l'account**: registra una *richiesta*
+- `register { username, password }` **in modalità approval** non crea subito l'account: registra una *richiesta*
   (in `accounts.data`, con hash sha256 della password) e risponde `notice`; l'admin la vede
   in `/admin` → "Richieste di registrazione" e la **approva** (`adminApproveAccount`) o
   **rifiuta** (`adminRejectAccount`). Solo dopo l'approvazione il login funziona.

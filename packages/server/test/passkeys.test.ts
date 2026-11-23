@@ -66,8 +66,8 @@ function connect(): Promise<Client> {
   });
 }
 
-describe('accounts v6 + passkey (unita)', () => {
-  it('migra un file v5 a v6 aggiungendo passkeys: []', () => {
+describe('accounts v7 + passkey (unita)', () => {
+  it('migra un file v5 a v7 aggiungendo passkeys: [] e settings', () => {
     writeFileSync(
       accounts.ACCOUNTS_FILE,
       JSON.stringify({
@@ -79,7 +79,8 @@ describe('accounts v6 + passkey (unita)', () => {
       }),
     );
     const f = accounts.loadAccountsFile();
-    expect(f.v).toBe(6);
+    expect(f.v).toBe(7);
+    expect(f.settings).toEqual({});
     expect(f.accounts.bob.passkeys).toEqual([]);
   });
 

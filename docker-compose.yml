@@ -27,6 +27,10 @@ services:
       DND5E_DATA_DIR: /data
       DND5E_STATIC_DIR: /app/apps/web/dist
       DND5E_ADMIN_TOKEN: ${DND5E_ADMIN_TOKEN:-}
+      # webapp di Docker: SENZA login non si accede al sito (pagina di login). App native: login facoltativo.
+      DND5E_REQUIRE_AUTH: ${DND5E_REQUIRE_AUTH:-true}
+      # registrazione: 'approval' (l'admin approva le richieste) oppure 'open' (chiunque si registra subito)
+      DND5E_REGISTRATION: ${DND5E_REGISTRATION:-approval}
       # IP LAN reale dell'host (in Docker il bridge 172.x non serve): es. DND5E_LAN_IP=192.168.1.36
       DND5E_LAN_IP: ${DND5E_LAN_IP:-}
       # opzionale (repo privato): GITHUB_TOKEN: ${GITHUB_TOKEN:-}

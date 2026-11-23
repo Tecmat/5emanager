@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>5e Manager — Login</title>
+<style>
+  :root { color-scheme: dark; --bg:#14161c; --card:#1d2029; --line:#2c3040; --txt:#e8eaf2; --muted:#9aa0b4; --accent:#7c5cff; }
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; background:var(--bg); color:var(--txt); font:15px/1.5 system-ui, sans-serif; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:14px; padding:26px; width:min(400px, 92vw); }
+  h1 { font-size:20px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+  .muted { color:var(--muted); font-size:13px; }
+  label { display:block; margin:14px 0 4px; font-size:13px; color:var(--muted); }
+  input { width:100%; padding:9px 11px; border-radius:9px; border:1px solid var(--line); background:#12141a; color:var(--txt); font-size:14px; }
+  input:focus { outline:2px solid var(--accent); border-color:transparent; }
+  .row { display:flex; gap:10px; align-items:center; margin-top:16px; }
+  button { padding:9px 16px; border-radius:9px; border:1px solid var(--line); background:#262a38; color:var(--txt); cursor:pointer; font-size:14px; }
+  button.primary { background:var(--accent); border-color:transparent; color:#fff; flex:1; }
+  button:disabled { opacity:.5; cursor:default; }
+  .err { color:#ff7b7b; font-size:13px; margin-top:10px; min-height:18px; }
+  .ok { color:#7bd88f; font-size:13px; margin-top:10px; }
+  .chk { display:flex; gap:8px; align-items:center; font-size:13px; color:var(--muted); margin-top:12px; }
+  .tabs { display:flex; gap:8px; margin-top:18px; }
+  .tabs button { flex:1; }
+  .tabs button.on { border-color:var(--accent); color:var(--accent); }
+  #totpBox { display:none; }
+</style>
+</head>
+<body>
+<div class="card">
+  <h1>🎲 5e Manager</h1>
+  <div class="muted" id="sub">Questo server richiede un account per accedere.</div>
+  <div class="tabs">
+    <button id="tabLogin" class="on" type="button">Login</button>
+    <button id="tabReg" type="button">Registrati</button>
+  </div>
+  <form id="f">
+    <label for="u">Username</label>
+    <input id="u" autocomplete="username" required>
+    <label for="p">Password</label>
+    <input id="p" type="password" autocomplete="current-password" required>
+    <div id="totpBox">
+      <label for="c">Codice 2FA (app authenticator)</label>
+      <input id="c" inputmode="numeric" maxlength="6" placeholder="123456">
+    </div>
+    <label class="chk"><input type="checkbox" id="remember" style="width:auto"> Mantieni l'accesso su questo dispositivo</label>
+    <div class="row">
+      <button class="primary" id="go" type="submit">Entra</button>
+    </div>
+    <div class="err" id="err"></div>
+    <div class="ok" id="ok"></div>
+  </form>
+  <div class="muted" style="margin-top:14px" id="regInfo"></div>
+</div>
+<script>
+const $ = (id) => document.getElementById(id);
+let mode = 'login';
+let registration = 'approval';
+
+async function info() {
+  try {
+    const r = await fetch('/api/info');
+    const j = await r.json();
+    registration = j.registration || 'approval';
+    $('regInfo').textContent = registration === 'open'
+      ? 'Registrazione aperta: chiunque può creare un account.'
+      : 'Registrazione con approvazione: l\'admin approva le richieste dal pannello /admin.';
+  } catch {}
+}
+
+$('tabLogin').onclick = () => { mode = 'login'; $('tabLogin').classList.add('on'); $('tabReg').classList.remove('on'); $('go').textContent = 'Entra'; };
+$('tabReg').onclick = () => { mode = 'register'; $('tabReg').classList.add('on'); $('tabLogin').classList.remove('on'); $('go').textContent = 'Crea account'; };
+
+$('f').onsubmit = async (e) => {
+  e.preventDefault();
+  $('err').textContent = ''; $('ok').textContent = '';
+  $('go').disabled = true;
+  try {
+    const body = { username: $('u').value.trim(), password: $('p').value, remember: $('remember').checked };
+    if ($('totpBox').style.display === 'block') body.code = $('c').value.trim();
+    const path = mode === 'login' ? '/api/login' : '/api/register';
+    const r = await fetch(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+    const j = await r.json();
+    if (r.status === 401 && j.totpRequired) {
+      $('totpBox').style.display = 'block';
+      $('err').textContent = 'Serve il codice 2FA.';
+      return;
+    }
+    if (!r.ok) { $('err').textContent = j.error || ('Errore ' + r.status); return; }
+    if (mode === 'register' && j.pending) {
+      $('ok').textContent = j.message || 'Richiesta inviata: attendi l\'approvazione dell\'admin.';
+      return;
+    }
+    // login ok (o registrazione aperta con auto-login): cookie impostato -> ricarico
+    $('ok').textContent = 'Accesso riuscito, carico l\'app…';
+    location.reload();
+  } catch (err) {
+    $('err').textContent = String(err);
+  } finally {
+    $('go').disabled = false;
+  }
+};
+
+info();
+// se esiste già una sessione valida, ricarica subito
+fetch('/api/me').then((r) => { if (r.ok) location.reload(); }).catch(() => {});
+</script>
+</body>
+</html>

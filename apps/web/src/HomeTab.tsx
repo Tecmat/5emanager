@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { totalLevel, type Character } from '@dnd5e/core';
 import { useStore, isCampaignSheetId, campaignSheetId } from './store.js';
-import { useNet } from './netStore.js';
+import { useNet, loadAuthServer, passkeySupported } from './netStore.js';
+import { defaultWsUrl, toWsUrl, httpUrlFromWs } from './net.js';
 import Icon from './icons.js';
 
 /**
@@ -9,7 +11,7 @@ import Icon from './icons.js';
  */
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
   const { sheets, char, campaignMeta, reg, t, tf, importSheets } = useStore();
-  const { auth, act } = useNet();
+  const { auth, act, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
   const campaigns = sheets.filter((s) => isCampaignSheetId(s.id));
@@ -59,6 +61,14 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>
         </div>
       </div>
+
+      <ServerAccountCard
+        url={url} setUrl={setUrl} servers={servers} auth={auth} savedSession={savedSession}
+        doLogin={doLogin} doRegister={doRegister} doLoginToken={doLoginToken} logout={logout}
+        totpPending={totpPending} doLoginTotp={doLoginTotp} doLoginTotpBackup={doLoginTotpBackup}
+        passkeyLogin={passkeyLogin} passkeySupported={passkeySupported} error={error} setError={setError}
+        onOnline={onOnline} t={t} tf={tf}
+      />
 
       {local.length === 0 && campaigns.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 28 }}>
@@ -133,3 +143,136 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
 }
 
 export { campaignSheetId };
+
+
+/** card "Server e account": scelta del server ws/wss + login (con mantieni l'accesso) + link account/admin */
+function ServerAccountCard(props: {
+  url: string; setUrl: (u: string) => void; servers: string[]; auth: ReturnType<typeof useNet>['auth'];
+  savedSession: ReturnType<typeof useNet>['savedSession'];
+  doLogin: (u: string, p: string, remember?: boolean) => Promise<void>;
+  doRegister: (u: string, p: string) => Promise<void>;
+  doLoginToken: (token: string) => Promise<void>;
+  logout: () => void;
+  totpPending: string | null;
+  doLoginTotp: (u: string, p: string, c: string, remember?: boolean) => Promise<void>;
+  doLoginTotpBackup: (u: string, p: string, b: string, remember?: boolean) => Promise<void>;
+  passkeyLogin: (u?: string) => Promise<void>;
+  passkeySupported: boolean;
+  error: string; setError: (e: string) => void;
+  onOnline: () => void;
+  t: (k: string, f?: string) => string; tf: (k: string, f: string, v: Record<string, string | number>) => string;
+}) {
+  const { url, setUrl, servers, auth, savedSession, doLogin, doRegister, doLoginToken, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, passkeySupported, error, setError, onOnline, t, tf } = props;
+  const [u, setU] = useState('');
+  const [p, setP] = useState('');
+  const [remember, setRemember] = useState(true);
+  const [code, setCode] = useState('');
+  const [customUrl, setCustomUrl] = useState('');
+
+  const serverOptions = [...new Set([url, loadAuthServer(), ...servers].filter(Boolean))];
+  const adminUrl = auth ? httpUrlFromWs(auth.server) + '/admin' : '';
+
+  return (
+    <div className="card">
+      <h3 className="home-h"><Icon name="globe" candy size={15} /> {t('home.serverTitle', 'Server e account')}</h3>
+
+      <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+        <select
+          value={serverOptions.includes(url) ? url : '__custom'}
+          onChange={(e) => {
+            if (e.target.value === '__custom') return;
+            setUrl(e.target.value);
+            setError('');
+          }}
+          title={t('home.serverPick', 'Scegli il server (ws/wss). https:// viene convertito in wss://')}
+          style={{ minWidth: 220 }}
+        >
+          {serverOptions.map((s2) => <option key={s2} value={s2}>{s2}</option>)}
+          {!serverOptions.includes(url) && url && <option value={url}>{url}</option>}
+          <option value="__custom">{t('home.serverCustom', '— altro server…')}</option>
+        </select>
+        <input
+          value={customUrl}
+          onChange={(e) => setCustomUrl(e.target.value)}
+          onKeyDown={(e) => { if (e.key === 'Enter' && customUrl.trim()) { setUrl(toWsUrl(customUrl)); setCustomUrl(''); } }}
+          placeholder={t('home.serverPh', 'ws://192.168.1.10:3001 oppure https://dnd.tuo.it (→ wss://)')}
+          style={{ flex: 1, minWidth: 240, fontFamily: 'monospace', fontSize: 13 }}
+        />
+        <button onClick={() => { setUrl(toWsUrl(customUrl)); setCustomUrl(''); }} disabled={!customUrl.trim()} title={t('home.serverUse', 'Usa questo server (https:// → wss:// automatico)')}>
+          {t('home.serverUseBtn', 'Usa server')}
+        </button>
+        <button onClick={() => { setUrl(defaultWsUrl()); setError(''); }} title={t('home.serverOrigin', 'Usa il server che sta servendo questa pagina')}>
+          {t('home.serverOriginBtn', 'Questa pagina')}
+        </button>
+      </div>
+      <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+        {tf('home.serverCurrent', 'Server attuale: {url}', { url: url || '—' })}
+      </div>
+
+      {auth ? (
+        <div style={{ marginTop: 10 }}>
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <span className="tag custom"><Icon name="user" size={11} /> {auth.username}</span>
+            <span className="tag">{auth.role === 'admin' ? '🛡️ admin' : t('home.roleUser', 'user')}</span>
+            <span className="tag">{tf('home.sheetsRemote', '{n} schede in libreria', { n: auth.characters.length })}</span>
+            {savedSession && <span className="tag" title={t('home.keepAliveOn', "'Mantieni l\'accesso' attivo: al prossimo avvio entri da solo")}>🔑 {t('home.keepAlive', 'accesso mantenuto')}</span>}
+          </div>
+          <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+            <button className="primary" onClick={onOnline}><Icon name="map" size={13} /> {t('home.goCampaign', 'Vai a Campagna (usa questo server)')}</button>
+            <button onClick={() => { onOnline(); }} title={t('home.myAccountTitle', 'La tua pagina account (libreria, 2FA, passkey) è nella tab Campagna → Account')}>
+              <Icon name="user" size={13} /> {t('home.myAccount', 'Il mio account')}
+            </button>
+            {auth.role === 'admin' && (
+              <button onClick={() => window.open(adminUrl, '_blank')} title={t('home.adminTitle', 'Apri il pannello admin del server in una nuova scheda (solo admin)')}>
+                🛡️ {t('home.adminPanel', 'Pannello admin')}
+              </button>
+            )}
+            <button className="danger" onClick={logout}>{t('home.logout', 'Esci')}</button>
+          </div>
+          {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
+        </div>
+      ) : (
+        <div style={{ marginTop: 10 }}>
+          {savedSession && (
+            <div className="row" style={{ marginBottom: 8 }}>
+              <span className="muted" style={{ fontSize: 13 }}>🔑 {tf('home.sessionSaved', 'Sessione salvata per {u} su {s}: provo il login automatico…', { u: savedSession.username, s: savedSession.server })}</span>
+              <button onClick={() => doLoginToken(savedSession.token)}>{t('home.retryLogin', 'Riprova login')}</button>
+            </div>
+          )}
+          <div className="row" style={{ flexWrap: 'wrap', gap: 8 }}>
+            <input value={u} onChange={(e) => setU(e.target.value)} placeholder="Username" autoComplete="username" style={{ flex: 1, minWidth: 130 }} />
+            <input
+              type="password" value={p} onChange={(e) => setP(e.target.value)} placeholder={t('cg.pwServer', 'Password')}
+              autoComplete="current-password" style={{ flex: 1, minWidth: 130 }}
+              onKeyDown={(e) => { if (e.key === 'Enter') void doLogin(u, p, remember); }}
+            />
+            <label className="row" style={{ gap: 5, fontSize: 13, color: 'var(--muted)' }} title={t('home.rememberTitle', 'Salva un token sicuro in questo dispositivo: al prossimo avvio entri senza password')}>
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} /> {t('home.remember', 'Mantieni l\'accesso')}
+            </label>
+          </div>
+          {totpPending && (
+            <div className="row" style={{ marginTop: 8 }}>
+              <input value={code} onChange={(e) => setCode(e.target.value)} placeholder={t('home.totpPh', 'Codice 2FA (6 cifre)')} inputMode="numeric" maxLength={8} style={{ width: 140 }} />
+              <button className="primary" disabled={code.trim().length < 6} onClick={() => void doLoginTotp(totpPending, p, code, remember)}>{t('cg.login', 'Login')}</button>
+              <button onClick={() => void doLoginTotpBackup(totpPending, p, code, remember)} title={t('home.backupTitle', 'Usa un codice di backup (monouso)')}>{t('home.backup', 'Codice backup')}</button>
+            </div>
+          )}
+          <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
+            {!totpPending && (
+              <>
+                <button className="primary" onClick={() => void doLogin(u, p, remember)} disabled={!u.trim() || !p}>{t('cg.login', 'Login')}</button>
+                <button onClick={() => void doRegister(u, p)} disabled={!u.trim() || !p}>{t('cg.register', 'Registrati')}</button>
+                {passkeySupported && (
+                  <button onClick={() => void passkeyLogin(u || undefined)} title={t('cg.pkLoginTitle', 'Accedi con passkey (niente password)')}>
+                    🔑 {t('home.passkey', 'Passkey')}
+                  </button>
+                )}
+              </>
+            )}
+          </div>
+          {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
+        </div>
+      )}
+    </div>
+  );
+}

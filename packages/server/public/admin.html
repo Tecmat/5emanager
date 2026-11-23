@@ -73,6 +73,20 @@
   </div>
 
   <div class="card">
+    <h2>Impostazioni server</h2>
+    <div class="row" style="align-items:center">
+      <span>Registrazione:</span>
+      <select id="reg-mode">
+        <option value="approval">con approvazione (richieste da approvare qui sotto)</option>
+        <option value="open">aperta (chiunque si registra subito)</option>
+      </select>
+      <button id="reg-save">Salva</button>
+      <span class="muted" id="reg-status"></span>
+    </div>
+    <div class="muted" style="margin-top:6px" id="auth-mode"></div>
+  </div>
+
+  <div class="card">
     <h2>Richieste di registrazione (in attesa)</h2>
     <table>
       <thead><tr><th>Username</th><th>Richiesta il</th><th></th></tr></thead>
@@ -149,6 +163,12 @@ function render(state) {
   if (state.server) {
     const s = state.server;
     const up = Math.floor(s.uptimeSec / 3600) + 'h ' + Math.floor((s.uptimeSec % 3600) / 60) + 'm';
+    const regSel = document.getElementById('reg-mode');
+    if (regSel && s.registration) regSel.value = s.registration;
+    const am = document.getElementById('auth-mode');
+    if (am) am.textContent = s.requireAuth
+      ? 'DND5E_REQUIRE_AUTH attivo: senza login non si accede al sito (si vede solo la pagina di login).'
+      : 'DND5E_REQUIRE_AUTH non attivo: il sito \u00e8 aperto (le app native restano indipendenti).';
     si.innerHTML = 'Avviato: <b>' + fmtDate(s.startedAt) + '</b> · uptime <b>' + up + '</b> · campagne <b>' + s.campaigns + '</b> · account <b>' + s.accounts + '</b> · schede in libreria <b>' + (s.characters ?? 0) + '</b> · campagne P2P salvate <b>' + (s.p2pCampaigns ?? 0) + '</b> · richieste in attesa <b>' + s.pending + '</b>' +
       (s.lan.length ? '<br>LAN: ' + s.lan.map((a) => '<code>' + esc(a) + '</code>').join(' ') : '');
   }
@@ -334,6 +354,14 @@ function connect() {
   ws.onclose = () => setStatus('disconnesso', false);
   ws.onerror = () => { err('Connessione a ' + wsurl + ' fallita'); setStatus('errore', false); };
 }
+
+document.getElementById('reg-save').onclick = () => {
+  const mode = document.getElementById('reg-mode').value;
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ t: 'adminSetRegistration', mode }));
+    document.getElementById('reg-status').textContent = 'salvato: ' + mode;
+  }
+};
 
 document.getElementById('broadcast-btn').onclick = () => {
   const m = document.getElementById('broadcast-msg').value.trim();

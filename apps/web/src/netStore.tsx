@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Campaign, Character, PlayerInfo, SavedCampaignSnapshot } from '@dnd5e/core';
-import { NetClient, defaultWsUrl } from './net.js';
+import { NetClient, defaultWsUrl, toWsUrl } from './net.js';
 
 // i tipi campagna/giocatore vivono nel core (condivisi con server e host P2P)
 export type { PlayerInfo };
@@ -16,6 +16,8 @@ export type ConnState =
 export interface AuthState {
   token: string;
   username: string;
+  /** server ws da cui arriva il login (default per le campagne) */
+  server: string;
   /** ruolo dell'account sul server (admin vede il pulsante per il pannello /admin) */
   role: 'admin' | 'user';
   characters: Character[];
@@ -61,6 +63,39 @@ const JOINED_KEY = 'dnd5e.joined.v1';
 const URL_KEY = 'dnd5e.net.url';
 const NAME_KEY = 'dnd5e.net.name';
 const REJOIN_KEY = 'dnd5e.rejoinToken.v1';
+const SESSION_KEY = 'dnd5e.session.v1';
+const AUTH_SERVER_KEY = 'dnd5e.authServer';
+
+export interface SavedSession {
+  server: string;
+  /** token "mantieni l'accesso" (remember token) */
+  token: string;
+  username: string;
+  at: string;
+}
+
+export function loadSavedSession(): SavedSession | null {
+  try {
+    const raw = localStorage.getItem(SESSION_KEY);
+    if (!raw) return null;
+    const j = JSON.parse(raw);
+    if (j && j.server && j.token) return j as SavedSession;
+    return null;
+  } catch { return null; }
+}
+
+export function saveSession(s: SavedSession): void {
+  try { localStorage.setItem(SESSION_KEY, JSON.stringify(s)); } catch { /* quota */ }
+}
+
+export function clearSavedSession(): void {
+  try { localStorage.removeItem(SESSION_KEY); } catch { /* ignore */ }
+}
+
+/** ultimo server usato per il login: default per le campagne (login + sync schede) */
+export function loadAuthServer(): string {
+  try { return localStorage.getItem(AUTH_SERVER_KEY) ?? ''; } catch { return ''; }
+}
 
 function randomToken(): string {
   return crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
@@ -136,13 +171,17 @@ interface NetCtx {
   checkConnection: () => Promise<void>;
   refreshCampaignList: () => Promise<void>;
   doRegister: (username: string, password: string) => Promise<void>;
-  doLogin: (username: string, password: string) => Promise<void>;
+  doLogin: (username: string, password: string, remember?: boolean) => Promise<void>;
+  /** login automatico con il token "mantieni l'accesso" salvato (primo avvio) */
+  doLoginToken: (token: string) => Promise<void>;
   logout: () => void;
+  /** sessione "mantieni l'accesso" salvata in locale, se presente */
+  savedSession: SavedSession | null;
   /** 2FA: username in attesa di codice TOTP dopo password ok, e dati del setup (QR/secret/backup) */
   totpPending: string | null;
   totpSetup: TotpSetupMsg | null;
-  doLoginTotp: (username: string, password: string, code: string) => Promise<void>;
-  doLoginTotpBackup: (username: string, password: string, backupCode: string) => Promise<void>;
+  doLoginTotp: (username: string, password: string, code: string, remember?: boolean) => Promise<void>;
+  doLoginTotpBackup: (username: string, password: string, backupCode: string, remember?: boolean) => Promise<void>;
   setupTotp: () => Promise<void>;
   enableTotp: (code: string) => Promise<void>;
   disableTotp: (password: string) => Promise<void>;
@@ -164,7 +203,13 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [notice, setNotice] = useState('');
   const [pingState, setPingState] = useState<PingState>({ status: 'idle' });
   const [campaignList, setCampaignList] = useState<{ id: string; name: string; players: number }[]>([]);
-  const [url, setUrlState] = useState(() => localStorage.getItem(URL_KEY) ?? defaultWsUrl());
+  const [url, setUrlState] = useState(() => {
+    const saved = localStorage.getItem(URL_KEY);
+    if (saved) return saved;
+    // default: l'ultimo server usato per il login (campagne + sync), altrimenti l'origin
+    try { const a = localStorage.getItem(AUTH_SERVER_KEY); if (a) return a; } catch { /* ignore */ }
+    return defaultWsUrl();
+  });
   const [name, setNameState] = useState(() => localStorage.getItem(NAME_KEY) ?? '');
   const [lastUsername, setLastUsername] = useState('');
   const [servers, setServers] = useState<string[]>(loadServers);
@@ -172,6 +217,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [totpPending, setTotpPending] = useState<string | null>(null);
   const [totpSetup, setTotpSetup] = useState<TotpSetupMsg | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
+  const [savedSession, setSavedSession] = useState<SavedSession | null>(() => loadSavedSession());
   /** richieste in attesa di una risposta WS di un certo tipo (es. passkeyLoginOptions) */
   const pendingReq = useRef(new Map<string, { resolve: (m: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>());
   const urlRef = useRef(url);
@@ -193,6 +239,20 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   useEffect(() => () => netRef.current?.close(), []);
+
+  // primo avvio con "mantieni l'accesso": login automatico col token salvato verso l'ultimo server
+  useEffect(() => {
+    const sess = loadSavedSession();
+    if (!sess) return;
+    if (!urlRef.current) setUrl(sess.server);
+    void (async () => {
+      try {
+        const net = await ensureNet();
+        net.send({ t: 'loginToken', token: sess.token });
+      } catch { /* server non raggiungibile: si resta offline */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const rememberServer = (u: string) => {
     setServers((prev) => {
@@ -253,9 +313,15 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'campaigns') {
       setCampaignList(m.list);
     } else if (m.t === 'auth') {
-      setAuth({ token: m.token, username: m.username, role: m.role ?? 'user', characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
+      const server = serverUrl ?? urlRef.current;
+      setAuth({ token: m.token, username: m.username, server, role: m.role ?? 'user', characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
       setLastUsername(m.username);
       setTotpPending(null);
+      // server del login = default per campagne/sync
+      try { localStorage.setItem(AUTH_SERVER_KEY, server); } catch { /* quota */ }
+      if (!urlRef.current) setUrl(server);
+      // "mantieni l'accesso": salva il remember token per il login automatico al prossimo avvio
+      if (m.rememberToken) saveSession({ server, token: m.rememberToken, username: m.username, at: new Date().toISOString() });
     } else if (m.t === 'totpRequired') {
       // password ok, serve il codice 2FA
       setTotpPending(m.username);
@@ -341,8 +407,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
     cur?.close();
     const net = new NetClient();
     netRef.current = net;
-    attachHandlers(net, urlRef.current);
-    await net.connect(urlRef.current);
+    const target = toWsUrl(urlRef.current) || urlRef.current;
+    attachHandlers(net, target);
+    await net.connect(target);
     rememberServer(urlRef.current);
     return net;
   };
@@ -413,19 +480,31 @@ export function NetProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const doLogin = async (username: string, password: string) => {
+  const doLogin = async (username: string, password: string, remember = false) => {
     setError('');
     setNotice('');
     if (!username.trim()) { setError('Inserisci lo username'); return; }
     try {
       const net = await ensureNet();
-      net.send({ t: 'login', username: username.trim(), password });
+      net.send({ t: 'login', username: username.trim(), password, remember });
+    } catch (e) {
+      setError((e as Error).message);
+    }
+  };
+
+  const doLoginToken = async (token: string) => {
+    setError('');
+    try {
+      const net = await ensureNet();
+      net.send({ t: 'loginToken', token });
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
   const logout = () => {
+    clearSavedSession();
+    setSavedSession(null);
     setAuth(null);
     setLastUsername('');
     setTotpPending(null);
@@ -434,21 +513,21 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   // --- 2FA TOTP ---
-  const doLoginTotp = async (username: string, password: string, code: string) => {
+  const doLoginTotp = async (username: string, password: string, code: string, remember = false) => {
     setError('');
     try {
       const net = await ensureNet();
-      net.send({ t: 'loginTotp', username: username.trim(), password, code: code.trim() });
+      net.send({ t: 'loginTotp', username: username.trim(), password, code: code.trim(), remember });
     } catch (e) {
       setError((e as Error).message);
     }
   };
 
-  const doLoginTotpBackup = async (username: string, password: string, backupCode: string) => {
+  const doLoginTotpBackup = async (username: string, password: string, backupCode: string, remember = false) => {
     setError('');
     try {
       const net = await ensureNet();
-      net.send({ t: 'loginTotpBackup', username: username.trim(), password, backupCode: backupCode.trim() });
+      net.send({ t: 'loginTotpBackup', username: username.trim(), password, backupCode: backupCode.trim(), remember });
     } catch (e) {
       setError((e as Error).message);
     }
@@ -584,7 +663,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
     url, setUrl, name, setName, servers, savedCampaigns,
     send, act, setConn, handleNetMessage: (m: any) => handleMsg(m), setP2PTransport,
     connect, disconnect, checkConnection, refreshCampaignList,
-    doRegister, doLogin, logout,
+    doRegister, doLogin, doLoginToken, logout, savedSession,
     totpPending, totpSetup, doLoginTotp, doLoginTotpBackup, setupTotp, enableTotp, disableTotp,
     passkeys, passkeyLogin, passkeyRegister, refreshPasskeys, removePasskey,
   };

@@ -4,6 +4,7 @@ import { inflateRawSync } from 'node:zlib';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { hostname } from 'node:os';
+import { registrationMode } from './accounts.js';
 
 /**
  * Endpoint di check-update lato server (utile quando il repo GitHub è PRIVATO):
@@ -201,6 +202,8 @@ export function handleInfoApi(port: number, lan: string[]): (req: IncomingMessag
     if (new URL(req.url ?? '/', 'http://localhost').pathname !== '/api/info') return false;
     if (req.method !== 'GET') return false;
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    let registration = 'approval';
+    try { registration = registrationMode(); } catch { /* noop */ }
     res.end(
       JSON.stringify({
         app: '5emanager',
@@ -208,6 +211,8 @@ export function handleInfoApi(port: number, lan: string[]): (req: IncomingMessag
         version: readFileSync(join(process.cwd(), 'package.json'), 'utf8') ? JSON.parse(readFileSync(join(process.cwd(), 'package.json'), 'utf8')).version : '',
         port,
         lan,
+        requireAuth: (process.env.DND5E_REQUIRE_AUTH ?? '').trim().toLowerCase() === 'true',
+        registration,
       }),
     );
     return true;

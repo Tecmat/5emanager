@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Character, SavedCampaignSnapshot } from '@dnd5e/core';
@@ -64,6 +64,8 @@ export interface Account {
   /** statistiche per il pannello admin */
   lastLoginAt?: string;
   loginCount?: number;
+  /** hash sha256 dei token "mantieni l'accesso" (max 10): permiten il login automatico senza password */
+  rememberTokens?: string[];
 }
 
 export interface PendingRequest {
@@ -72,10 +74,28 @@ export interface PendingRequest {
   requestedAt: string;
 }
 
+export type RegistrationMode = 'open' | 'approval';
+
 interface AccountsFile {
-  v: 6;
+  v: 7;
   accounts: Record<string, Account>;
   pending: Record<string, PendingRequest>;
+  settings?: { registration?: RegistrationMode };
+}
+
+/** modalita' di registrazione del server: env DND5E_REGISTRATION > impostazione salvata > 'approval' (default) */
+export function registrationMode(): RegistrationMode {
+  const env = (process.env.DND5E_REGISTRATION ?? '').trim().toLowerCase();
+  if (env === 'open' || env === 'approval') return env;
+  const saved = loadAccountsFile().settings?.registration;
+  return saved === 'open' ? 'open' : 'approval';
+}
+
+/** l'admin cambia la modalita' di registrazione (persistente su disco) */
+export function setRegistrationMode(mode: RegistrationMode): void {
+  const f = loadAccountsFile();
+  f.settings = { ...(f.settings ?? {}), registration: mode };
+  saveAccountsFile(f);
 }
 
 /** migrazione v1..v5 -> v6: aggiunge role, savedP2PCampaigns, totp e passkeys */
@@ -100,7 +120,7 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
     a.passkeys = a.passkeys ?? [];
     accounts[k] = a as Account;
   }
-  return { v: 6, accounts, pending };
+  return { v: 7, accounts, pending, settings: {} };
 }
 
 /** sessioni attive in memoria: token -> username (si perdono al riavvio del server) */
@@ -112,13 +132,18 @@ export function loadAccountsFile(): AccountsFile {
   try {
     if (existsSync(ACCOUNTS_FILE)) {
       const raw = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-      if (raw && raw.v === 6 && raw.accounts) return raw as AccountsFile;
+      if (raw && (raw.v === 7 || raw.v === 6) && raw.accounts) {
+        const f = raw as AccountsFile;
+        f.v = 7;
+        f.settings = f.settings ?? {};
+        return f;
+      }
       if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5 || !raw.v)) return migrateAccounts(raw);
     }
   } catch {
     /* file corroto: si riparte da un registro vuoto */
   }
-  return { v: 6, accounts: {}, pending: {} };
+  return { v: 7, accounts: {}, pending: {}, settings: {} };
 }
 
 export function saveAccountsFile(f: AccountsFile): void {
@@ -503,4 +528,44 @@ export function adminClearPasskeys(username: string): number {
 
 export function sessionUsername(token: string): string | undefined {
   return sessions.get(token);
+}
+
+export function deleteSession(token: string): void {
+  sessions.delete(token);
+}
+
+function hashToken(t: string): string {
+  return createHash('sha256').update('5e-remember-' + t).digest('hex');
+}
+
+/** crea un token "mantieni l'accesso" persistente per l'account (hash salvato, max 10) */
+export function createRememberToken(username: string): string {
+  const token = randomUUID() + randomUUID();
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato: ' + username);
+  const list = [...(acc.rememberTokens ?? []), hashToken(token)].slice(-10);
+  acc.rememberTokens = list;
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+  return token;
+}
+
+/** login automatico con token "mantieni l'accesso": ritorna l'account se il token e' valido */
+export function loginByRememberToken(token: string): Account | undefined {
+  const h = hashToken(token);
+  for (const acc of Object.values(loadAccountsFile().accounts)) {
+    if (acc.rememberTokens?.includes(h)) return acc;
+  }
+  return undefined;
+}
+
+/** revoca tutti i token "mantieni l'accesso" dell'account (es. al cambio password) */
+export function revokeRememberTokens(username: string): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) return;
+  acc.rememberTokens = [];
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
 }

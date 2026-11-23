@@ -189,6 +189,8 @@ docker compose -f docker-compose.nginx.yml ps
 | `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https (impostati in automatico dal compose nginx dal `DND5E_DOMAIN`) |
 | `DND5E_ADMIN_USER` | *(vuoto)* | username che diventa admin a prescindere dal file (bootstrap primo admin) |
 | `DND5E_LAN_IP` / `DND5E_LAN_IPS` | auto (interfacce di rete) | in Docker gli IP rilevati sono quelli del bridge (172.x): impostali con l'IP LAN reale dell'host (es. `DND5E_LAN_IP=192.168.1.36`) così la scansione LAN delle app mostra l'indirizzo giusto |
+| `DND5E_REQUIRE_AUTH` | `true` (nei compose) | **webapp di Docker chiusa**: senza account non si accede al sito (si vede solo la pagina di login; `/api/login`, `/api/register`, `/api/info`, `/setup`, `/version.json` restano pubblici). Sui WS `create`/`join`/`action` richiedono la sessione. Le app scaricabili (AppImage/APK/…) restano indipendenti: là il login è facoltativo. Mettilo `false` solo in LAN fidata |
+| `DND5E_REGISTRATION` | `approval` | `approval` = registrazione con approvazione dell'admin (richieste in `/admin`); `open` = chiunque si registra subito dalla pagina di login. Cambiabile anche da `/admin` → Impostazioni server |
 
 ## Comandi utili
 

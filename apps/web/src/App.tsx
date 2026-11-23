@@ -5,6 +5,7 @@ import { useNet, sha256Hex } from './netStore.js';
 import { hasPendingDeepLink, onDeepLink, queueDeepLink } from './deepLink.js';
 import CreateForm from './CreateForm.js';
 import Onboarding, { ONBOARD_KEY } from './Onboarding.js';
+import SetupPage, { isSetupDone, SETUP_KEY } from './SetupPage.js';
 import CommandPalette, { type Command } from './CommandPalette.js';
 import UpdateButton from './UpdateButton.js';
 import Icon, { type IconName } from './icons.js';
@@ -69,6 +70,7 @@ export default function App() {
   const [onboarded, setOnboarded] = useState(() => {
     try { return localStorage.getItem(ONBOARD_KEY) === '1'; } catch { return true; }
   });
+  const [setupDone, setSetupDone] = useState(() => isSetupDone());
   const [paletteOpen, setPaletteOpen] = useState(false);
 
   const createdRef = useRef(false);
@@ -349,6 +351,12 @@ export default function App() {
         />
       )}
       {paletteOpen && <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)} />}
+      {!setupDone && (
+        <SetupPage onDone={() => {
+          try { localStorage.setItem(SETUP_KEY, '1'); } catch { /* quota */ }
+          setSetupDone(true);
+        }} />
+      )}
     </>
   );
 }

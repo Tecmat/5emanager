@@ -26,6 +26,7 @@ import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet, passkeySupported } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, getP2PRejoinToken, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
+import { isServerWebapp } from './net.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
@@ -191,6 +192,8 @@ export default function CampaignTab() {
     });
   };
   const [netMode, setNetMode] = useState<'server' | 'p2p'>('server');
+  // sulla webapp servita dal server il P2P non ha senso: solo server remoto
+  const serverWebapp = isServerWebapp();
   const [p2pSub, setP2pSub] = useState<'host' | 'join'>('host');
   const [invite, setInvite] = useState<{ key: string; code: string } | null>(null);
   const [joinerAnswer, setJoinerAnswer] = useState('');
@@ -268,6 +271,7 @@ export default function CampaignTab() {
 
   /** cambio modalità server<->p2p "pulito": ferma discovery/timer e azzera gli stati residui */
   const switchNetMode = (m: 'server' | 'p2p') => {
+    if (serverWebapp && m === 'p2p') return;
     if (m === netMode) return;
     stopDiscovery();
     setHosts([]);
@@ -851,6 +855,9 @@ export default function CampaignTab() {
     disconnect();
   };
 
+  // webapp servita dal server: niente P2P, solo server remoto
+  useEffect(() => { if (serverWebapp && netMode === 'p2p') setNetMode('server'); }, [serverWebapp, netMode]);
+
   // deep link (QR 5ELAN:/5EP2P1: aperto dalla fotocamera di sistema): instrada come una scansione
   useEffect(() => {
     const off = onDeepLink((raw) => { consumePendingDeepLink(); routeScannedQr(raw); });
@@ -970,9 +977,11 @@ export default function CampaignTab() {
               <button className={`seg ${(netMode as string) === 'server' ? 'active' : ''}`} onClick={() => switchNetMode('server')}>
                 <Icon name="globe" candy size={15} /> {t('cg.remoteServer', 'Server remoto')}
               </button>
-              <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')}>
-                <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
-              </button>
+              {!serverWebapp && (
+                <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')}>
+                  <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
+                </button>
+              )}
             </div>
             <div className="segmented" style={{ marginBottom: 8 }}>
               <button className={`seg ${p2pSub === 'host' ? 'active' : ''}`} onClick={() => setP2pSub('host')}>
@@ -1201,9 +1210,11 @@ export default function CampaignTab() {
             <button className={`seg ${(netMode as string) === 'server' ? 'active' : ''}`} onClick={() => switchNetMode('server')}>
               <Icon name="globe" candy size={15} /> {t('cg.remoteServer', 'Server remoto')}
             </button>
-            <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')} title="Campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito">
-              <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
-            </button>
+            {!serverWebapp && (
+              <button className={`seg ${(netMode as string) === 'p2p' ? 'active' : ''}`} onClick={() => switchNetMode('p2p')} title="Campagna direttamente su questo dispositivo (senza server): beacon LAN o codice invito">
+                <Icon name="signal" candy size={15} /> {t('cg.p2pHost', 'P2P (host sul mio dispositivo)')}
+              </button>
+            )}
           </div>
           <label>{t('cg.wsUrl', 'Server WebSocket')}</label>
           <div className="row">

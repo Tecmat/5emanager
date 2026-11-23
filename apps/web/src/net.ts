@@ -70,6 +70,40 @@ export function wsUrlFromLocation(loc: { protocol: string; host: string }): stri
 }
 
 /**
+ * normalizza un URL server inserito a mano in un URL WebSocket:
+ * https://host -> wss://host, http://host -> ws://host, ws(s):// resta, "host:3001" -> ws://host:3001
+ */
+export function toWsUrl(u: string): string {
+  const s = u.trim();
+  if (!s) return s;
+  if (/^wss?:\/\//i.test(s)) return s;
+  if (/^https:\/\//i.test(s)) return s.replace(/^https:/i, 'wss:');
+  if (/^http:\/\//i.test(s)) return s.replace(/^http:/i, 'ws:');
+  return 'ws://' + s;
+}
+
+/** URL http(s) dello stesso server da un URL ws(s) (per aprire /admin, /setup ecc.) */
+export function httpUrlFromWs(u: string): string {
+  const s = u.trim();
+  if (/^wss:/i.test(s)) return s.replace(/^wss:/i, 'https:');
+  if (/^ws:/i.test(s)) return s.replace(/^ws:/i, 'http:');
+  if (/^https?:\/\//i.test(s)) return s;
+  return 'http://' + s;
+}
+
+/**
+ * true quando l'app gira come webapp servita DAL server (non vite dev 5173, non app nativa):
+ * in quel caso il multiplayer e' il server stesso e la sezione P2P non ha senso.
+ */
+export function isServerWebapp(): boolean {
+  try {
+    if (Capacitor.isNativePlatform()) return false;
+  } catch { /* non nativo */ }
+  if (typeof location === 'undefined' || !location.host) return false;
+  return location.port !== '5173';
+}
+
+/**
  * URL WS di default: in web usa l'origin della pagina (il server che serve l'app).
  * Su app nativa (APK: location = https://localhost) NON ha senso ws://localhost:
  * si lascia vuoto e si usa la scansione LAN / l'URL salvato o inserito a mano.
