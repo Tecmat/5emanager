@@ -54,7 +54,10 @@ docker compose -f docker-compose.nginx.yml up -d --build
 - Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin`
 - Multiplayer remoto dalle app: `wss://dnd.tuosito.it` (l'upgrade WebSocket passa da nginx in automatico, vedi `docker/nginx/default.conf.template`)
 
-### Se hai già un nginx esterno
+### Se hai già un nginx esterno (cert tuoi sull'host) — usa i file pronti
+
+Non serve il container nginx: vai alla **sezione 2b** qui sotto (`docker-compose.external-nginx.yml` +
+`deploy/nginx-external.conf` + `deploy/nginx-upgrade-map.conf`). Snippet minimo equivalente:
 Punta il tuo server block al container (porta interna esposta solo sulla rete docker, oppure
 pubblica `3001` e fai proxy dal tuo nginx host):
 

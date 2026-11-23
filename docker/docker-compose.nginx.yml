@@ -8,6 +8,11 @@
 #   # (es. certbot certonly --webroot -w docker/certbot-webroot -d dnd.tuosito.it e copia i file)
 #   docker compose -f docker-compose.nginx.yml up -d --build
 #
+#   ATTENZIONE: questo file pubblica 80/443 con un nginx IN CONTAINER. Se sull'host hai
+#   gia' il TUO nginx su 80/443 (certificati tuoi), qui fallisce con 'bind: address already in use':
+#   in quel caso usa invece docker-compose.external-nginx.yml (server su 127.0.0.1:3001 + tuo nginx,
+#   vedi docs/DOCKER.md sezione 2b e deploy/nginx-external.conf).
+#
 # Risultato: https://dnd.tuosito.it (web app + /admin) e wss://dnd.tuosito.it (multiplayer WS).
 
 services:
