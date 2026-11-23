@@ -70,6 +70,41 @@ location / {
 }
 ```
 
+## 2b) HTTPS con il TUO nginx esterno (certificati gestiti da te)
+
+Se hai già nginx sull'host e gestisci i certificati da lì (es. Let's Encrypt con certbot), non serve
+il container nginx: usa **`docker/docker-compose.external-nginx.yml`**, che pubblica il server SOLO su
+`127.0.0.1:3001` (la porta resta chiusa verso l'esterno; apri solo 80/443 nel firewall).
+
+```bash
+# --- sull'HOST (nginx tuo) ---
+sudo cp deploy/nginx-upgrade-map.conf /etc/nginx/conf.d/     # map per WebSocket
+sudo cp deploy/nginx-external.conf /etc/nginx/sites-available/dnd.conf
+sudo sed -i 's/<DOMAIN>/dnd.tuosito.it/g' /etc/nginx/sites-available/dnd.conf
+sudo ln -sf /etc/nginx/sites-available/dnd.conf /etc/nginx/sites-enabled/dnd.conf
+sudo nginx -t && sudo systemctl reload nginx                  # blocco :80 attivo (challenge ACME)
+sudo certbot certonly --webroot -w /var/www/certbot -d dnd.tuosito.it
+sudo nginx -t && sudo systemctl reload nginx                  # blocco 443 attivo
+sudo ufw allow 80/tcp && sudo ufw allow 443/tcp              # 3001 resta solo su 127.0.0.1
+
+# --- sul server, il container ---
+cd /opt/5emanager/docker
+cp -n .env.example .env
+sed -i 's/^DND5E_DOMAIN=.*/DND5E_DOMAIN=dnd.tuosito.it/' .env
+sed -i 's/^DND5E_ADMIN_TOKEN=.*/DND5E_ADMIN_TOKEN=<token-lungo-casuale>/' .env
+docker compose -f docker-compose.external-nginx.yml up -d --build
+
+# --- verifica ---
+/opt/5emanager/deploy/smoke-test.sh https://dnd.tuosito.it
+```
+
+- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` · Multiplayer: `wss://dnd.tuosito.it`
+  (la web app lo deriva in automatico; nelle app native inserisci `wss://dnd.tuosito.it`).
+- Il compose imposta `DND5E_RP_ID`/`DND5E_RP_ORIGIN` dal dominio → **passkey attive** su HTTPS.
+- Lo snippet nginx (`deploy/nginx-external.conf`) passa `Upgrade`/`Connection` (WebSocket), `Host` e
+  `X-Forwarded-Proto: https`, con `proxy_read_timeout` alto per le sessioni WS lunghe.
+- Se preferisci nginx dentro Docker (tutto in un container): resta `docker-compose.nginx.yml` (sezione 2).
+
 ## 3) Deploy remoto passo-passo (VPS + dominio + HTTPS con nginx)
 
 Prerequisiti: un dominio con **record A** che punta all'IP pubblico del server, porte **80 e 443 aperte**
