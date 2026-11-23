@@ -25,7 +25,7 @@ import {
 import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet, passkeySupported } from './netStore.js';
-import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
+import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, getP2PRejoinToken, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
 import { qrEncode, qrSvg, scanQr } from './qr.js';
 import { onDeepLink, consumePendingDeepLink } from './deepLink.js';
 import { detectPlatform, errMsg } from './update.js';
@@ -214,6 +214,8 @@ export default function CampaignTab() {
   const hostRef = useRef<P2PHost | P2PRelayHost | P2PLanHost | null>(null);
   const [hostMode, setHostMode] = useState<'rtc' | 'relay' | 'lan'>('rtc');
   const p2pClientRef = useRef<P2PClient | P2PRelayClient | P2PLanClient | null>(null);
+  /** timer del retry automatico del client LAN dopo un drop (token di rientro) */
+  const lanReconnectRef = useRef<number | undefined>(undefined);
   const discRef = useRef<P2PDiscovery | null>(null);
   const discHostIdRef = useRef('');
   const announceTimerRef = useRef<number | undefined>(undefined);
@@ -374,6 +376,7 @@ export default function CampaignTab() {
     hostRef.current = null;
     setHostMode('rtc');
     setBeaconInfo(null);
+    if (lanReconnectRef.current) { window.clearTimeout(lanReconnectRef.current); lanReconnectRef.current = undefined; }
     p2pClientRef.current?.close();
     p2pClientRef.current = null;
     setP2PTransport(null);
@@ -611,9 +614,30 @@ export default function CampaignTab() {
       client.onMessage = (m) => onNetMessage(m);
       p2pClientRef.current = client;
       setP2PTransport((m) => client.send(m as never));
+      const hostKey = `lan:${peer.ip}:${peer.port}`;
+      let attempt = 0;
+      // drop del socket verso il beacon: riconnessione automatica con backoff (stesso playerId via token)
+      client.onClose = () => {
+        if (lanReconnectRef.current) window.clearTimeout(lanReconnectRef.current);
+        const delay = Math.min(1000 * Math.pow(2, attempt), 10_000);
+        attempt += 1;
+        setDiscMsg(t('cg.p2pLanReconnecting', '🔌 Connessione all\'host persa — riconnessione automatica in corso…'));
+        lanReconnectRef.current = window.setTimeout(() => {
+          void (async () => {
+            try {
+              await client.connect();
+              attempt = 0;
+              client.onOpen = () => client.join(name || 'Giocatore', password, hostKey);
+              client.join(name || 'Giocatore', password, hostKey);
+            } catch {
+              client.onClose?.();
+            }
+          })();
+        }, delay);
+      };
       await client.connect();
-      client.onOpen = () => client.join(name || 'Giocatore', password);
-      client.join(name || 'Giocatore', password);
+      client.onOpen = () => client.join(name || 'Giocatore', password, hostKey);
+      client.join(name || 'Giocatore', password, hostKey);
       setDiscMsg(t('cg.p2pJoinSent', '📨 Richiesta inviata all\'host — in attesa della risposta del master…'));
     } catch (e) {
       setError(errMsg(e));
@@ -658,7 +682,7 @@ export default function CampaignTab() {
   const makeP2PClient = () => {
     const client = new P2PClient();
     client.onMessage = (m) => onNetMessage(m);
-    client.onOpen = () => client.send({ t: 'join', name: name || 'Giocatore', password });
+    client.onOpen = () => client.join(name || 'Giocatore', password, 'disc:' + (discHostIdRef.current ?? 'rtc'));
     p2pClientRef.current = client;
     setP2PTransport((m) => client.send(m as never));
     return client;
@@ -751,7 +775,7 @@ export default function CampaignTab() {
       client.onMessage = (m) => onNetMessage(m);
       p2pClientRef.current = client;
       setP2PTransport((m) => client.send(m as never));
-      if (!skipJoin) client.join(name || 'Giocatore', password);
+      if (!skipJoin) client.join(name || 'Giocatore', password, getP2PRejoinToken('relay:' + hostId));
       return;
     }
     const client = makeP2PClient();
@@ -764,7 +788,7 @@ export default function CampaignTab() {
         } catch (e) { setError((e as Error).message); }
       })();
     };
-    if (!skipJoin) disc.join(hostId);
+    if (!skipJoin) disc.join(hostId, name || 'Giocatore', password, getP2PRejoinToken('relay:' + hostId));
   };
 
   /**
@@ -801,7 +825,7 @@ export default function CampaignTab() {
     if (disc?.connected) {
       setDiscMsg(tf('cg.p2pCodeJoiningSrv', 'Non trovato in LAN: provo col codice {code} via server…', { code }));
       disc.onCodeHost = (hostId, hostName) => joinDiscoveredHost(hostId, hostName || code, true);
-      disc.joinByCode(code, name || 'Giocatore', password);
+      disc.joinByCode(code, name || 'Giocatore', password, getP2PRejoinToken('code:' + code));
       return;
     }
     setError(tf('cg.p2pCodeNotFound', 'Codice {code} non trovato sulla rete locale: siete sulla stessa WiFi/hotspot? Su reti diverse l\'host deve annunciarsi su un server 5emanager (oppure si scambia il codice SDP 5EP2P1:…).', { code }));
@@ -1457,8 +1481,8 @@ export default function CampaignTab() {
         <div className="row">
           <b>{t('cg.players', 'Giocatori:')}</b>
           {campaign.players.map((p) => (
-            <span key={p.id} className={`tag ${p.id === you.id ? 'custom' : ''}`}>
-              {p.name}{p.role === 'master' ? ' 👑' : ''}{campaign.characters[p.id] ? ` — ${campaign.characters[p.id].name}` : ` ${t('cg.withoutSheet', '(senza scheda)')}`}
+            <span key={p.id} className={`tag ${p.id === you.id ? 'custom' : ''}`} title={p.online === false ? t('cg.offlineTitle', 'Disconnesso: in attesa di riconnessione automatica') : undefined}>
+              {p.name}{p.role === 'master' ? ' 👑' : ''}{p.online === false ? ` 🔌 ${t('cg.offline', 'disconnesso')}` : ''}{campaign.characters[p.id] ? ` — ${campaign.characters[p.id].name}` : ` ${t('cg.withoutSheet', '(senza scheda)')}`}
             </span>
           ))}
         </div>
@@ -1698,11 +1722,11 @@ export default function CampaignTab() {
             <tbody>
               {campaign.players.map((p) => {
                 const ch = campaign.characters[p.id];
-                if (!ch) return <tr key={p.id}><td>{p.name}</td><td className="muted" colSpan={7}>{t('cg.noSheet', 'senza scheda')}</td></tr>;
+                if (!ch) return <tr key={p.id}><td>{p.name}{p.online === false ? ` 🔌 ${t('cg.offline', 'disconnesso')}` : ''}</td><td className="muted" colSpan={7}>{t('cg.noSheet', 'senza scheda')}</td></tr>;
                 return (
                   <tr key={p.id}>
                     <td>
-                      {p.name}{p.role === 'master' ? ' 👑' : ''}
+                      {p.name}{p.role === 'master' ? ' 👑' : ''}{p.online === false ? ` 🔌 ${t('cg.offline', 'disconnesso')}` : ''}
                       {ch && <button style={{ marginLeft: 6, padding: '0 6px' }} title={t('cg.seeFullTitle', 'Vedi la scheda completa di questo giocatore')} onClick={() => setViewChar(ch, p.name)}>👁</button>}
                     </td>
                     <td>{ch.name}</td>
@@ -1729,7 +1753,7 @@ export default function CampaignTab() {
             return (
               <details key={p.id} style={{ marginBottom: 6 }}>
                 <summary style={{ cursor: 'pointer' }}>
-                  <b>{p.name}</b> {p.role === 'master' ? '👑' : ''}
+                  <b>{p.name}</b> {p.role === 'master' ? '👑' : ''}{p.online === false ? ` 🔌 ${t('cg.offline', 'disconnesso')}` : ''}
                   {ch ? (
                     <span className="row" style={{ display: 'inline-flex', marginLeft: 8 }}>
                       <span className="tag custom">{ch.name} — liv {totalLevel(ch)}</span>

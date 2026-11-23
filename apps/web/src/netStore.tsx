@@ -9,7 +9,9 @@ export type CampaignT = Campaign;
 export type ConnState =
   | { phase: 'offline' }
   | { phase: 'connecting'; error?: string }
-  | { phase: 'online'; campaign: CampaignT; you: PlayerInfo };
+  | { phase: 'online'; campaign: CampaignT; you: PlayerInfo }
+  /** drop di rete: riconnessione automatica in corso (rientro con lo stesso playerId via token) */
+  | { phase: 'reconnecting'; campaign: CampaignT; you: PlayerInfo; attempt: number };
 
 export interface AuthState {
   token: string;
@@ -58,6 +60,34 @@ const SERVERS_KEY = 'dnd5e.servers.v1';
 const JOINED_KEY = 'dnd5e.joined.v1';
 const URL_KEY = 'dnd5e.net.url';
 const NAME_KEY = 'dnd5e.net.name';
+const REJOIN_KEY = 'dnd5e.rejoinToken.v1';
+
+function randomToken(): string {
+  return crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+}
+
+/** token di rientro per campagna (persistente): dopo un drop si rientra con lo stesso playerId */
+export function getRejoinToken(campaignId: string): string {
+  try {
+    const all = JSON.parse(localStorage.getItem(REJOIN_KEY) ?? '{}') as Record<string, string>;
+    if (all[campaignId]) return all[campaignId];
+    const tok = randomToken();
+    all[campaignId] = tok;
+    localStorage.setItem(REJOIN_KEY, JSON.stringify(all));
+    return tok;
+  } catch {
+    return randomToken();
+  }
+}
+
+/** salva il token di rientro sotto il campaignId (usato dopo il welcome di una campagna appena creata) */
+export function saveRejoinToken(campaignId: string, token: string): void {
+  try {
+    const all = JSON.parse(localStorage.getItem(REJOIN_KEY) ?? '{}') as Record<string, string>;
+    all[campaignId] = token;
+    localStorage.setItem(REJOIN_KEY, JSON.stringify(all));
+  } catch { /* quota */ }
+}
 
 export function loadServers(): string[] {
   try { return JSON.parse(localStorage.getItem(SERVERS_KEY) ?? '[]') as string[]; } catch { return []; }
@@ -146,6 +176,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const pendingReq = useRef(new Map<string, { resolve: (m: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>());
   const urlRef = useRef(url);
   const nameRef = useRef(name);
+  const connRef = useRef(conn);
+  connRef.current = conn;
   const lastUsernameRef = useRef(lastUsername);
   lastUsernameRef.current = lastUsername;
 
@@ -181,6 +213,14 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const p2pRef = useRef<((m: unknown) => void) | null>(null);
   /** watchdog del connect: se il server non manda il welcome, sblocca il pulsante "Entra" */
   const connectWdRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** timer del retry di riconnessione automatica */
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** true se la disconnessione \u00e8 volontaria (Esci / kicked / campagna eliminata): niente auto-reconnect */
+  const manualCloseRef = useRef(false);
+  /** dati dell'ultimo join per il rientro automatico */
+  const lastJoinRef = useRef<{ campaignId: string; role: 'master' | 'player' } | null>(null);
+  /** token generato per una create in attesa del welcome (poi salvato col campaignId reale) */
+  const pendingCreateTokenRef = useRef<string | null>(null);
 
   const handleMsg = (m: any, serverUrl?: string) => {
     const pend = pendingReq.current.get(m.t);
@@ -199,6 +239,13 @@ export function NetProvider({ children }: { children: ReactNode }) {
     }
     if (m.t === 'welcome') {
       if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
+      if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      manualCloseRef.current = false;
+      lastJoinRef.current = { campaignId: m.campaign.id, role: m.you.role };
+      if (pendingCreateTokenRef.current) {
+        saveRejoinToken(m.campaign.id, pendingCreateTokenRef.current);
+        pendingCreateTokenRef.current = null;
+      }
       setConn({ phase: 'online', campaign: m.campaign, you: m.you });
       rememberJoined({ server: serverUrl ?? urlRef.current, id: m.campaign.id, name: m.campaign.name });
     } else if (m.t === 'state') {
@@ -216,7 +263,10 @@ export function NetProvider({ children }: { children: ReactNode }) {
     } else if (m.t === 'totpSetup') {
       setTotpSetup({ secret: m.secret, otpauthUrl: m.otpauthUrl, backupCodes: m.backupCodes ?? [] });
     } else if (m.t === 'kicked') {
-      // espulso dal master (campagna server) o dall'admin: chiudi tutto
+      // espulso dal master (campagna server) o dall'admin: chiudi tutto (niente auto-reconnect)
+      manualCloseRef.current = true;
+      if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      lastJoinRef.current = null;
       setConn({ phase: 'offline' });
       setError('Sei stato espulso dalla campagna (dal master o dall\'admin).');
       try { netRef.current?.close(); } catch { /* ignora */ }
@@ -225,6 +275,9 @@ export function NetProvider({ children }: { children: ReactNode }) {
       // la richiesta di join P2P è arrivata all'host: ora si aspetta il master
       setNotice('📨 Richiesta ricevuta dall\'host — in attesa che il master ti accetti…');
     } else if (m.t === 'campaignDeleted') {
+      manualCloseRef.current = true;
+      if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+      lastJoinRef.current = null;
       setConn({ phase: 'offline' });
       setError('La campagna è stata eliminata (dal master o dall\'admin).');
       // tutti giù insieme: chiudi anche il socket verso il server
@@ -234,9 +287,48 @@ export function NetProvider({ children }: { children: ReactNode }) {
       setNotice(m.message);
     } else if (m.t === 'error') {
       setError(m.message);
+      // durante la riconnessione automatica: token non pi\u00f9 valido (es. server riavviato) -> niente retry infiniti
+      const prev = connRef.current;
+      if (prev.phase === 'reconnecting' && /password|non trovata|gi\u00e0 un master/i.test(String(m.message))) {
+        manualCloseRef.current = true;
+        if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+        lastJoinRef.current = null;
+        setConn({ phase: 'offline' });
+      }
     } else if (m.t === 'closed') {
-      setConn({ phase: 'offline' });
+      const prev = connRef.current;
+      // drop di rete non volontario: rientro automatico con backoff (stesso playerId via token)
+      if (prev.phase === 'online' && !manualCloseRef.current && lastJoinRef.current && !p2pRef.current) {
+        scheduleReconnect(prev.campaign, prev.you, 1);
+        setConn({ phase: 'reconnecting', campaign: prev.campaign, you: prev.you, attempt: 1 });
+      } else {
+        setConn({ phase: 'offline' });
+      }
     }
+  };
+
+  /** retry del join con il token di rientro, backoff esponenziale (max 10s) finch\u00e9 non sei online o non esci */
+  const scheduleReconnect = (campaign: CampaignT, you: PlayerInfo, attempt: number) => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10_000);
+    reconnectTimerRef.current = setTimeout(() => {
+      reconnectTimerRef.current = null;
+      void (async () => {
+        const lj = lastJoinRef.current;
+        if (!lj || manualCloseRef.current) return;
+        try {
+          const net = await ensureNet();
+          if (lastUsernameRef.current) net.send({ t: 'login', username: lastUsernameRef.current });
+          net.send({ t: 'join', campaignId: lj.campaignId, password: '', name: nameRef.current || you.name, role: lj.role, playerToken: getRejoinToken(lj.campaignId) });
+        } catch {
+          const prev = connRef.current;
+          if (prev.phase === 'reconnecting' && !manualCloseRef.current && lastJoinRef.current) {
+            scheduleReconnect(prev.campaign, prev.you, attempt + 1);
+            setConn({ ...prev, attempt: attempt + 1 });
+          }
+        }
+      })();
+    }, delay);
   };
 
   const attachHandlers = (net: NetClient, serverUrl: string) => {
@@ -452,14 +544,17 @@ export function NetProvider({ children }: { children: ReactNode }) {
 
   const connect = async (opts: ConnectOpts) => {
     setError('');
+    manualCloseRef.current = false;
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
     setConn({ phase: 'connecting' });
     try {
       const net = await ensureNet();
       if (lastUsernameRef.current) net.send({ t: 'login', username: lastUsernameRef.current });
       if (opts.mode === 'create') {
-        net.send({ t: 'create', name: nameRef.current || 'Giocatore', password: opts.password, campaignName: opts.campaignName || 'Nuova campagna' });
+        pendingCreateTokenRef.current = randomToken();
+        net.send({ t: 'create', name: nameRef.current || 'Giocatore', password: opts.password, campaignName: opts.campaignName || 'Nuova campagna', playerToken: pendingCreateTokenRef.current });
       } else {
-        net.send({ t: 'join', campaignId: opts.joinId, password: opts.password, name: nameRef.current || 'Giocatore', role: opts.asMaster ? 'master' : 'player' });
+        net.send({ t: 'join', campaignId: opts.joinId, password: opts.password, name: nameRef.current || 'Giocatore', role: opts.asMaster ? 'master' : 'player', playerToken: getRejoinToken(opts.joinId) });
       }
       // watchdog: WS aperto ma nessun welcome entro 10s -> non restare bloccati su "Connessione..."
       if (connectWdRef.current) clearTimeout(connectWdRef.current);
@@ -476,7 +571,10 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   const disconnect = () => {
+    manualCloseRef.current = true;
     if (connectWdRef.current) { clearTimeout(connectWdRef.current); connectWdRef.current = null; }
+    if (reconnectTimerRef.current) { clearTimeout(reconnectTimerRef.current); reconnectTimerRef.current = null; }
+    lastJoinRef.current = null;
     netRef.current?.close();
     setConn({ phase: 'offline' });
   };

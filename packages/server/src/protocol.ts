@@ -3,8 +3,8 @@ import type { Campaign, Character, ClientAction, PlayerInfo, SavedCampaignSnapsh
 export type { Campaign, PlayerInfo, ClientAction } from '@dnd5e/core';
 
 export type ClientMessage =
-  | { t: 'create'; name: string; password: string; campaignName: string }
-  | { t: 'join'; campaignId: string; password: string; name: string; role?: 'master' | 'player' }
+  | { t: 'create'; name: string; password: string; campaignName: string; playerToken?: string }
+  | { t: 'join'; campaignId: string; password: string; name: string; role?: 'master' | 'player'; playerToken?: string }
   | { t: 'list' }
   // account: register crea una RICHIESTA che l'admin approva; login verifica la password lato server (hash sha256)
   | { t: 'register'; username: string; password: string }
@@ -46,10 +46,10 @@ export type ClientMessage =
   // discovery P2P: gli host P2P si annunciano qui (relay di codici SDP e, se WebRTC manca, di tutto il traffico)
   | { t: 'p2pAnnounce'; name: string }
   | { t: 'p2pList' }
-  | { t: 'p2pJoin'; hostId: string; name?: string; password?: string }
+  | { t: 'p2pJoin'; hostId: string; name?: string; password?: string; playerToken?: string }
   // codice invito BREVE (XXXX-XXXX): l'host lo annuncia e il giocatore lo usa al posto dell'hostId
   | { t: 'p2pAnnounceCode'; code: string; name?: string }
-  | { t: 'p2pJoinCode'; code: string; name?: string; password?: string }
+  | { t: 'p2pJoinCode'; code: string; name?: string; password?: string; playerToken?: string }
   | { t: 'p2pOffer'; to: string; code: string }
   | { t: 'p2pAnswer'; to: string; code: string }
   | { t: 'p2pData'; to: string; data: string };
@@ -83,7 +83,9 @@ export type ServerMessage =
   | { t: 'campaignDeleted'; id: string }
   | { t: 'p2pHosts'; hosts: { id: string; name: string; ip?: string }[] }
   | { t: 'p2pCodeHost'; hostId: string; name?: string }
-  | { t: 'p2pJoinRequest'; from: string; name?: string; password?: string }
+  | { t: 'p2pJoinRequest'; from: string; name?: string; password?: string; playerToken?: string }
+  /** relay host: un peer il cui socket si è chiuso (connId) — l'host lo marca offline con grace period */
+  | { t: 'p2pPeerGone'; from: string }
   | { t: 'p2pOffer'; from: string; name: string; code: string }
   | { t: 'p2pAnswer'; from: string; code: string }
   | { t: 'p2pData'; from: string; data: string }

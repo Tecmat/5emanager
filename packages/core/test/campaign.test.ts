@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyCampaignAction, createRegistry, DEFAULT_HOUSE_RULES, migrateCampaign, resumeCampaign, type Campaign } from '../src/index.js';
+import { applyCampaignAction, createRegistry, DEFAULT_HOUSE_RULES, migrateCampaign, resumeCampaign, setPlayerOnline, type Campaign } from '../src/index.js';
 
 function savedCampaign(): Campaign {
   return {
@@ -159,5 +159,18 @@ describe('chat di campagna', () => {
     delete old.chat;
     const m = migrateCampaign(old as Campaign);
     expect(m.chat).toEqual([]);
+  });
+
+  it('setPlayerOnline marca online/offline solo il giocatore giusto', () => {
+    const c = camp();
+    expect(c.players.length).toBeGreaterThanOrEqual(1);
+    const pid = c.players[0].id;
+    setPlayerOnline(c, pid, false);
+    expect(c.players.find((p) => p.id === pid)?.online).toBe(false);
+    setPlayerOnline(c, pid, true);
+    expect(c.players.find((p) => p.id === pid)?.online).toBe(true);
+    // id inesistente: no-op
+    setPlayerOnline(c, 'inesistente', false);
+    expect(c.players.some((p) => p.online === false)).toBe(false);
   });
 });

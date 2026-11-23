@@ -30,6 +30,15 @@ export interface PlayerInfo {
   name: string;
   role: 'master' | 'player';
   characterId?: string;
+  /** false = disconnesso (in grace period, in attesa di riconnessione); undefined/true = online */
+  online?: boolean;
+}
+
+/** marca un giocatore online/offline (usato da server e host P2P su disconnessione/riconnessione) */
+export function setPlayerOnline(c: Campaign, playerId: string, online: boolean): Campaign {
+  const p = c.players.find((x) => x.id === playerId);
+  if (p) p.online = online;
+  return c;
 }
 
 /** messaggio della chat di campagna */

@@ -241,8 +241,12 @@ export default function App() {
           )}
         </span>
         <span className="row">
-          <span className="muted status" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : 'Non connesso a nessuna campagna'}>
-            {conn.phase === 'online' ? <><Icon name="wifi" size={13} /> {conn.campaign.name}</> : <><Icon name="offline" size={13} /> {t('app.offline', 'offline')}</>}
+          <span className="muted status" title={conn.phase === 'online' ? `Connesso a ${conn.campaign.name} (${conn.campaign.id})` : conn.phase === 'reconnecting' ? `Disconnesso da ${conn.campaign.name}: riconnessione automatica in corso (tentativo ${conn.attempt})\u2026` : 'Non connesso a nessuna campagna'}>
+            {conn.phase === 'online'
+              ? <><Icon name="wifi" size={13} /> {conn.campaign.name}</>
+              : conn.phase === 'reconnecting'
+                ? <><Icon name="offline" size={13} /> {t('app.reconnecting', 'disconnesso, riconnessione\u2026')} ({conn.attempt})</>
+                : <><Icon name="offline" size={13} /> {t('app.offline', 'offline')}</>}
           </span>
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
           <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN"><Icon name="globe" size={14} /> {lang.toUpperCase()}</button>

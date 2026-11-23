@@ -104,9 +104,9 @@ Android APK (apre il download dell'asset). Dettagli in [docs/UPDATE.md](docs/UPD
 Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
 [docs/ROADMAP.md](docs/ROADMAP.md)) sono:
 
-1. **Robustezza P2P + polish UX** — persistenza della campagna sull'host ("riprendi campagna"),
-   riconnessione automatica dopo un drop, chat di campagna, turno corrente evidente con avviso,
-   onboarding al primo avvio e palette comandi Cmd-K
+1. **Robustezza P2P + polish UX** ✅ (v0.1.53–0.1.67) — persistenza della campagna sull'host ("riprendi campagna"),
+   **riconnessione automatica dopo un drop** (token identità + grace period + rientro automatico, badge "disconnesso"),
+   chat di campagna, turno corrente evidente con avviso, onboarding al primo avvio e palette comandi Cmd-K
 2. **Espansione gameplay** — mappa tattica con token trascinabili sincronizzata via P2P, party
    tracker del master, log/statistiche di campagna ed export della campagna intera, schede pregen,
    generatore di dungeon, crafting
@@ -120,4 +120,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 153/153 verdi (root) + 7/7 UI jsdom.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 158/158 verdi (root) + 7/7 UI jsdom.

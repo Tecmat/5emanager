@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createRegistry, loadData, type Registry } from '@dnd5e/core';
+import { createRegistry, loadData, setPlayerOnline, type Registry } from '@dnd5e/core';
 import { SRD_DATA } from '@dnd5e/data-srd';
 import type { Campaign, ClientMessage, PlayerInfo, ServerMessage } from './protocol.js';
 import {
@@ -176,10 +176,49 @@ const conns = new Set<Conn>();
 const campaigns = new Map<string, Campaign>();
 
 /**
+ * token di rientro dei giocatori (in memoria): token -> { campaignId, playerId }.
+ * Il client lo manda in create/join e lo tiene in localStorage per campagna: dopo un drop
+ * di rete rientra con lo stesso playerId (scheda compresa) senza reinserire la password.
+ */
+const rejoinTokens = new Map<string, { campaignId: string; playerId: string }>();
+/** grace period: dopo la disconnessione il giocatore resta "offline" (online=false) per TOT ms, poi viene rimosso */
+const REJOIN_GRACE_MS = Number(process.env.DND5E_REJOIN_GRACE_MS ?? 60_000);
+const offlineTimers = new Map<string, ReturnType<typeof setTimeout>>();
+
+function rejoinKey(campaignId: string, playerId: string): string {
+  return campaignId + ':' + playerId;
+}
+
+function dropRejoinToken(campaignId: string, playerId: string): void {
+  for (const [tok, v] of rejoinTokens) if (v.campaignId === campaignId && v.playerId === playerId) rejoinTokens.delete(tok);
+}
+
+/** dopo la disconnessione: marca offline e programma la rimozione dopo il grace period */
+function scheduleOfflineRemoval(campaignId: string, playerId: string): void {
+  const key = rejoinKey(campaignId, playerId);
+  const prev = offlineTimers.get(key);
+  if (prev) clearTimeout(prev);
+  const timer = setTimeout(() => {
+    offlineTimers.delete(key);
+    const c = campaigns.get(campaignId);
+    if (!c) return;
+    const p = c.players.find((x) => x.id === playerId);
+    const attached = [...conns].some((x) => x.campaignId === campaignId && x.playerId === playerId);
+    if (p && p.online === false && !attached) {
+      const next = removePlayer(c, playerId);
+      campaigns.set(next.id, next);
+      broadcast(next);
+    }
+  }, REJOIN_GRACE_MS);
+  offlineTimers.set(key, timer);
+}
+
+/**
  * elimina una campagna e disconnetti TUTTI i partecipanti (master incluso) insieme:
  * gli viene mandato campaignDeleted e poi il socket viene chiuso lato server.
  */
 function disconnectCampaign(cid: string): void {
+  for (const [tok, v] of rejoinTokens) if (v.campaignId === cid) rejoinTokens.delete(tok);
   for (const cc of conns) {
     if (cc.campaignId === cid) {
       send(cc.ws, { t: 'campaignDeleted', id: cid });
@@ -340,7 +379,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       return;
     }
     // relay della richiesta con nome/password: in modalità relay (senza WebRTC) l'host risponde direttamente via p2pData
-    p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    p2pRelay(conn, String(msg.hostId), { t: 'p2pJoinRequest', name: msg.name, password: msg.password, playerToken: msg.playerToken });
     // ack al giocatore: la richiesta è arrivata ed è stata inoltrata all'host
     send(conn.ws, { t: 'p2pJoinSent' });
     return;
@@ -376,7 +415,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     }
     // risolvi il codice in hostId per il client (serve al trasporto relay) e relay la richiesta
     send(conn.ws, { t: 'p2pCodeHost', hostId: host.id, name: p2pHosts.get(host.id)?.name });
-    p2pRelay(conn, host.id, { t: 'p2pJoinRequest', name: msg.name, password: msg.password });
+    p2pRelay(conn, host.id, { t: 'p2pJoinRequest', name: msg.name, password: msg.password, playerToken: msg.playerToken });
     send(conn.ws, { t: 'p2pJoinSent' });
     return;
   }
@@ -672,6 +711,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         }
         const next = removePlayer(c, kickPlayerId);
         campaigns.set(next.id, next);
+        dropRejoinToken(kickCampaignId, kickPlayerId);
         broadcast(next);
       }
       if (msg.t === 'adminBroadcast') {
@@ -703,37 +743,65 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   }
 
   if (msg.t === 'create') {
-    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: 'master' };
+    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: 'master', online: true };
     const c = createCampaign(msg.campaignName, msg.password, player);
     campaigns.set(c.id, c);
     conn.campaignId = c.id;
     conn.playerId = player.id;
     conns.add(conn);
+    if (msg.playerToken) rejoinTokens.set(msg.playerToken, { campaignId: c.id, playerId: player.id });
     send(conn.ws, { t: 'welcome', you: player, campaign: c });
     return;
   }
 
   if (msg.t === 'join') {
-    const c = campaigns.get(msg.campaignId) ?? loadCampaign(msg.campaignId);
-    if (!c) {
+    const loaded = campaigns.get(msg.campaignId) ?? loadCampaign(msg.campaignId);
+    if (!loaded) {
       send(conn.ws, { t: 'error', message: 'Campagna non trovata: ' + msg.campaignId });
       return;
+    }
+    const c = loaded;
+    // campagna caricata da disco (es. server riavviato): tutti i giocatori salvati sono offline
+    if (!campaigns.has(c.id)) {
+      let dirty = false;
+      for (const p of c.players) if (p.online !== false) { p.online = false; dirty = true; }
+      if (dirty) saveCampaign(c);
+    }
+    campaigns.set(c.id, c);
+    // rientro automatico dopo un drop: token valido -> stesso playerId (scheda compresa), niente password
+    if (msg.playerToken) {
+      const entry = rejoinTokens.get(msg.playerToken);
+      const existing = entry && entry.campaignId === c.id ? c.players.find((p) => p.id === entry.playerId) : undefined;
+      if (existing) {
+        const key = rejoinKey(c.id, existing.id);
+        const prev = offlineTimers.get(key);
+        if (prev) { clearTimeout(prev); offlineTimers.delete(key); }
+        setPlayerOnline(c, existing.id, true);
+        if (msg.name) existing.name = msg.name;
+        saveCampaign(c);
+        conn.campaignId = c.id;
+        conn.playerId = existing.id;
+        conns.add(conn);
+        send(conn.ws, { t: 'welcome', you: existing, campaign: c });
+        broadcast(c);
+        return;
+      }
     }
     if (!checkPassword(c, msg.password)) {
       send(conn.ws, { t: 'error', message: 'Password sbagliata' });
       return;
     }
-    campaigns.set(c.id, c);
     // rientro come master: concesso se non c'è già un master collegato (la password della campagna protegge l'accesso)
-    if (msg.role === 'master' && c.players.some((p) => p.role === 'master')) {
+    if (msg.role === 'master' && c.players.some((p) => p.role === 'master' && p.online !== false)) {
       send(conn.ws, { t: 'error', message: 'C\'è già un master collegato in questa campagna' });
       return;
     }
-    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'master' : 'player' };
+    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'master' : 'player', online: true };
     addPlayer(c, player);
     conn.campaignId = c.id;
     conn.playerId = player.id;
     conns.add(conn);
+    if (msg.playerToken) rejoinTokens.set(msg.playerToken, { campaignId: c.id, playerId: player.id });
     send(conn.ws, { t: 'welcome', you: player, campaign: c });
     broadcast(c);
     return;
@@ -799,8 +867,11 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     }
     campaigns.set(next.id, next);
     broadcast(next);
-    // kick: disconnetti subito il giocatore espulso
+    // uscita volontaria: il token di rientro non deve pi\u00f9 valere
+    if (action.kind === 'leave') dropRejoinToken(next.id, conn.playerId);
+    // kick: disconnetti subito il giocatore espulso e invalida il suo token di rientro
     if (action.kind === 'kickPlayer') {
+      dropRejoinToken(next.id, action.playerId);
       const victim = [...conns].find((x) => x.campaignId === next.id && x.playerId === action.playerId);
       if (victim) {
         send(victim.ws, { t: 'kicked' });
@@ -833,13 +904,24 @@ export function createDndServer(port = PORT, host = HOST) {
     ws.on('close', () => {
       conns.delete(conn);
       if (p2pHosts.delete(conn.id)) broadcastP2PHosts();
+      // avvisa gli host P2P annunciati che questo peer (relay) si è disconnesso: grace period lato host
+      if (!p2pHosts.has(conn.id)) {
+        const gone: ServerMessage = { t: 'p2pPeerGone', from: conn.id };
+        for (const h of conns) if (p2pHosts.has(h.id)) send(h.ws, gone);
+      }
       for (const [c, v] of p2pCodes) if (v.connId === conn.id) p2pCodes.delete(c);
       if (conn.campaignId && conn.playerId) {
-        const c = campaigns.get(conn.campaignId);
-        if (c) {
-          const next = removePlayer(c, conn.playerId);
-          campaigns.set(next.id, next);
-          broadcast(next);
+        const cid = conn.campaignId;
+        const pid = conn.playerId;
+        // un'altra connessione dello stesso giocatore (es. seconda scheda) non lo fa andare offline
+        const stillAttached = [...conns].some((x) => x.campaignId === cid && x.playerId === pid);
+        const c = campaigns.get(cid);
+        if (c && !stillAttached) {
+          setPlayerOnline(c, pid, false);
+          saveCampaign(c);
+          campaigns.set(c.id, c);
+          broadcast(c);
+          scheduleOfflineRemoval(cid, pid);
         }
       }
     });

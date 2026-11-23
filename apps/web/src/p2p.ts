@@ -2,6 +2,7 @@ import {
   applyCampaignAction,
   DEFAULT_HOUSE_RULES,
   resumeCampaign,
+  setPlayerOnline,
   type Campaign,
   type ClientAction,
   type PlayerInfo,
@@ -77,6 +78,46 @@ function buildCampaign(opts: { campaignName: string; password: string; masterNam
   };
 }
 
+
+/** grace period (ms) prima di rimuovere un peer P2P disconnesso: nel frattempo resta "disconnesso" e può rientrare col token */
+export const P2P_REJOIN_GRACE_MS = 60_000;
+
+const P2P_TOKEN_KEY = 'dnd5e.p2pRejoinToken.v1';
+
+/** token di rientro del client P2P per un host (persistente): dopo un drop rientra con lo stesso playerId */
+export function getP2PRejoinToken(hostKey: string): string {
+  try {
+    const all = JSON.parse(localStorage.getItem(P2P_TOKEN_KEY) ?? '{}') as Record<string, string>;
+    if (all[hostKey]) return all[hostKey];
+    const tok = crypto.randomUUID ? crypto.randomUUID() : 'tok-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+    all[hostKey] = tok;
+    localStorage.setItem(P2P_TOKEN_KEY, JSON.stringify(all));
+    return tok;
+  } catch {
+    return 'tok-' + Date.now().toString(36) + Math.random().toString(36).slice(2);
+  }
+}
+
+/** marca un peer offline e programma la rimozione dopo il grace period (se non rientra) */
+function makeOfflineScheduler(markOffline: (playerId: string) => void, removePeer: (playerId: string) => void) {
+  const timers = new Map<string, ReturnType<typeof setTimeout>>();
+  return {
+    onPeerGone(playerId: string): void {
+      markOffline(playerId);
+      const prev = timers.get(playerId);
+      if (prev) clearTimeout(prev);
+      timers.set(playerId, setTimeout(() => {
+        timers.delete(playerId);
+        removePeer(playerId);
+      }, P2P_REJOIN_GRACE_MS));
+    },
+    onPeerBack(playerId: string): void {
+      const prev = timers.get(playerId);
+      if (prev) { clearTimeout(prev); timers.delete(playerId); }
+    },
+  };
+}
+
 function b64urlEncode(s: string): string {
   return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
@@ -127,6 +168,16 @@ export class P2PHost {
   private pcs = new Set<RTCPeerConnection>(); // tutte le pc (per chiudere tutto su deleteCampaign)
   private cb: HostCallbacks;
   private nextInvite = 0;
+  private rejoinTokens = new Map<string, string>(); // playerId -> token
+  private offline = makeOfflineScheduler(
+    (pid) => { setPlayerOnline(this.campaign, pid, false); this.broadcastState(); },
+    (pid) => {
+      this.campaign.players = this.campaign.players.filter((p) => p.id !== pid);
+      this.rejoinTokens.delete(pid);
+      this.cb.onPeerLeft(pid);
+      this.broadcastState();
+    },
+  );
 
   constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; existing?: Campaign }) {
     this.reg = opts.reg;
@@ -184,9 +235,8 @@ export class P2PHost {
       const playerId = [...this.peers.entries()].find(([, c]) => c === ch)?.[0];
       if (playerId) {
         this.peers.delete(playerId);
-        this.campaign.players = this.campaign.players.filter((p) => p.id !== playerId);
-        this.cb.onPeerLeft(playerId);
-        this.broadcastState();
+        // grace period: resta "disconnesso" e può rientrare col token entro P2P_REJOIN_GRACE_MS
+        this.offline.onPeerGone(playerId);
       }
     };
     void key;
@@ -194,6 +244,21 @@ export class P2PHost {
 
   private handlePeerMessage(ch: RTCDataChannel, playerId: string | undefined, msg: AnyMsg) {
     if (msg.t === 'join') {
+      // rientro automatico dopo un drop: token valido -> stesso playerId, niente password
+      if (msg.playerToken) {
+        const [pid, tok] = [...this.rejoinTokens.entries()].find(([, t]) => t === msg.playerToken) ?? [];
+        const existing = pid ? this.campaign.players.find((p) => p.id === pid) : undefined;
+        if (existing) {
+          this.offline.onPeerBack(existing.id);
+          setPlayerOnline(this.campaign, existing.id, true);
+          if (msg.name) existing.name = String(msg.name);
+          this.peers.set(existing.id, ch);
+          ch.send(JSON.stringify({ t: 'welcome', you: existing, campaign: this.campaign }));
+          this.cb.onPeerJoined(existing);
+          this.broadcastState();
+          return;
+        }
+      }
       // password facoltativa: se l'host non l'ha impostata (passwordHash vuoto) non si controlla
       if (this.campaign.passwordHash && msg.password !== this.campaign.passwordHash) {
         ch.send(JSON.stringify({ t: 'error', message: 'Password sbagliata' }));
@@ -203,8 +268,9 @@ export class P2PHost {
         ch.send(JSON.stringify({ t: 'error', message: 'Nome già in uso in questa campagna' }));
         return;
       }
-      const player: PlayerInfo = { id: 'p2p-' + Math.random().toString(36).slice(2, 8), name: String(msg.name || 'Giocatore'), role: 'player' };
+      const player: PlayerInfo = { id: 'p2p-' + Math.random().toString(36).slice(2, 8), name: String(msg.name || 'Giocatore'), role: 'player', online: true };
       this.campaign.players.push(player);
+      if (msg.playerToken) this.rejoinTokens.set(player.id, String(msg.playerToken));
       this.peers.set(player.id, ch);
       ch.send(JSON.stringify({ t: 'welcome', you: player, campaign: this.campaign }));
       this.cb.onPeerJoined(player);
@@ -303,6 +369,11 @@ export class P2PClient {
     if (this.dc && this.dc.readyState === 'open') this.dc.send(JSON.stringify(m));
   }
 
+  /** entra nella campagna (dopo onOpen); hostKey serve per il token di rientro persistente */
+  join(name: string, password: string, hostKey = 'rtc'): void {
+    this.send({ t: 'join', name, password, playerToken: getP2PRejoinToken(hostKey) });
+  }
+
   get open(): boolean {
     return !!this.dc && this.dc.readyState === 'open';
   }
@@ -331,7 +402,9 @@ export class P2PDiscovery {
   private ws: WebSocket | null = null;
   onHosts: (hosts: P2PHostInfo[]) => void = () => {};
   /** l'host riceve una richiesta di join da `from` (con name/password: in modalità relay il join avviene qui) */
-  onJoinRequest: (from: string, name?: string, password?: string) => void = () => {};
+  onJoinRequest: (from: string, name?: string, password?: string, playerToken?: string) => void = () => {};
+  /** relay: un peer il cui socket verso il server si è chiuso (connId) */
+  onPeerGone?: (from: string) => void;
   /** il joiner riceve l'invito (offer) dall'host `from` */
   onOffer: (from: string, name: string, code: string) => void = () => {};
   /** l'host riceve la risposta (answer) dal joiner `from` */
@@ -360,7 +433,8 @@ export class P2PDiscovery {
         try { m = JSON.parse(ev.data); } catch { return; }
         if (m.t === 'p2pHosts') this.onHosts(m.hosts as P2PHostInfo[]);
         else if (m.t === 'p2pCodeHost') this.onCodeHost?.(String(m.hostId), String(m.name ?? ''));
-        else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from), m.name, m.password);
+        else if (m.t === 'p2pJoinRequest') this.onJoinRequest(String(m.from), m.name, m.password, m.playerToken);
+        else if (m.t === 'p2pPeerGone') this.onPeerGone?.(String(m.from));
         else if (m.t === 'p2pOffer') this.onOffer(String(m.from), String(m.name ?? ''), String(m.code));
         else if (m.t === 'p2pAnswer') this.onAnswer(String(m.from), String(m.code));
         else if (m.t === 'p2pData') {
@@ -378,9 +452,9 @@ export class P2PDiscovery {
   /** annuncia un codice invito breve (l'host appare anche nella lista host) */
   announceCode(code: string, name?: string): void { this.send({ t: 'p2pAnnounceCode', code, name }); }
   list(): void { this.send({ t: 'p2pList' }); }
-  join(hostId: string, name?: string, password?: string): void { this.send({ t: 'p2pJoin', hostId, name, password }); }
+  join(hostId: string, name?: string, password?: string, playerToken?: string): void { this.send({ t: 'p2pJoin', hostId, name, password, playerToken }); }
   /** unisciti a un host tramite codice invito breve (il server risolve il codice in hostId e relay la richiesta) */
-  joinByCode(code: string, name?: string, password?: string): void { this.send({ t: 'p2pJoinCode', code, name, password }); }
+  joinByCode(code: string, name?: string, password?: string, playerToken?: string): void { this.send({ t: 'p2pJoinCode', code, name, password, playerToken }); }
   offer(to: string, code: string): void { this.send({ t: 'p2pOffer', to, code }); }
   answer(to: string, code: string): void { this.send({ t: 'p2pAnswer', to, code }); }
   /** relay di un messaggio di gioco verso `to` (trasporto P2P quando WebRTC manca) */
@@ -407,6 +481,16 @@ export class P2PRelayHost {
   /** se true, il master deve accettare ogni richiesta (pulsanti ✅/✖), default true */
   requireAccept: boolean;
   private pending = new Map<string, string>(); // connId -> name
+  private rejoinTokens = new Map<string, string>(); // playerId -> token
+  private offline = makeOfflineScheduler(
+    (pid) => { setPlayerOnline(this.campaign, pid, false); this.broadcastState(); },
+    (pid) => {
+      this.campaign.players = this.campaign.players.filter((p) => p.id !== pid);
+      this.rejoinTokens.delete(pid);
+      this.cb.onPeerLeft(pid);
+      this.broadcastState();
+    },
+  );
 
   constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; disc: P2PDiscovery; cb: HostCallbacks; requireAccept?: boolean; existing?: Campaign }) {
     this.reg = opts.reg;
@@ -416,25 +500,32 @@ export class P2PRelayHost {
     const { campaign, master } = buildCampaign(opts);
     this.campaign = campaign;
     this.masterId = master.id;
-    this.disc.onJoinRequest = (from, name, password) => {
+    this.disc.onJoinRequest = (from, name, password, playerToken) => {
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
         this.pending.set(from, name ?? 'Giocatore');
         this.pendingPw.set(from, password ?? '');
+        if (playerToken) this.pendingTokens.set(from, playerToken);
         this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
         // ack: la richiesta è arrivata, ora si aspetta il master
         this.sendTo(from, { t: 'joinPending' });
         return;
       }
-      this.handleJoin(from, name ?? 'Giocatore', password ?? '');
+      this.handleJoin(from, name ?? 'Giocatore', password ?? '', playerToken);
     };
     this.disc.onData = (from, msg) => this.handleData(from, msg);
+    this.disc.onPeerGone = (from) => {
+      // il socket del giocatore verso il server si è chiuso: grace period prima di rimuoverlo
+      if (this.campaign.players.some((p) => p.id === from && p.id !== this.masterId)) this.offline.onPeerGone(from);
+    };
   }
 
   /** il master accetta la richiesta in attesa: il giocatore entra e riceve il welcome */
   acceptJoin(from: string): void {
     const name = this.pending.get(from) ?? 'Giocatore';
+    const token = this.pendingTokens.get(from);
     this.pending.delete(from);
-    this.handleJoin(from, name, this._lastPassword(from));
+    this.pendingTokens.delete(from);
+    this.handleJoin(from, name, this._lastPassword(from), token);
   }
 
   /** il master rifiuta la richiesta */
@@ -445,12 +536,27 @@ export class P2PRelayHost {
 
   /** password delle join in attesa (serve per acceptJoin dopo il click) */
   private pendingPw = new Map<string, string>();
+  private pendingTokens = new Map<string, string>();
   private _lastPassword(from: string): string {
     return this.pendingPw.get(from) ?? this.campaign.passwordHash;
   }
 
-  private handleJoin(from: string, name: string, password: string): void {
+  private handleJoin(from: string, name: string, password: string, playerToken?: string): void {
     this.pendingPw.set(from, password);
+    // rientro automatico dopo un drop: token valido -> stesso playerId, niente password
+    if (playerToken) {
+      const [pid] = [...this.rejoinTokens.entries()].find(([, t]) => t === playerToken) ?? [];
+      const existing = pid ? this.campaign.players.find((p) => p.id === pid) : undefined;
+      if (existing) {
+        this.offline.onPeerBack(existing.id);
+        setPlayerOnline(this.campaign, existing.id, true);
+        if (name) existing.name = name;
+        this.sendTo(existing.id, { t: 'welcome', you: existing, campaign: this.campaign });
+        this.cb.onPeerJoined(existing);
+        this.broadcastState();
+        return;
+      }
+    }
     if (this.campaign.passwordHash && password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;
@@ -459,8 +565,9 @@ export class P2PRelayHost {
       this.sendTo(from, { t: 'error', message: 'Nome già in uso in questa campagna' });
       return;
     }
-    const player: PlayerInfo = { id: from, name, role: 'player' };
+    const player: PlayerInfo = { id: from, name, role: 'player', online: true };
     this.campaign.players.push(player);
+    if (playerToken) this.rejoinTokens.set(player.id, playerToken);
     this.sendTo(from, { t: 'welcome', you: player, campaign: this.campaign });
     this.cb.onPeerJoined(player);
     this.broadcastState();
@@ -522,8 +629,8 @@ export class P2PRelayClient {
   }
 
   /** entra direttamente: in modalità relay non servono offer/answer SDP */
-  join(name: string, password: string): void {
-    this.disc.join(this.hostId, name, password);
+  join(name: string, password: string, playerToken?: string): void {
+    this.disc.join(this.hostId, name, password, playerToken);
   }
 
   send(m: AnyMsg): void {
@@ -559,11 +666,22 @@ export class P2PLanHost {
   masterId: string;
   requireAccept: boolean;
   private cb: HostCallbacks;
-  private pending = new Map<string, { name: string; password: string; relay: boolean }>();
+  private pending = new Map<string, { name: string; password: string; relay: boolean; playerToken?: string }>();
   private offEvt: (() => void) | null = null;
   /** connessioni del server (relay): peer che arrivano via codice breve/lista host, non dal beacon */
   private disc: P2PDiscovery | null = null;
   private relayPeers = new Set<string>();
+  private rejoinTokens = new Map<string, string>(); // playerId -> token
+  private offline = makeOfflineScheduler(
+    (pid) => { setPlayerOnline(this.campaign, pid, false); this.broadcastState(); },
+    (pid) => {
+      this.campaign.players = this.campaign.players.filter((p) => p.id !== pid);
+      this.rejoinTokens.delete(pid);
+      this.relayPeers.delete(pid);
+      this.cb.onPeerLeft(pid);
+      this.broadcastState();
+    },
+  );
 
   constructor(opts: { campaignName: string; password: string; masterName: string; reg: Registry; cb: HostCallbacks; requireAccept?: boolean; existing?: Campaign }) {
     this.reg = opts.reg;
@@ -580,9 +698,8 @@ export class P2PLanHost {
       } else if (kind === 'close') {
         const p = this.campaign.players.find((x) => x.id === id);
         if (p && p.id !== this.masterId) {
-          this.campaign.players = this.campaign.players.filter((x) => x.id !== id);
-          this.cb.onPeerLeft(id);
-          this.broadcastState();
+          // grace period: resta "disconnesso" e può rientrare col token entro P2P_REJOIN_GRACE_MS
+          this.offline.onPeerGone(id);
         }
       }
     });
@@ -595,17 +712,20 @@ export class P2PLanHost {
    */
   attachDiscovery(disc: P2PDiscovery): void {
     this.disc = disc;
-    disc.onJoinRequest = (from, name, password) => {
+    disc.onJoinRequest = (from, name, password, playerToken) => {
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
-        this.pending.set(from, { name: name ?? 'Giocatore', password: password ?? '', relay: true });
+        this.pending.set(from, { name: name ?? 'Giocatore', password: password ?? '', relay: true, playerToken });
         this.cb.onJoinPending?.({ from, name: name ?? 'Giocatore' });
         this.sendTo(from, { t: 'joinPending' });
         return;
       }
-      this.doJoin(from, name ?? 'Giocatore', password ?? '', true);
+      this.doJoin(from, name ?? 'Giocatore', password ?? '', true, playerToken);
     };
     disc.onData = (from, msg) => {
       if (this.relayPeers.has(from)) this.handleData(from, msg);
+    };
+    disc.onPeerGone = (from) => {
+      if (this.campaign.players.some((p) => p.id === from && p.id !== this.masterId)) this.offline.onPeerGone(from);
     };
   }
 
@@ -613,13 +733,14 @@ export class P2PLanHost {
     if (msg.t === 'join') {
       const name = String(msg.name || 'Giocatore');
       const password = String(msg.password ?? '');
+      const playerToken = msg.playerToken ? String(msg.playerToken) : undefined;
       if (this.requireAccept && !this.campaign.players.some((p) => p.id === from)) {
-        this.pending.set(from, { name, password, relay: false });
+        this.pending.set(from, { name, password, relay: false, playerToken });
         this.cb.onJoinPending?.({ from, name });
         this.sendTo(from, { t: 'joinPending' });
         return;
       }
-      this.doJoin(from, name, password, false);
+      this.doJoin(from, name, password, false, playerToken);
       return;
     }
     if (msg.t === 'ping') {
@@ -629,7 +750,22 @@ export class P2PLanHost {
     if (msg.t === 'action') this.applyAction(from, msg.action as ClientAction);
   }
 
-  private doJoin(from: string, name: string, password: string, relay: boolean): void {
+  private doJoin(from: string, name: string, password: string, relay: boolean, playerToken?: string): void {
+    // rientro automatico dopo un drop: token valido -> stesso playerId, niente password
+    if (playerToken) {
+      const [pid] = [...this.rejoinTokens.entries()].find(([, t]) => t === playerToken) ?? [];
+      const existing = pid ? this.campaign.players.find((p) => p.id === pid) : undefined;
+      if (existing) {
+        this.offline.onPeerBack(existing.id);
+        setPlayerOnline(this.campaign, existing.id, true);
+        if (name) existing.name = name;
+        if (relay) this.relayPeers.add(existing.id);
+        this.sendTo(existing.id, { t: 'welcome', you: existing, campaign: this.campaign });
+        this.cb.onPeerJoined(existing);
+        this.broadcastState();
+        return;
+      }
+    }
     if (this.campaign.passwordHash && password !== this.campaign.passwordHash) {
       this.sendTo(from, { t: 'error', message: 'Password sbagliata' });
       return;
@@ -638,8 +774,9 @@ export class P2PLanHost {
       this.sendTo(from, { t: 'error', message: 'Nome già in uso in questa campagna' });
       return;
     }
-    const player: PlayerInfo = { id: from, name, role: 'player' };
+    const player: PlayerInfo = { id: from, name, role: 'player', online: true };
     this.campaign.players.push(player);
+    if (playerToken) this.rejoinTokens.set(player.id, playerToken);
     if (relay) this.relayPeers.add(from);
     this.sendTo(from, { t: 'welcome', you: player, campaign: this.campaign });
     this.cb.onPeerJoined(player);
@@ -650,7 +787,7 @@ export class P2PLanHost {
   acceptJoin(from: string): void {
     const p = this.pending.get(from);
     this.pending.delete(from);
-    this.doJoin(from, p?.name ?? 'Giocatore', p?.password ?? '', p?.relay ?? false);
+    this.doJoin(from, p?.name ?? 'Giocatore', p?.password ?? '', p?.relay ?? false, p?.playerToken);
   }
 
   /** il master rifiuta la richiesta */
@@ -732,9 +869,9 @@ export class P2PLanClient {
     });
   }
 
-  /** entra nella campagna (dopo onOpen) */
-  join(name: string, password: string): void {
-    this.send({ t: 'join', name, password });
+  /** entra nella campagna (dopo onOpen); hostKey serve per il token di rientro persistente */
+  join(name: string, password: string, hostKey?: string): void {
+    this.send({ t: 'join', name, password, playerToken: hostKey ? getP2PRejoinToken(hostKey) : undefined });
   }
 
   send(m: AnyMsg): void {
