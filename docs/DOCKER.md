@@ -3,6 +3,8 @@
 > ⚠️ **Non modificare i file tracciati** (`docker-compose*.yml`, `Dockerfile`, `docker/nginx/*`):
 > le personalizzazioni vanno in `docker/.env` (non tracciato). Se li modifichi, `git pull` va in conflitto:
 > backup (`cp file /tmp/`) + `git checkout -- <path>` + `git pull`.
+> Nota: se crei/modifichi `docker/.env` con `sudo` resta di root (permessi 600/root) → per modificarlo usa di nuovo `sudo`
+> (es. `sudo sh -c "echo 'DND5E_LAN_IP=192.168.1.36' >> docker/.env"`). In `/opt/5emanager` usa sempre `sudo`.
 
 
 Il server (web app + WebSocket multiplayer + pannello `/admin` + account con **libreria schede
