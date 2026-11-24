@@ -41,6 +41,22 @@ export interface CombatTemplate {
   label?: string;
 }
 
+/** token sulla mappa tattica: cella (5 ft = 1 cella), angoli in alto a sinistra */
+export interface MapToken {
+  x: number;
+  y: number;
+}
+
+/** mappa tattica del combattimento: griglia cols x rows, un token per combattente */
+export interface TacticalMap {
+  cols: number;
+  rows: number;
+  tokens: Record<string, MapToken>;
+}
+
+export const DEFAULT_MAP_COLS = 16;
+export const DEFAULT_MAP_ROWS = 12;
+
 export interface CombatState {
   combatants: Combatant[];
   round: number;
@@ -48,6 +64,42 @@ export interface CombatState {
   log: string[];
   /** template area correntemente mostrato (cono/sfera/linea/cubo) */
   template?: CombatTemplate;
+  /** mappa tattica con i token dei combattenti (sincronizzata via state) */
+  map?: TacticalMap;
+}
+
+/** crea la mappa di default e mette i combattenti senza token in posizioni a griglia */
+export function ensureMap(c: CombatState): CombatState {
+  if (c.map) return c;
+  const cols = DEFAULT_MAP_COLS;
+  const rows = DEFAULT_MAP_ROWS;
+  const tokens: Record<string, MapToken> = {};
+  c.combatants.forEach((cb, i) => {
+    tokens[cb.id] = { x: 1 + (i % 6), y: 1 + Math.floor(i / 6) };
+  });
+  return { ...c, map: { cols, rows, tokens } };
+}
+
+/** sposta un token (clamp ai bordi); crea la mappa se mancante */
+export function moveToken(c: CombatState, id: string, x: number, y: number): CombatState {
+  const withMap = ensureMap(c);
+  const m = withMap.map!;
+  const cx = Math.max(0, Math.min(m.cols - 1, Math.round(x)));
+  const cy = Math.max(0, Math.min(m.rows - 1, Math.round(y)));
+  return { ...withMap, map: { ...m, tokens: { ...m.tokens, [id]: { x: cx, y: cy } } } };
+}
+
+/** ridimensiona la griglia (clamp dei token dentro) */
+export function setMapSize(c: CombatState, cols: number, rows: number): CombatState {
+  const withMap = ensureMap(c);
+  const m = withMap.map!;
+  const nCols = Math.max(4, Math.min(40, Math.round(cols)));
+  const nRows = Math.max(4, Math.min(30, Math.round(rows)));
+  const tokens: Record<string, MapToken> = {};
+  for (const [id, t] of Object.entries(m.tokens)) {
+    tokens[id] = { x: Math.max(0, Math.min(nCols - 1, t.x)), y: Math.max(0, Math.min(nRows - 1, t.y)) };
+  }
+  return { ...withMap, map: { cols: nCols, rows: nRows, tokens } };
 }
 
 const DEFAULT_SPEED = 30;
@@ -83,7 +135,7 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
     bonusUsed: false,
     reactionUsed: false,
   };
-  return { combatants: [player], round: 1, turnIndex: 0, log: [`⚔️ Combattimento iniziato! ${char.name} entra con CA ${ac}.`] };
+  return ensureMap({ combatants: [player], round: 1, turnIndex: 0, log: [`⚔️ Combattimento iniziato! ${char.name} entra con CA ${ac}.`] });
 }
 
 /** combattimento con tutta la party: un combattente per personaggio */
@@ -116,12 +168,13 @@ export function startPartyCombat(chars: Character[], reg: Registry): CombatState
       reactionUsed: false,
     };
   });
-  return {
+  const base: CombatState = {
     combatants: sortByInitiative(combatants),
     round: 1,
     turnIndex: 0,
     log: [`⚔️ Combattimento iniziato con ${combatants.length} PG!`],
   };
+  return ensureMap(base);
 }
 
 let seq = 0;
@@ -149,7 +202,20 @@ function baseCombatant(input: { name: string; hp: number; initiative?: number; a
 
 export function addCombatant(state: CombatState, input: { name: string; hp: number; initiative?: number; ac?: number; speed?: number; attacks?: AttackDef[] }): CombatState {
   const c = baseCombatant(input);
-  return { ...state, combatants: sortByInitiative([...state.combatants, c]), log: [...state.log, `➕ ${c.name} entra (init ${c.initiative}, CA ${c.ac}, PF ${c.hp}).`] };
+  let next: CombatState = { ...state, combatants: sortByInitiative([...state.combatants, c]), log: [...state.log, `➕ ${c.name} entra (init ${c.initiative}, CA ${c.ac}, PF ${c.hp}).`] };
+  if (next.map) {
+    // token in una cella libera (angolo in alto a destra della griglia)
+    const m = next.map;
+    let x = m.cols - 2, y = 1;
+    const free = new Set<string>();
+    for (let yy = 0; yy < m.rows; yy++) for (let xx = 0; xx < m.cols; xx++) free.add(xx + ',' + yy);
+    for (const t of Object.values(m.tokens)) free.delete(t.x + ',' + t.y);
+    outer: for (let yy = 1; yy < m.rows - 1; yy++) for (let xx = m.cols - 2; xx >= 0; xx--) {
+      if (free.has(xx + ',' + yy)) { x = xx; y = yy; break outer; }
+    }
+    next = { ...next, map: { ...m, tokens: { ...m.tokens, [c.id]: { x, y } } } };
+  }
+  return next;
 }
 
 /** aggiunge `count` nemici da uno statblock del registry */
@@ -176,6 +242,7 @@ export function removeCombatant(state: CombatState, id: string): CombatState {
   return {
     ...state,
     combatants,
+    map: state.map ? { ...state.map, tokens: Object.fromEntries(Object.entries(state.map.tokens).filter(([k]) => k !== id)) } : undefined,
     turnIndex: Math.min(state.turnIndex, Math.max(0, combatants.length - 1)),
     log: [...state.log, `✕ ${c?.name ?? id} esce dal combattimento.`],
   };

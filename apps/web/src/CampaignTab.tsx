@@ -37,6 +37,7 @@ import { listSavedP2P, getSavedP2P, saveP2PCampaign, onResumeRequest, type Saved
 import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
+import TacticalMap from './TacticalMap.js';
 
 /** QR del testo (per condividere il codice invito) */
 function QrBox({ text }: { text: string }) {
@@ -1497,6 +1498,19 @@ export default function CampaignTab() {
             </span>
           ))}
         </div>
+        {isMaster && campaign.players.some((p) => campaign.characters[p.id]) && (
+          <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 6 }}>
+            <span className="muted" style={{ fontSize: 12 }}>{t('cg.partyStrip', 'Party:')}</span>
+            {campaign.players.filter((p) => campaign.characters[p.id]).map((p) => {
+              const ch = campaign.characters[p.id];
+              return (
+                <span key={p.id} className="tag" title={`${ch.name} — liv ${totalLevel(ch)}`}>
+                  {p.name}{p.online === false ? ` \ud83d\udd0c` : ''}: PF {ch.hp.current}/{maxHp(ch, reg)} · CA {armorClass(ch, reg).ac}
+                </span>
+              );
+            })}
+          </div>
+        )}
         <div className="row" style={{ marginTop: 8 }}>
           <button onClick={checkConnection} disabled={pingState.status === 'checking'} title="Controllo manuale (ripetibile per aggiornare)">
             {pingState.status === 'checking' ? t('cg.ping', 'Ping…') : t('cg.check', '🔌 Verifica connessione')}
@@ -2027,6 +2041,17 @@ export default function CampaignTab() {
               <TemplateView tpl={combat.template} />
             </div>
           )}
+
+          <div style={{ marginBottom: 10, maxWidth: 620 }}>
+            <TacticalMap
+              combat={combat}
+              currentTurnId={cur?.id}
+              canMove={(id) => isMaster || (isMyTurn && cur?.id === id)}
+              onMove={(id, x, y) => act({ kind: 'moveToken', targetId: id, x, y })}
+              canResize={isMaster}
+              onResize={(cols, rows) => act({ kind: 'setMapSize', cols, rows })}
+            />
+          </div>
 
           <table>
             <thead>

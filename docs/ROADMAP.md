@@ -35,8 +35,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Polish UI** (v0.1.61): onboarding primo avvio wizard 3 passi (nome/razza/classe → punteggi array-standard o 4d6 → crea, con Salta/Form completo), palette comandi **Ctrl/Cmd+K** con filtro e tastiera (↑↓+Invio), skeleton di caricamento, empty state Home con CTA, banner di errore con pulsante chiudi; test jsdom `polish.test.tsx`
 
 ### Fase 2 — espansione gameplay (medio termine)
-- **Mappa tattica minimale** con token trascinabili su griglia 5 ft, sincronizzata via P2P (il master muove i token, tutti li vedono) — estende `TemplateView`/`CombatTab`, stato in `core/campaign.ts`
-- **Party tracker lato master** sempre visibile: PF/CA/percezione/condizioni di tutti i PG anche fuori dal combattimento
+- ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
+- ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento
 - **Log del combattimento persistente per round** + **statistiche di campagna** (danni totali, incantesimi lanciati, round) + **export campagna intera** (log + schede + tesoreria) in un file
 - **Schede pregen** da sfogliare e clonare
 - Nuovi contenuti: **generatore di dungeon/stanze casuali** (tabelle JSON, come `random.json`), **crafting/ricette**, **compravendita con calcolo del resto**

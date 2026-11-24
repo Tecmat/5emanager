@@ -7,11 +7,14 @@ import {
   clearTemplate,
   currentCombatant,
   damageCombatant,
+  ensureMap,
   healCombatant,
   moveCombatant,
+  moveToken,
   nextTurn,
   rerollInitiatives,
   setCombatantCondition,
+  setMapSize,
   setTemplate,
   startPartyCombat,
   useBonus,
@@ -158,7 +161,11 @@ export type ClientAction =
   | { kind: 'groupAddCurrency'; amount: Partial<Currency> }
   | { kind: 'setTemplate'; template: CombatTemplate }
   | { kind: 'clearTemplate' }
-  | { kind: 'setCampaignNote'; text: string };
+  | { kind: 'setCampaignNote'; text: string }
+  /** mappa tattica: sposta il token di un combattente (master sempre, PG sul proprio turno) */
+  | { kind: 'moveToken'; targetId: string; x: number; y: number }
+  /** mappa tattica: ridimensiona la griglia (solo master) */
+  | { kind: 'setMapSize'; cols: number; rows: number };
 
 /**
  * applica un'azione allo stato della campagna — PURO (niente I/O, niente fs):
@@ -395,6 +402,23 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
     case 'setCampaignNote': {
       if (!isMaster) return [c, 'Solo il master può modificare le note di sessione'];
       c.notes = action.text;
+      return [c];
+    }
+
+    case 'moveToken': {
+      if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      // master sempre; un PG può muovere il proprio token solo nel suo turno
+      const ownTurn = cur !== undefined && cur.id === action.targetId && isTurn;
+      if (!isMaster && !ownTurn) return [c, 'Puoi muovere solo il tuo token nel tuo turno (o sei il master)'];
+      if (!c.combat.combatants.some((x) => x.id === action.targetId)) return [c, 'Combattente non trovato'];
+      c.combat = moveToken(ensureMap(c.combat), action.targetId, action.x, action.y);
+      return [c];
+    }
+
+    case 'setMapSize': {
+      if (!isMaster) return [c, 'Solo il master può ridimensionare la mappa'];
+      if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      c.combat = setMapSize(ensureMap(c.combat), action.cols, action.rows);
       return [c];
     }
 

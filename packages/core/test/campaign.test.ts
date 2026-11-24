@@ -174,3 +174,76 @@ describe('chat di campagna', () => {
     expect(c.players.some((p) => p.online === false)).toBe(false);
   });
 });
+
+describe('mappa tattica (moveToken / setMapSize)', () => {
+  const reg = createRegistry();
+  const camp = (): Campaign => ({
+    id: 'c1',
+    name: 'Test',
+    passwordHash: 'x',
+    houseRules: { ...DEFAULT_HOUSE_RULES },
+    custom: {},
+    players: [
+      { id: 'm', name: 'Master', role: 'master' },
+      { id: 'p1', name: 'Eroe', role: 'player' },
+      { id: 'p2', name: 'Altro', role: 'player' },
+    ],
+    characters: { p1: { id: 'ch1' } as never, p2: { id: 'ch2' } as never },
+    combat: {
+      combatants: [
+        { id: 'ch1', name: 'Eroe', isPlayer: true, hp: 10, maxHp: 10 } as never,
+        { id: 'e1', name: 'Goblin', isPlayer: false, hp: 7, maxHp: 7 } as never,
+      ],
+      round: 1,
+      turnIndex: 0, // turno di ch1 (PG di p1)
+      log: [],
+    },
+    groupInventory: [],
+    groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
+    notes: '',
+    chat: [],
+    createdAt: '2026-01-01T00:00:00.000Z',
+    updatedAt: '2026-01-01T00:00:00.000Z',
+  });
+
+  it('la mappa viene creata on-demand e il token si sposta con clamp ai bordi', () => {
+    const [c1] = applyCampaignAction(camp(), 'm', reg, { kind: 'moveToken', targetId: 'e1', x: 3, y: 4 });
+    expect(c1.combat!.map).toBeDefined();
+    expect(c1.combat!.map!.tokens['e1']).toEqual({ x: 3, y: 4 });
+    const [c2] = applyCampaignAction(camp(), 'm', reg, { kind: 'moveToken', targetId: 'e1', x: 999, y: -5 });
+    expect(c2.combat!.map!.tokens['e1']).toEqual({ x: c2.combat!.map!.cols - 1, y: 0 });
+  });
+
+  it('permessi: master muove tutto; PG solo il proprio token e solo nel suo turno', () => {
+    // p1 e' di turno (turnIndex 0 = ch1): puo' muovere ch1 ma non e1
+    const [ok1, err1] = applyCampaignAction(camp(), 'p1', reg, { kind: 'moveToken', targetId: 'ch1', x: 5, y: 5 });
+    expect(err1).toBeUndefined();
+    expect(ok1.combat!.map!.tokens['ch1']).toEqual({ x: 5, y: 5 });
+    const [, err2] = applyCampaignAction(camp(), 'p1', reg, { kind: 'moveToken', targetId: 'e1', x: 5, y: 5 });
+    expect(err2).toMatch(/solo il tuo token/);
+    // p2 non e' di turno: niente
+    const [, err3] = applyCampaignAction(camp(), 'p2', reg, { kind: 'moveToken', targetId: 'ch2', x: 1, y: 1 });
+    expect(err3).toMatch(/solo il tuo token/);
+    // master: tutto ok
+    const [ok4, err4] = applyCampaignAction(camp(), 'm', reg, { kind: 'moveToken', targetId: 'e1', x: 2, y: 2 });
+    expect(err4).toBeUndefined();
+    expect(ok4.combat!.map!.tokens['e1']).toEqual({ x: 2, y: 2 });
+  });
+
+  it('setMapSize: solo master, con clamp dei token dentro la nuova griglia', () => {
+    const [, err] = applyCampaignAction(camp(), 'p1', reg, { kind: 'setMapSize', cols: 8, rows: 6 });
+    expect(err).toMatch(/solo il master/i);
+    let c = camp();
+    [c] = applyCampaignAction(c, 'm', reg, { kind: 'moveToken', targetId: 'e1', x: 15, y: 11 });
+    [c] = applyCampaignAction(c, 'm', reg, { kind: 'setMapSize', cols: 8, rows: 6 });
+    expect(c.combat!.map!.cols).toBe(8);
+    expect(c.combat!.map!.tokens['e1']).toEqual({ x: 7, y: 5 });
+  });
+
+  it('senza combattimento niente mappa', () => {
+    const c = camp();
+    c.combat = null;
+    const [, err] = applyCampaignAction(c, 'm', reg, { kind: 'moveToken', targetId: 'e1', x: 1, y: 1 });
+    expect(err).toMatch(/Nessun combattimento/);
+  });
+});

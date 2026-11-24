@@ -7,10 +7,12 @@ import {
   damageCombatant,
   healCombatant,
   logJournal,
+  moveToken,
   nextTurn,
   removeCombatant,
   rerollInitiatives,
   setCombatantCondition,
+  setMapSize,
   setTemplate,
   startCombat,
   syncPlayerHp,
@@ -19,6 +21,7 @@ import {
 } from '@dnd5e/core';
 import { useStore } from './store.js';
 import TemplateView from './TemplateView.js';
+import TacticalMap from './TacticalMap.js';
 
 export default function CombatTab() {
   const { char, setChar, reg, t, tf } = useStore();
@@ -98,6 +101,16 @@ export default function CombatTab() {
             <TemplateView tpl={combat.template} />
           </div>
         )}
+        <div style={{ maxWidth: 620, marginBottom: 10 }}>
+          <TacticalMap
+            combat={combat}
+            currentTurnId={cur?.id}
+            canMove={() => true}
+            onMove={(id, x, y) => setCombat(moveToken(combat, id, x, y))}
+            canResize
+            onResize={(cols, rows) => setCombat(setMapSize(combat, cols, rows))}
+          />
+        </div>
         <div className="row" style={{ marginBottom: 10 }}>
           <input placeholder={t('cb.enemyPh', 'Nome nemico')} value={name} onChange={(e) => setName(e.target.value)} style={{ width: 160 }} />
           <input type="number" min={1} value={hp} onChange={(e) => setHp(Number(e.target.value))} style={{ width: 70 }} />

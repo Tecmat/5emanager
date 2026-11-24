@@ -40,7 +40,7 @@ src-tauri/          # wrapper desktop Tauri v2
 - **Meccaniche sbloccate col livello**: risorse con usi calcolati, attacchi extra, dado dell'attacco furtivo scalato
 - **House-rules**: selettore per eludere regole (limite incantesimi, cap 20, sintonizzazione max 3, XP, livello 20)
 - **Tira dado** con vantaggio/svantaggio; **condizioni** (avvelenato, prono, invisibile...)
-- **Combattimento**: initiative, turni/round, PF e condizioni dei nemici
+- **Combattimento**: initiative, turni/round, PF e condizioni dei nemici, **mappa tattica con token trascinabili** (griglia 5 ft, sincronizzata in multiplayer) e **party tracker del master** sempre visibile
 - **Inventario**: peso, equipaggiamento, sintonizzazione, valuta
 - **Contenuti custom** validati, salvati in localStorage e separati dai dati SRD; scheda esportabile/importabile in JSON
 
@@ -124,4 +124,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 163/163 verdi (root) + 9/9 UI jsdom.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 167/167 verdi (root) + 9/9 UI jsdom.
