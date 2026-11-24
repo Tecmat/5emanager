@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Campaign, Character, PlayerInfo, SavedCampaignSnapshot } from '@dnd5e/core';
 import { NetClient, defaultWsUrl, isServerWebapp, toWsUrl } from './net.js';
-import { checkServerSession } from './serverSession.js';
+import { checkServerSession, logoutServerSession } from './serverSession.js';
 
 // i tipi campagna/giocatore vivono nel core (condivisi con server e host P2P)
 export type { PlayerInfo };
@@ -26,6 +26,8 @@ export interface AuthState {
   savedCampaigns: SavedCampaignSnapshot[];
   /** 2FA TOTP attiva sull'account */
   totpEnabled: boolean;
+  /** modalita' di registrazione del server (open/approval/invite) — da /api/me o dal messaggio auth */
+  registration?: 'open' | 'approval' | 'invite';
 }
 
 export interface TotpSetupMsg {
@@ -150,6 +152,8 @@ export interface ConnectOpts {
 interface NetCtx {
   conn: ConnState;
   auth: AuthState | null;
+  /** modalità di registrazione del server (da auth oppure da /api/info): open/approval/invite */
+  registration: AuthState['registration'];
   error: string;
   setError: (e: string) => void;
   notice: string;
@@ -200,6 +204,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const netRef = useRef<NetClient | null>(null);
   const [conn, setConn] = useState<ConnState>({ phase: 'offline' });
   const [auth, setAuth] = useState<AuthState | null>(null);
+  /** modalità di registrazione del server anche senza login (da /api/info sulla webapp servita dal server) */
+  const [serverRegistration, setServerRegistration] = useState<AuthState['registration']>(undefined);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [pingState, setPingState] = useState<PingState>({ status: 'idle' });
@@ -219,6 +225,8 @@ export function NetProvider({ children }: { children: ReactNode }) {
   const [totpSetup, setTotpSetup] = useState<TotpSetupMsg | null>(null);
   const [passkeys, setPasskeys] = useState<PasskeyInfo[]>([]);
   const [savedSession, setSavedSession] = useState<SavedSession | null>(() => loadSavedSession());
+  /** true se il server impone il login (DND5E_REQUIRE_AUTH) — appreso da /api/me sulla webapp servita dal server */
+  const requireAuthRef = useRef(false);
   /** richieste in attesa di una risposta WS di un certo tipo (es. passkeyLoginOptions) */
   const pendingReq = useRef(new Map<string, { resolve: (m: any) => void; reject: (e: Error) => void; timer: ReturnType<typeof setTimeout> }>());
   const urlRef = useRef(url);
@@ -267,9 +275,16 @@ export function NetProvider({ children }: { children: ReactNode }) {
         window.location.replace('/login');
         return;
       }
+      // modalità di registrazione del server (visibile anche prima del login, es. per nascondere "Registrati" in modalità invito)
+      try {
+        const ri = await fetch('/api/info', { credentials: 'same-origin' });
+        const ji = (await ri.json().catch(() => ({}))) as { registration?: string };
+        if (ji.registration === 'open' || ji.registration === 'approval' || ji.registration === 'invite') setServerRegistration(ji.registration);
+      } catch { /* non è la webapp del server: resta undefined */ }
       if (s.kind === 'server') {
         const server = defaultWsUrl();
-        setAuth({ token: '', username: s.me.username, server, role: s.me.role ?? 'user', characters: [], savedCampaigns: [], totpEnabled: !!s.me.totpEnabled });
+        requireAuthRef.current = !!s.me.requireAuth;
+        setAuth({ token: '', username: s.me.username, server, role: s.me.role ?? 'user', characters: [], savedCampaigns: [], totpEnabled: !!s.me.totpEnabled, registration: s.me.registration as AuthState['registration'] });
         setLastUsername(s.me.username);
         try { localStorage.setItem(AUTH_SERVER_KEY, server); } catch { /* quota */ }
         if (!urlRef.current) setUrl(server);
@@ -341,7 +356,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
       setCampaignList(m.list);
     } else if (m.t === 'auth') {
       const server = serverUrl ?? urlRef.current;
-      setAuth({ token: m.token, username: m.username, server, role: m.role ?? 'user', characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled });
+      setAuth({ token: m.token, username: m.username, server, role: m.role ?? 'user', characters: m.characters, savedCampaigns: m.savedCampaigns ?? [], totpEnabled: !!m.totpEnabled, registration: m.registration });
       setLastUsername(m.username);
       setTotpPending(null);
       // server del login = default per campagne/sync
@@ -538,14 +553,11 @@ export function NetProvider({ children }: { children: ReactNode }) {
     setTotpSetup(null);
     setPasskeys([]);
     // su webapp servita dal server la sessione e' anche nel cookie: la revoco via /api/logout,
-    // poi se il server impone il login torno alla pagina /login
+    // poi se il server impone il login torno subito alla pagina /login
     if (isServerWebapp()) {
       void (async () => {
-        try {
-          await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
-        } catch { /* offline: resta solo lo stato locale */ }
-        const s = await checkServerSession();
-        if (s.kind === 'login') window.location.replace('/login');
+        const backToLogin = await logoutServerSession();
+        if (backToLogin || requireAuthRef.current) window.location.replace('/login');
       })();
     }
   };
@@ -697,7 +709,7 @@ export function NetProvider({ children }: { children: ReactNode }) {
   };
 
   const value: NetCtx = {
-    conn, auth, error, setError, notice, setNotice, pingState, campaignList,
+    conn, auth, registration: auth?.registration ?? serverRegistration, error, setError, notice, setNotice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     send, act, setConn, handleNetMessage: (m: any) => handleMsg(m), setP2PTransport,
     connect, disconnect, checkConnection, refreshCampaignList,

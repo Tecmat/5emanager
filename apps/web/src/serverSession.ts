@@ -31,3 +31,17 @@ export async function checkServerSession(): Promise<ServerSessionCheck> {
     return { kind: 'skip' };
   }
 }
+
+/**
+ * Logout lato server (webapp servita dal server): revoca il cookie con /api/logout e
+ * restituisce true se bisogna tornare alla pagina /login (il server impone il login).
+ * Su app nativa/dev/offline restituisce false senza redirect.
+ */
+export async function logoutServerSession(): Promise<boolean> {
+  if (!isServerWebapp()) return false;
+  try {
+    await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+  } catch { /* offline: resta solo lo stato locale */ }
+  const s = await checkServerSession();
+  return s.kind === 'login';
+}

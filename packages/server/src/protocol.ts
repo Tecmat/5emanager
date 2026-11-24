@@ -73,7 +73,7 @@ export type ServerMessage =
   | { t: 'welcome'; you: PlayerInfo; campaign: Campaign }
   | { t: 'campaigns'; list: { id: string; name: string; players: number }[] }
   | { t: 'state'; campaign: Campaign }
-  | { t: 'auth'; token: string; username: string; role: 'admin' | 'user'; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean; /** token persistente per "mantieni l'accesso" (presente solo se richiesto) */ rememberToken?: string }
+  | { t: 'auth'; token: string; username: string; role: 'admin' | 'user'; characters: Character[]; savedCampaigns: SavedCampaignSnapshot[]; totpEnabled: boolean; /** modalita' di registrazione attuale del server (open/approval/invite) */ registration?: 'open' | 'approval' | 'invite'; /** token persistente per "mantieni l'accesso" (presente solo se richiesto) */ rememberToken?: string }
   | { t: 'totpRequired'; username: string }
   | { t: 'totpSetup'; secret: string; otpauthUrl: string; backupCodes: string[] }
   | { t: 'passkeyRegisterOptions'; options: unknown }

@@ -2,7 +2,7 @@ import { useRef, useState } from 'react';
 import { totalLevel, uid, type Character } from '@dnd5e/core';
 import { PREGEN_DATA } from '@dnd5e/data-srd';
 import { useStore, isCampaignSheetId, campaignSheetId } from './store.js';
-import { useNet, loadAuthServer, passkeySupported } from './netStore.js';
+import { useNet, loadAuthServer, passkeySupported, type AuthState } from './netStore.js';
 import { defaultWsUrl, toWsUrl, httpUrlFromWs } from './net.js';
 import AppearanceCard from './AppearanceCard.js';
 import ReminderCard from './ReminderCard.js';
@@ -16,7 +16,7 @@ import Icon from './icons.js';
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
   const { sheets, char, campaignMeta, reg, t, tf, importSheets, createSheet } = useStore();
   const ddbFileRef = useRef<HTMLInputElement>(null);
-  const { auth, act, conn, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
+  const { auth, registration, act, conn, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
   const campaigns = sheets.filter((s) => isCampaignSheetId(s.id));
@@ -103,7 +103,7 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
       </div>
 
       <ServerAccountCard
-        url={url} setUrl={setUrl} servers={servers} auth={auth} savedSession={savedSession}
+        url={url} setUrl={setUrl} servers={servers} auth={auth} registration={registration} savedSession={savedSession}
         doLogin={doLogin} doRegister={doRegister} doLoginToken={doLoginToken} logout={logout}
         totpPending={totpPending} doLoginTotp={doLoginTotp} doLoginTotpBackup={doLoginTotpBackup}
         passkeyLogin={passkeyLogin} passkeySupported={passkeySupported} error={error} setError={setError}
@@ -209,6 +209,7 @@ export { campaignSheetId };
 /** card "Server e account": scelta del server ws/wss + login (con mantieni l'accesso) + link account/admin */
 function ServerAccountCard(props: {
   url: string; setUrl: (u: string) => void; servers: string[]; auth: ReturnType<typeof useNet>['auth'];
+  registration: AuthState['registration'];
   savedSession: ReturnType<typeof useNet>['savedSession'];
   doLogin: (u: string, p: string, remember?: boolean) => Promise<void>;
   doRegister: (u: string, p: string) => Promise<void>;
@@ -223,7 +224,7 @@ function ServerAccountCard(props: {
   onOnline: () => void;
   t: (k: string, f?: string) => string; tf: (k: string, f: string, v: Record<string, string | number>) => string;
 }) {
-  const { url, setUrl, servers, auth, savedSession, doLogin, doRegister, doLoginToken, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, passkeySupported, error, setError, onOnline, t, tf } = props;
+  const { url, setUrl, servers, auth, registration, savedSession, doLogin, doRegister, doLoginToken, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, passkeySupported, error, setError, onOnline, t, tf } = props;
   const [u, setU] = useState('');
   const [p, setP] = useState('');
   const [remember, setRemember] = useState(true);
@@ -276,6 +277,11 @@ function ServerAccountCard(props: {
             <span className="tag custom"><Icon name="user" size={11} /> {auth.username}</span>
             <span className="tag">{auth.role === 'admin' ? '🛡️ admin' : t('home.roleUser', 'user')}</span>
             <span className="tag">{tf('home.sheetsRemote', '{n} schede in libreria', { n: auth.characters.length })}</span>
+            {registration && (
+              <span className="tag" title={t('home.regTitle', 'Modalità di registrazione del server')}>
+                {registration === 'invite' ? `📨 ${t('home.regInvite', 'solo su invito')}` : registration === 'open' ? `✅ ${t('home.regOpen', 'registrazione aperta')}` : `⏳ ${t('home.regApproval', 'con approvazione')}`}
+              </span>
+            )}
             {savedSession && <span className="tag" title={t('home.keepAliveOn', "'Mantieni l\'accesso' attivo: al prossimo avvio entri da solo")}>🔑 {t('home.keepAlive', 'accesso mantenuto')}</span>}
           </div>
           <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
@@ -322,7 +328,9 @@ function ServerAccountCard(props: {
             {!totpPending && (
               <>
                 <button className="primary" onClick={() => void doLogin(u, p, remember)} disabled={!u.trim() || !p}>{t('cg.login', 'Login')}</button>
-                <button onClick={() => void doRegister(u, p)} disabled={!u.trim() || !p}>{t('cg.register', 'Registrati')}</button>
+                {registration !== 'invite' && (
+                  <button onClick={() => void doRegister(u, p)} disabled={!u.trim() || !p}>{t('cg.register', 'Registrati')}</button>
+                )}
                 {passkeySupported && (
                   <button onClick={() => void passkeyLogin(u || undefined)} title={t('cg.pkLoginTitle', 'Accedi con passkey (niente password)')}>
                     🔑 {t('home.passkey', 'Passkey')}
@@ -331,6 +339,9 @@ function ServerAccountCard(props: {
               </>
             )}
           </div>
+          {registration === 'invite' && (
+            <div className="muted" style={{ marginTop: 6, fontSize: 12 }}>📨 {t('home.regInviteHint', 'Su questo server la registrazione è solo su invito: chiedi all\'admin un link /invite?token=… (univoco, a scadenza, vale una sola volta)')}</div>
+          )}
           {error && <div className="error" style={{ marginTop: 6 }}>{error}</div>}
         </div>
       )}

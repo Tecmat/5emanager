@@ -5,7 +5,7 @@
  * se va redirectato a /login (401 + requireAuth) o se si salta (app nativa/dev/offline).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkServerSession } from '../src/serverSession.js';
+import { checkServerSession, logoutServerSession } from '../src/serverSession.js';
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -46,6 +46,43 @@ describe('checkServerSession (webapp servita dal server: jsdom porta 3000)', () 
     const f = vi.fn();
     vi.stubGlobal('fetch', f);
     expect((await checkServerSession()).kind).toBe('skip');
+    expect(f).not.toHaveBeenCalled();
+  });
+});
+
+describe('logoutServerSession (webapp servita dal server)', () => {
+  it('revoca il cookie via /api/logout e, se il server impone il login, torna al /login', async () => {
+    const calls: string[] = [];
+    stubFetch(async (input: unknown) => {
+      const url = String(input);
+      calls.push(url);
+      if (url === '/api/logout') return { ok: true, status: 200, json: async () => ({}) };
+      return { ok: false, status: 401, json: async () => ({ requireAuth: true }) };
+    });
+    expect(await logoutServerSession()).toBe(true);
+    expect(calls).toContain('/api/logout');
+    expect(calls).toContain('/api/me');
+  });
+
+  it('se dopo il logout /api/me risponde ancora 200 non c\'è redirect', async () => {
+    stubFetch(async (input: unknown) => {
+      const url = String(input);
+      if (url === '/api/logout') return { ok: true, status: 200, json: async () => ({}) };
+      return { ok: true, status: 200, json: async () => ({ username: 'alice', role: 'user', totpEnabled: false, requireAuth: true }) };
+    });
+    expect(await logoutServerSession()).toBe(false);
+  });
+
+  it('offline (fetch che fallisce) -> false, mai redirect e mai eccezione', async () => {
+    stubFetch(async () => { throw new Error('offline'); });
+    expect(await logoutServerSession()).toBe(false);
+  });
+
+  it('dev (porta 5173): false senza chiamare fetch', async () => {
+    vi.stubGlobal('location', { ...window.location, host: 'localhost:5173', port: '5173', protocol: 'http:' });
+    const f = vi.fn();
+    vi.stubGlobal('fetch', f);
+    expect(await logoutServerSession()).toBe(false);
     expect(f).not.toHaveBeenCalled();
   });
 });

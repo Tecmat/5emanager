@@ -270,11 +270,12 @@ function serveAdminForbidden(res: ServerResponse): void {
   res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
   res.end(
     '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>403 — 5e Manager</title></head>' +
-    '<body style="margin:0;font:15px/1.5 system-ui,sans-serif;background:#14161c;color:#e8eaf2;display:flex;min-height:100vh;align-items:center;justify-content:center">' +
-    '<div style="max-width:440px;text-align:center;padding:16px"><h1 style="font-size:20px">🔒 403 — Area riservata agli admin</h1>' +
-    '<p style="color:#9aa0b4">Per aprire il pannello devi essere loggato con un account <b>admin</b>' +
-    (ADMIN_TOKEN ? ' (oppure aprirlo come <code>/admin?token=…</code> con il token admin)' : '') + '.</p>' +
-    '<p><a href="/" style="color:#7c5cff">⬅️ App</a>' + (REQUIRE_AUTH ? ' &nbsp;·&nbsp; <a href="/login" style="color:#7c5cff">Login</a>' : '') + '</p></div></body></html>',
+    '<body style="margin:0;font:15px/1.5 system-ui,sans-serif;background:#14110d;color:#ece4d4;display:flex;min-height:100vh;align-items:center;justify-content:center;background-image:linear-gradient(rgba(201,162,39,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(201,162,39,.05) 1px,transparent 1px);background-size:26px 26px">' +
+    '<div style="max-width:440px;text-align:center;padding:26px;background:#201b15;border:1px solid #3e352a;border-top:2px solid rgba(201,162,39,.5);border-radius:14px">' +
+    '<h1 style="font-size:20px;margin:0 0 8px;color:#c9a227;font-family:Georgia,serif">🔒 403 — Area riservata agli admin</h1>' +
+    '<p style="color:#a3947c">Per aprire il pannello devi essere loggato con un account <b>admin</b>' +
+    (ADMIN_TOKEN ? ' (oppure aprirlo come <code style="background:#14110d;border:1px solid #3e352a;padding:1px 6px;border-radius:6px">/admin?token=…</code> con il token admin)' : '') + '.</p>' +
+    '<p><a href="/" style="color:#c9a227">⬅️ App</a>' + (REQUIRE_AUTH ? ' &nbsp;·&nbsp; <a href="/login" style="color:#c9a227">Login</a>' : '') + '</p></div></body></html>',
   );
 }
 
@@ -286,8 +287,25 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
     res.end();
     return;
   }
-  // /admin ha il suo gate: MAI pubblica — vedi adminPageDecision
-  if (rawPath === '/admin' || rawPath === '/admin.html') {
+  // pagina di login standalone del server: su /login MAI servire l'SPA (loop con il redirect di /api/me).
+  // Sessione valida -> 302 all'app; senza sessione -> pagina di login temata.
+  if (REQUIRE_AUTH && (rawPath === '/login' || rawPath === '/login.html')) {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.writeHead(405, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('usa GET');
+      return;
+    }
+    const tok = sessionTokenOf(req);
+    if (tok && (sessionUsername(tok) ?? loginByRememberToken(tok)?.username)) {
+      res.writeHead(302, { location: '/' });
+      res.end();
+      return;
+    }
+    serveLoginPage(res);
+    return;
+  }
+  // /admin ha il suo gate: MAI pubblica — vedi adminPageDecision (anche /admin/ con slash finale)
+  if (rawPath === '/admin' || rawPath === '/admin/' || rawPath === '/admin.html') {
     if (req.method !== 'GET' && req.method !== 'HEAD') {
       res.writeHead(405, { 'content-type': 'text/plain; charset=utf-8' });
       res.end('usa GET');
@@ -583,6 +601,7 @@ function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: b
     characters: accountCharacters(username),
     savedCampaigns: accountSavedP2PCampaigns(username),
     totpEnabled,
+    registration: registrationMode(),
     rememberToken,
   });
 }

@@ -114,8 +114,12 @@ Server→Client: `welcome`, `state` (broadcast a ogni cambiamento), `campaigns`,
 
 Con `DND5E_REQUIRE_AUTH=true` (default nei compose Docker) la webapp servita dal server **richiede un account**:
 senza cookie di sessione valido (`dnd5e_session`, impostato da `POST /api/login` o `/api/login-token`) ogni GET
-serve una pagina di login standalone (`public/login.html`) al posto dell'app; `/api/info`, `/api/setup`, `/setup`,
-`/api/login`, `/api/register`, `/api/logout`, `/api/me`, `/version.json`, `/api/update*` e `/admin` restano pubblici.
+serve una pagina di login standalone (`public/login.html`) al posto dell'app — anche `/login` stesso serve
+quella pagina (mai l'SPA, per evitare loop con `/api/me`), mentre con sessione valida `/login` redirecta (302)
+all'app `/`; `/api/info`, `/api/setup`, `/setup`, `/api/login`, `/api/register`, `/api/logout`, `/api/me`,
+`/version.json`, `/api/update*` restano pubblici (`/admin` ha il suo gate, vedi sotto).
+Le pagine statiche login/setup/invite/admin condividono lo **stesso tema D&D** dell'app web;
+dopo il logout (`/api/logout`) la webapp servita dal server torna **automaticamente** a `/login`.
 **Primo avvio con zero account**: `/` e `/login` redirectano (302) a `/setup`, che mostra il processo di
 creazione del primo admin (la pagina di login fa lo stesso controllo via `GET /api/setup`).
 Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messaggi P2P richiedono la sessione:
@@ -143,6 +147,10 @@ Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse prox
   "solo su invito"); si registra solo da un link di invito creato dall'admin (vedi sotto).
 - L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data` v8);
   `/api/info` espone `registration` e `requireAuth`.
+- La modalità è **visibile nell'app**: tag "solo su invito / aperta / con approvazione" nella card account
+  (tab Home e Campagna, da `/api/me` o `/api/info`); in modalità invito il pulsante "Registrati" è nascosto
+  e al suo posto appare il suggerimento di chiedere il link `/invite?token=…` (la pagina `/login` nasconde
+  la tab "Registrati").
 
 ### Inviti (modalità "solo su invito")
 

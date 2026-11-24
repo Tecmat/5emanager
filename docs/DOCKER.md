@@ -64,8 +64,10 @@ Sicurezza già attiva lato server (non serve configurare nulla, ma il proxy deve
 - controllo **Origin** sugli upgrade WebSocket: se il proxy non passa `Host` intatto, imposta anche
   `DND5E_RP_ORIGIN` (vedi sotto) altrimenti il browser viene rifiutato con 403;
 - primo avvio con zero account: `/` redirecta a `/setup` (creazione primo admin, protetta dal token admin
-  generato da Docker); login pagina `/login` per gli altri; una volta loggati la webapp non chiede più
-  user/password (sessione cookie) e su Home non mostra "Connetti online" se sei già dentro una campagna;
+  generato da Docker); login pagina `/login` per gli altri (login/setup/invite/admin con lo stesso tema D&D
+  dell'app); una volta loggati la webapp non chiede più user/password (sessione cookie), `/login` redirecta
+  all'app, dopo il logout si torna automaticamente a `/login`, e su Home non mostra "Connetti online"
+  se sei già dentro una campagna;
 - `/admin` non è mai pubblica: con `DND5E_REQUIRE_AUTH=true` senza sessione → redirect a `/login`,
   account non-admin → 403, solo account admin vedono il pannello (stesso gate su `adminAuth` WS e su
   `POST /api/update/apply`);

@@ -157,7 +157,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
 export default function CampaignTab() {
   const { reg, char, sheets, viewChar, viewLabel, setViewChar, t, tf, getCampaignSheet, setCampaignSheet, setCampaignMeta, selectSheet, campaignMeta } = useStore();
   const {
-    conn, auth, error, setError, notice, pingState, campaignList,
+    conn, auth, registration, error, setError, notice, pingState, campaignList,
     url, setUrl, name, setName, servers, savedCampaigns,
     act, connect, disconnect, checkConnection, refreshCampaignList,
     doRegister, doLogin, logout, setConn, handleNetMessage, setP2PTransport,
@@ -1253,6 +1253,13 @@ export default function CampaignTab() {
           {auth ? (
             <>
               <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
+              {registration && (
+                <div style={{ marginTop: 4 }}>
+                  <span className="tag" title={t('home.regTitle', 'Modalità di registrazione del server')}>
+                    {registration === 'invite' ? `📨 ${t('home.regInvite', 'solo su invito')}` : registration === 'open' ? `✅ ${t('home.regOpen', 'registrazione aperta')}` : `⏳ ${t('home.regApproval', 'con approvazione')}`}
+                  </span>
+                </div>
+              )}
               <div className="row" style={{ marginTop: 6 }}>
                 <button onClick={logout}>{t('cg.logout', 'Esci dall\'account')}</button>
                 {auth.role === 'admin' && (
@@ -1350,7 +1357,9 @@ export default function CampaignTab() {
                 <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder={t('cg.pwServer', 'Password (verificata dal server)')} style={{ flex: 1 }} />
               </div>
               <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
+                {registration !== 'invite' && (
+                  <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
+                )}
                 <button className="primary" onClick={() => doLogin(accountName, accountPw)}>{t('cg.login', 'Login')}</button>
               </div>
               {passkeySupported ? (
@@ -1392,7 +1401,9 @@ export default function CampaignTab() {
               )}
               {notice && <div className="ok" style={{ marginTop: 6 }}>ℹ️ {notice}</div>}
               <div className="muted" style={{ marginTop: 6 }}>
-                {t('cg.regNote', 'La registrazione crea una richiesta che l\'admin approva dal pannello /admin; la password è verificata lato server (hash sha256, mai in chiaro).')}
+                {registration === 'invite'
+                  ? `📨 ${t('home.regInviteHint', 'Su questo server la registrazione è solo su invito: chiedi all\'admin un link /invite?token=… (univoco, a scadenza, vale una sola volta)')}`
+                  : t('cg.regNote', 'La registrazione crea una richiesta che l\'admin approva dal pannello /admin; la password è salvata lato server solo come hash (scrypt), mai in chiaro.')}
               </div>
             </>
           )}

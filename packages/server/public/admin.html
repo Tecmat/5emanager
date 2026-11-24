@@ -5,28 +5,30 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>5e Manager — Admin server</title>
 <style>
-  :root { --bg:#14161c; --panel:#1d2029; --panel2:#262a36; --border:#333947; --text:#e8e6e0; --muted:#9a97a3; --accent:#e0b34c; --danger:#b04040; }
+  :root { color-scheme: dark; --bg:#14110d; --panel:#201b15; --panel2:#2a231b; --border:#3e352a; --text:#ece4d4; --muted:#a3947c; --accent:#c9a227; --accent2:#8a6fd8; --accent-dim:rgba(201,162,39,.5); --stripe:rgba(201,162,39,.05); --font-display:'Iowan Old Style','Palatino Linotype','Book Antiqua',Palatino,Georgia,serif; }
   * { box-sizing: border-box; }
-  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 system-ui, sans-serif; }
-  header { display:flex; justify-content:space-between; align-items:center; padding:12px 18px; background:var(--panel); border-bottom:1px solid var(--border); position:sticky; top:0; }
-  h1 { font-size:17px; margin:0; color:var(--accent); }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.45 'Segoe UI',system-ui,sans-serif; background-image:linear-gradient(var(--stripe) 1px,transparent 1px),linear-gradient(90deg,var(--stripe) 1px,transparent 1px); background-size:26px 26px; }
+  header { display:flex; justify-content:space-between; align-items:center; padding:10px 16px; background:linear-gradient(180deg,var(--panel2),var(--panel)); border-bottom:2px solid var(--accent-dim); position:sticky; top:0; z-index:5; }
+  h1 { font-family:var(--font-display); font-size:17px; margin:0; color:var(--accent); letter-spacing:.03em; }
   main { max-width:1000px; margin:0 auto; padding:16px; }
-  .card { background:var(--panel); border:1px solid var(--border); border-radius:10px; padding:12px 14px; margin-bottom:14px; }
-  .card h2 { margin:0 0 8px; font-size:13px; color:var(--accent); text-transform:uppercase; letter-spacing:.05em; }
-  input, button { font:inherit; background:var(--panel2); color:var(--text); border:1px solid var(--border); border-radius:6px; padding:6px 10px; }
-  button { cursor:pointer; }
+  .card { background:var(--panel); border:1px solid var(--border); border-top:2px solid var(--accent-dim); border-radius:12px; padding:14px 16px; margin-bottom:14px; }
+  .card h2 { margin:0 0 8px; font-family:var(--font-display); font-size:14px; color:var(--accent); text-transform:uppercase; letter-spacing:.06em; }
+  input,select,button { font:inherit; background:var(--bg); color:var(--text); border:1px solid var(--border); border-radius:8px; padding:6px 10px; }
+  button { background:var(--panel2); cursor:pointer; }
   button:hover { border-color:var(--accent); }
-  button.danger { border-color:var(--danger); color:#e08080; }
-  button.primary { background:var(--accent); color:#14161c; font-weight:600; border-color:var(--accent); }
+  button.primary { background:linear-gradient(180deg,#dcb644,#b8920f); color:#1c1607; font-weight:700; border-color:#7c610c; }
+  button.danger { border-color:#b04040; color:#e08080; }
   table { width:100%; border-collapse:collapse; font-size:13px; }
-  th { color:var(--muted); text-align:left; font-size:11px; text-transform:uppercase; padding:4px 8px; border-bottom:1px solid var(--border); }
+  th { color:var(--accent); text-align:left; font-size:11px; text-transform:uppercase; letter-spacing:.05em; padding:4px 8px; border-bottom:2px solid var(--accent-dim); }
   td { padding:6px 8px; border-bottom:1px solid var(--border); }
+  tbody tr:nth-child(even) { background:var(--stripe); }
   .row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
   .muted { color:var(--muted); font-size:12px; }
   .error { color:#e08080; font-size:12px; margin-top:6px; white-space:pre-line; }
   .ok { color:#7fc97f; font-size:12px; }
   .tag { display:inline-block; background:var(--panel2); border:1px solid var(--border); border-radius:20px; padding:0 8px; font-size:11px; }
-  code { background:var(--panel2); padding:1px 5px; border-radius:4px; }
+  code { background:var(--bg); border:1px solid var(--border); padding:1px 5px; border-radius:4px; }
+  a { color:var(--accent); }
 </style>
 </head>
 <body>
