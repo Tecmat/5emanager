@@ -41,3 +41,18 @@ jobs:
       - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
+
+  aur:
+    # valida il pacchetto AUR (deploy/aur/PKGBUILD) in un container Arch: parse + .SRCINFO
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Valida PKGBUILD AUR (parse + .SRCINFO) in container Arch
+        run: |
+          docker run --rm -v "$PWD:/src" -w /src archlinux:base-devel bash -c '
+            pacman -Sy --noconfirm --needed base-devel >/dev/null
+            cd deploy/aur
+            makepkg --printsrcinfo > .SRCINFO.check
+            test -s .SRCINFO.check
+            echo "PKGBUILD OK: $(head -2 .SRCINFO.check | tail -1)"
+          '

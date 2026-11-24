@@ -1,0 +1,28 @@
+# Maintainer: Tecmat
+# Pacchetto AUR binario: prende l'AppImage ufficiale dalla release GitHub di 5e Manager.
+# Dopo ogni tag vX.Y.Z il workflow release.yml pubblica anche l'asset con nome stabile
+# "5emanager-<ver>-x86_64.AppImage" (oltre a "5e.Manager_<ver>_amd64.AppImage" usato dall'auto-update).
+# Dopo il push del tag aggiorna pkgver e sha256sums (sha256 dell'asset stable).
+pkgname=5emanager-bin
+pkgver=0.1.72
+pkgrel=1
+pkgdesc="Gestore di schede D&D 5e: level-up guidato, incantesimi, inventario, combattimento con mappa tattica e multiplayer (binario AppImage dalla release GitHub)"
+arch=('x86_64')
+url="https://github.com/Tecmat/5emanager"
+license=('custom') # contenuti SRD bundled: OGL 1.0a / CC-BY 4.0 (Wizards of the Coast) — vedi README sezione Licenze
+depends=('fuse2' 'glib2' 'gtk3' 'webkit2gtk-4.1' 'librsvg' 'libayatana-appindicator' 'hicolor-icon-theme' 'desktop-file-utils')
+optdepends=('libappindicator-gtk3: tray icon')
+source=("${pkgname}-${pkgver}.AppImage::https://github.com/Tecmat/5emanager/releases/download/v${pkgver}/5emanager-${pkgver}-x86_64.AppImage")
+# aggiorna dopo ogni release: sha256sum dell'asset 5emanager-<pkgver>-x86_64.AppImage
+sha256sums=('SKIP')
+options=(!strip)
+
+package() {
+  install -Dm755 "${srcdir}/${pkgname}-${pkgver}.AppImage" "${pkgdir}/opt/${pkgname}/5emanager.AppImage"
+  install -Dm755 /dev/stdin "${pkgdir}/usr/bin/5emanager" <<'EOF'
+#!/bin/sh
+exec /opt/5emanager-bin/5emanager.AppImage "$@"
+EOF
+  install -Dm644 "${srcdir}/5emanager.desktop" "${pkgdir}/usr/share/applications/5emanager.desktop"
+  install -Dm644 "${srcdir}/5emanager.png" "${pkgdir}/usr/share/icons/hicolor/512x512/apps/5emanager.png"
+}

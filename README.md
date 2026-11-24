@@ -56,6 +56,17 @@ npm run tauri:dev     # finestra di sviluppo con hot-reload
 npm run tauri:build   # pacchetti installabili (msi/deb/appimage/dmg/...)
 ```
 
+Su **Arch Linux** c'è il pacchetto AUR `5emanager-bin` (AppImage ufficiale dalla release GitHub,
+PKGBUILD in `deploy/aur/` — vedi [deploy/aur/README.md](deploy/aur/README.md)):
+
+```bash
+yay -S 5emanager-bin        # oppure: paru -S 5emanager-bin
+```
+
+Sulla **webapp servita dal server** (Docker) il setup "solo locale / server remoto" **non appare**:
+lì si entra con il login (obbligatorio se `DND5E_REQUIRE_AUTH=true`) e la prima configurazione
+riguarda solo l'admin del server (`/setup` la prima volta).
+
 ## Android (Capacitor)
 
 Prerequisiti: Android Studio + SDK (vedi [capacitorjs.com/docs/android](https://capacitorjs.com/docs/android)).
@@ -129,4 +140,4 @@ Icone del set "Lucide": [Lucide](https://lucide.dev), licenza ISC (Copyright © 
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 22/22 UI jsdom + e2e Playwright in CI (job `e2e`).
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 24/24 UI jsdom + e2e Playwright e validazione PKGBUILD AUR in CI (job `e2e`, `aur`).

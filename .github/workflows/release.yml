@@ -45,12 +45,19 @@ jobs:
         with:
           name: desktop-bundles
           path: src-tauri/target/release/bundle
+      - name: AppImage con nome stabile per AUR (deploy/aur/PKGBUILD)
+        shell: bash
+        run: |
+          ver="${GITHUB_REF_NAME#v}"
+          mkdir -p dist-stable
+          cp src-tauri/target/release/bundle/appimage/*.AppImage "dist-stable/5emanager-${ver}-x86_64.AppImage"
       - uses: softprops/action-gh-release@v2
         with:
           files: |
             src-tauri/target/release/bundle/deb/*.deb
             src-tauri/target/release/bundle/rpm/*.rpm
             src-tauri/target/release/bundle/appimage/*.AppImage
+            dist-stable/*.AppImage
 
   desktop-windows:
     runs-on: windows-latest

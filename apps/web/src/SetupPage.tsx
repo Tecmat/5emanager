@@ -11,6 +11,16 @@ export function isSetupDone(): boolean {
   try { return localStorage.getItem(SETUP_KEY) === '1'; } catch { return true; }
 }
 
+/**
+ * Il setup client (nome/lingua/tema + scelta "server remoto" vs "solo locale") ha senso
+ * solo sulle app scaricate (AppImage/APK/iOS/Win/mac) o in dev: sulla webapp servita
+ * DAL server Docker non appare — lì c'è il login (require-auth) e, lato server, il
+ * primo setup admin su /setup. Qui il server è la pagina stessa.
+ */
+export function shouldShowClientSetup(setupDone: boolean): boolean {
+  return !setupDone && !isServerWebapp();
+}
+
 function isNative(): boolean {
   try { return Capacitor.isNativePlatform(); } catch { return false; }
 }

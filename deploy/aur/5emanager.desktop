@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=5e Manager
+GenericName=Gestore di schede D&D 5e
+Comment=Schede, level-up, incantesimi, inventario e campagne multiplayer per D&D 5e
+Exec=5emanager
+Icon=5emanager
+Type=Application
+Terminal=false
+Categories=Game;RolePlaying;
+Keywords=dnd;5e;scheda;gdr;roleplaying;
+StartupNotify=true

@@ -1,0 +1,20 @@
+pkgbase = 5emanager-bin
+	pkgdesc = Gestore di schede D&D 5e: level-up guidato, incantesimi, inventario, combattimento con mappa tattica e multiplayer (binario AppImage dalla release GitHub)
+	pkgver = 0.1.72
+	pkgrel = 1
+	url = https://github.com/Tecmat/5emanager
+	arch = x86_64
+	license = custom
+	depends = fuse2
+	depends = glib2
+	depends = gtk3
+	depends = webkit2gtk-4.1
+	depends = librsvg
+	depends = libayatana-appindicator
+	depends = hicolor-icon-theme
+	depends = desktop-file-utils
+	optdepends = libappindicator-gtk3: tray icon
+	source = 5emanager-bin-0.1.72.AppImage::https://github.com/Tecmat/5emanager/releases/download/v0.1.72/5emanager-0.1.72-x86_64.AppImage
+	sha256sums = SKIP
+
+pkgname = 5emanager-bin
