@@ -12,6 +12,10 @@ apps/web/public/version.json
 __pycache__/
 *.pyc
 
+# playwright e2e artifacts
+test-results/
+playwright-report/
+
 # docker runtime: .env con i secret e le dir dati/certificati restano solo sul server
 docker/.env
 docker/data/

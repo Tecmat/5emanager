@@ -43,6 +43,9 @@ src-tauri/          # wrapper desktop Tauri v2
 - **Combattimento**: initiative, turni/round, PF e condizioni dei nemici, **mappa tattica con token trascinabili** (griglia 5 ft, sincronizzata in multiplayer) e **party tracker del master** sempre visibile
 - **Inventario**: peso, equipaggiamento, sintonizzazione, valuta
 - **Contenuti custom** validati, salvati in localStorage e separati dai dati SRD; scheda esportabile/importabile in JSON
+- **Personalizzazione interfaccia**: tema scuro/chiaro/auto, palette colori (predefinite o custom), stile bordi e raggio angoli, set icone (interne o Lucide open source) e riordino/nascosdi delle tab principali e della scheda
+- **PWA offline**: app installabile che funziona senza rete (shell + dati in cache), indicatore offline e promemoria di sessione con notifica
+- **Import da D&D Beyond**: export JSON proprio importato come nuova scheda (best-effort)
 
 ## Desktop (Tauri v2)
 
@@ -122,7 +125,8 @@ Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
 
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
 vanno inseriti solo come custom dall'utente.
+Icone del set "Lucide": [Lucide](https://lucide.dev), licenza ISC (Copyright © 2013–2025 Cole Bemis e contributori).
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 9/9 UI jsdom.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 22/22 UI jsdom + e2e Playwright in CI (job `e2e`).

@@ -2,7 +2,7 @@
 // Supporta l'aggiornamento in-app: il client manda SKIP_WAITING e ricarica.
 const CACHE_PREFIX = 'dnd5e-v';
 let VERSION = 'dev';
-const ASSETS = ['/', '/index.html', '/manifest.webmanifest'];
+const ASSETS = ['/', '/index.html', '/manifest.webmanifest', '/version.json', '/icon-192.png', '/icon-512.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -46,7 +46,16 @@ self.addEventListener('fetch', (e) => {
         return res;
       })),
     );
+  } else if (e.request.mode === 'navigate') {
+    // pagine: network-first con fallback alla shell (offline completo)
+    e.respondWith(
+      fetch(e.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_PREFIX + VERSION).then((c) => c.put('/index.html', copy));
+        return res;
+      }).catch(() => caches.match('/index.html')),
+    );
   } else {
-    e.respondWith(fetch(e.request).catch(() => caches.match('/index.html')));
+    e.respondWith(fetch(e.request).catch(() => caches.match(e.request)));
   }
 });

@@ -28,3 +28,16 @@ jobs:
       - run: docker build -f docker/Dockerfile -t 5emanager-server:ci .
       - run: docker run --rm -d -p 3999:3001 -e DND5E_DATA_DIR=/tmp/dnd5e-data 5emanager-server:ci
       - run: sleep 8 && curl -fsS http://127.0.0.1:3999/api/info
+
+  e2e:
+    # test end-to-end Playwright (Chromium headless) sui flussi principali dell'app
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npx playwright test

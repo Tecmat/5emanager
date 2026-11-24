@@ -1,0 +1,168 @@
+// @vitest-environment jsdom
+/**
+ * Test personalizzazione UI (v0.1.71): uiSettings (palette, tema, tab order) e import D&D Beyond.
+ */
+import { beforeEach, describe, expect, it } from 'vitest';
+import {
+  PALETTES,
+  UI_KEY,
+  applyUISettings,
+  darken,
+  defaultUISettings,
+  hexToRgb,
+  loadUISettings,
+  getUISettings,
+  moveId,
+  orderTabs,
+  rgba,
+  subscribeUISettings,
+  updateUISettings,
+} from '../src/uiSettings.js';
+import { MAIN_PAGES, SHEET_TABS } from '../src/tabs.js';
+import { parseDdbJson } from '../src/ddbImport.js';
+import { createSrdRegistry } from '@dnd5e/data-srd';
+import { totalLevel } from '@dnd5e/core';
+
+beforeEach(() => {
+  localStorage.clear();
+  document.documentElement.removeAttribute('style');
+  document.documentElement.removeAttribute('data-theme');
+  document.documentElement.removeAttribute('data-border');
+  document.documentElement.removeAttribute('data-icon-set');
+});
+
+describe('uiSettings', () => {
+  it('default: tema auto (o da dnd5e-theme legacy), palette gold, tab default', () => {
+    localStorage.setItem('dnd5e-theme', 'light');
+    const s = defaultUISettings();
+    expect(s.theme).toBe('light');
+    expect(s.paletteId).toBe('gold');
+    expect(s.iconSet).toBe('classic');
+    localStorage.removeItem('dnd5e-theme');
+    expect(defaultUISettings().theme).toBe('auto');
+  });
+
+  it('applyUISettings scrive le CSS var sul :root e persiste', () => {
+    const s = { ...defaultUISettings(), theme: 'dark' as const, paletteId: 'ocean' };
+    applyUISettings(s);
+    const root = document.documentElement;
+    expect(root.dataset.theme).toBe('dark');
+    expect(root.style.getPropertyValue('--accent')).toBe(PALETTES.find((p) => p.id === 'ocean')!.dark.accent);
+    expect(root.style.getPropertyValue('--accent2')).toBe(PALETTES.find((p) => p.id === 'ocean')!.dark.accent2);
+    expect(root.style.getPropertyValue('--radius')).toBe('8px');
+    expect(JSON.parse(localStorage.getItem(UI_KEY)!).paletteId).toBe('ocean');
+    // tema chiaro usa la variante light della palette
+    applyUISettings({ ...s, theme: 'light' });
+    expect(root.style.getPropertyValue('--accent')).toBe(PALETTES.find((p) => p.id === 'ocean')!.light.accent);
+  });
+
+  it('colori custom: paletteId custom usa i colori scelti (light = scurito)', () => {
+    applyUISettings({ ...defaultUISettings(), theme: 'dark', paletteId: 'custom', accent: '#ff0000', accent2: '#00ff00' });
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#ff0000');
+    applyUISettings({ ...defaultUISettings(), theme: 'light', paletteId: 'custom', accent: '#ff0000', accent2: '#00ff00' });
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(darken('#ff0000', 0.3));
+  });
+
+  it('stile bordi: sharp fuerza raggio 2, pill mette i bottoni a capsula', () => {
+    applyUISettings({ ...defaultUISettings(), border: 'sharp', radius: 12 });
+    expect(document.documentElement.style.getPropertyValue('--radius')).toBe('2px');
+    applyUISettings({ ...defaultUISettings(), border: 'pill', radius: 12 });
+    expect(document.documentElement.style.getPropertyValue('--btn-radius')).toBe('999px');
+    expect(document.documentElement.style.getPropertyValue('--radius')).toBe('12px');
+  });
+
+  it('updateUISettings persiste e notifica i subscriber', () => {
+    let n = 0;
+    const unsub = subscribeUISettings(() => { n++; });
+    updateUISettings({ iconSet: 'lucide' });
+    expect(n).toBe(1);
+    expect(getUISettings().iconSet).toBe('lucide');
+    expect(loadUISettings().iconSet).toBe('lucide');
+    unsub();
+  });
+
+  it('hexToRgb / rgba / darken', () => {
+    expect(hexToRgb('#c9a227')).toEqual([201, 162, 39]);
+    expect(hexToRgb('nope')).toBeNull();
+    expect(rgba('#c9a227', 0.5)).toBe('rgba(201, 162, 39, 0.5)');
+    expect(darken('#ffffff', 0.5)).toBe('#808080');
+  });
+
+  it('orderTabs: ordina secondo l\'ordine salvato, mette i nuovi in coda, filtra le nascoste', () => {
+    const items = MAIN_PAGES; // home, campagna, p2p, custom
+    expect(orderTabs(items, [], []).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom']);
+    expect(orderTabs(items, ['custom', 'home'], []).map((t) => t.id)).toEqual(['custom', 'home', 'campagna', 'p2p']);
+    expect(orderTabs(items, ['p2p', 'campagna'], ['p2p']).map((t) => t.id)).toEqual(['campagna', 'home', 'custom']);
+  });
+
+  it('moveId: sposta su/gi\u00f9 con clamp ai bordi', () => {
+    expect(moveId(['a', 'b', 'c'], 'c', -1)).toEqual(['a', 'c', 'b']);
+    expect(moveId(['a', 'b', 'c'], 'a', -1)).toEqual(['a', 'b', 'c']);
+    expect(moveId(['a', 'b', 'c'], 'a', 1)).toEqual(['b', 'a', 'c']);
+    expect(moveId([], 'x', -1)).toEqual(['x']);
+  });
+
+  it('SHEET_TABS restano riordinabili', () => {
+    expect(orderTabs(SHEET_TABS, ['combattimento', 'panoramica'], ['inventario']).map((t) => t.id))
+      .toEqual(['combattimento', 'panoramica', 'incantesimi']);
+  });
+});
+
+describe('import D&D Beyond (ddbImport)', () => {
+  const reg = createSrdRegistry();
+  const sample = {
+    data: {
+      name: 'Kaelen',
+      race: { fullName: 'Elf' },
+      subrace: { fullName: 'High Elf' },
+      classes: [{ definition: { name: 'Wizard', level: 5 } }],
+      stats: [
+        { id: 1, value: 8 }, { id: 2, value: 14 }, { id: 3, value: 12 },
+        { id: 4, value: 16 }, { id: 5, value: 13 }, { id: 6, value: 10 },
+      ],
+    },
+  };
+
+  it('parsa un export DDB standard (nome, razza, classe, livello, caratteristiche)', () => {
+    const res = parseDdbJson(JSON.stringify(sample), reg);
+    expect(res.errors).toEqual([]);
+    expect(res.character).toBeDefined();
+    const c = res.character!;
+    expect(c.name).toBe('Kaelen');
+    expect(c.raceId).toBe('elf');
+    expect(c.subraceId).toBe('high-elf');
+    expect(c.classLevels[0]).toMatchObject({ classId: 'wizard', level: 5 });
+    expect(totalLevel(c)).toBe(5);
+    // elfo alto: +1 INT razziale, più ASI automatico ai livelli // il valore base 16 sale con i bonus
+    expect(c.abilityScores.int).toBeGreaterThanOrEqual(16);
+    expect(c.abilityScores.str).toBe(8);
+  });
+
+  it('accetta anche la radice senza wrapper "data" e nomi italiani', () => {
+    const res = parseDdbJson(JSON.stringify({ name: 'Brun', race: 'Nano', classes: [{ name: 'Guerriero', level: 3 }], stats: [] }), reg);
+    expect(res.character).toBeDefined();
+    expect(res.character!.raceId).toBe('dwarf');
+    expect(res.character!.classLevels[0].classId).toBe('fighter');
+    expect(res.warnings.join(' ')).toMatch(/standard/);
+  });
+
+  it('multiclasse: prende la classe principale e avvisa', () => {
+    const multi = { data: { name: 'Mix', race: 'Human', classes: [
+      { definition: { name: 'Fighter', level: 4 } },
+      { definition: { name: 'Rogue', level: 3 } },
+    ], stats: [] } };
+    const res = parseDdbJson(JSON.stringify(multi), reg);
+    expect(res.character!.classLevels[0]).toMatchObject({ classId: 'fighter', level: 4 });
+    expect(totalLevel(res.character!)).toBe(4);
+    expect(res.warnings.join(' ')).toMatch(/Multiclasse/);
+  });
+
+  it('rifiuta JSON non valido e formati non riconosciuti', () => {
+    expect(parseDdbJson('non json', reg).errors.length).toBeGreaterThan(0);
+    expect(parseDdbJson('{"foo": 1}', reg).errors.join(' ')).toMatch(/non riconosciuto/);
+    const badClass = { data: { name: 'X', race: 'Human', classes: [{ definition: { name: 'Artificer', level: 1 } }], stats: [] } };
+    expect(parseDdbJson(JSON.stringify(badClass), reg).errors.join(' ')).toMatch(/Classe non supportata/);
+    const badRace = { data: { name: 'X', race: 'Aarakocra', classes: [{ definition: { name: 'Fighter', level: 1 } }], stats: [] } };
+    expect(parseDdbJson(JSON.stringify(badRace), reg).errors.join(' ')).toMatch(/Razza non supportata/);
+  });
+});

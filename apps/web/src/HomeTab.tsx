@@ -1,9 +1,12 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { totalLevel, uid, type Character } from '@dnd5e/core';
 import { PREGEN_DATA } from '@dnd5e/data-srd';
 import { useStore, isCampaignSheetId, campaignSheetId } from './store.js';
 import { useNet, loadAuthServer, passkeySupported } from './netStore.js';
 import { defaultWsUrl, toWsUrl, httpUrlFromWs } from './net.js';
+import AppearanceCard from './AppearanceCard.js';
+import ReminderCard from './ReminderCard.js';
+import { parseDdbJson } from './ddbImport.js';
 import Icon from './icons.js';
 
 /**
@@ -12,6 +15,7 @@ import Icon from './icons.js';
  */
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
   const { sheets, char, campaignMeta, reg, t, tf, importSheets, createSheet } = useStore();
+  const ddbFileRef = useRef<HTMLInputElement>(null);
   const { auth, act, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
@@ -31,6 +35,20 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
     const clone: Character = { ...structuredClone(p), id: uid('scheda'), createdAt: now, updatedAt: now };
     createSheet(clone);
     onOpenSheet(clone.id);
+  };
+
+  /** importa un export JSON di D&D Beyond (solo dati propri) come nuova scheda */
+  const importDdb = async (file: File) => {
+    const text = await file.text();
+    const res = parseDdbJson(text, reg);
+    if (!res.character) {
+      alert(res.errors.join('\n') || t('home.ddbBad', 'File non riconosciuto come export D&D Beyond'));
+      return;
+    }
+    createSheet(res.character);
+    onOpenSheet(res.character.id);
+    const msgs = [...res.warnings, ...res.errors].filter(Boolean);
+    if (msgs.length) alert(tf('home.ddbWarn', 'Importato "{name}" con avvisi:\n{m}', { name: res.character.name, m: msgs.join('\n') }));
   };
 
   const Card = ({ c, campaign }: { c: Character; campaign?: boolean }) => (
@@ -67,6 +85,16 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
           <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>
+          <button className="big-btn" onClick={() => ddbFileRef.current?.click()} title={t('home.ddbTitle', 'Importa un export JSON di D&D Beyond (solo i tuoi dati) come nuova scheda')}>
+            <Icon name="save" size={16} /> {t('home.ddb', 'Importa da D&D Beyond')}
+          </button>
+          <input
+            ref={ddbFileRef}
+            type="file"
+            accept=".json,application/json"
+            style={{ display: 'none' }}
+            onChange={(e) => { const f = e.target.files?.[0]; if (f) void importDdb(f); e.target.value = ''; }}
+          />
         </div>
       </div>
 
@@ -124,6 +152,9 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           </div>
         ))}
       </div>
+
+      <AppearanceCard />
+      <ReminderCard />
 
       <div className="card">
         <h3 className="home-h"><Icon name="globe" candy size={15} /> {auth ? tf('home.remoteTitle', '☁️ Libreria remoto — account {u} ({n} schede)', { u: auth.username, n: auth.characters.length }) : t('home.remoteTitleNoAuth', '☁️ Libreria schede sul server')}</h3>

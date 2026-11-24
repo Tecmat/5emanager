@@ -44,9 +44,12 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Rework UI in tema D&D** (v0.1.70): palette cuoio/parchment (dark caldo + light pergamena), font serif display per titoli e brand (`--font-display`), card "placca" con bordo dorato, header con bordo dorato, bottoni uniformi (raggio 8px, primary con gradiente oro), tabelle con intestazione dorata e righe alternate, grigliettina di sfondo sottile stile mappa; temi chiaro/scuro preservati (`styles.css`)
 
 ### Fase 3 — piattaforme e dati (visioni)
-- **PWA offline completa** (dati SRD cachati nel service worker) + **notifiche push** promemoria sessione (Android/desktop)
-- **Import da D&D Beyond** (parsing del JSON esportato dall'utente — solo dati propri) + **sync cloud opzionale** (login multi-dispositivo, conflitto last-write-wins)
-- **iOS via Capacitor**, **test e2e Playwright** (flusso: crea PG → XP → level-up → lancia incantesimo), copertura core > 90%
+- ✅ **PWA offline completa + promemoria sessione** (v0.1.71): `sw.js` precache di shell/asset/icone/`version.json`, cache-first per JS/CSS (i chunk lazy includono i dati SRD), network-first per le pagine con fallback offline sulla shell, indicatore "⚠️ senza rete" in header; promemoria di sessione con Notification API (card 🔔 in Home: data/ora + testo, notifica alla scadenza anche con PWA installata, banner se scaduto ad app chiusa) — `reminder.ts`, `ReminderCard.tsx`, `App.tsx`
+- ✅ **Import da D&D Beyond** (v0.1.71): `ddbImport.ts` best-effort su export JSON propri (nome, razza+sottorazza, classe, livello, caratteristiche; 12 classi e 9 razze SRD mappate EN/IT; livello ricostruito con PF medi e ASI/sottoclasse automatici; avvisi per multiclasse e campi non mappati) — bottone "Importa da D&D Beyond" in Home; test in `apps/web/test/uiSettings.test.ts`
+- ✅ **Sync cloud opzionale** (v0.1.68): login multi-dispositivo con libreria schede sull'account (`saveCharacter` per id = last-write-wins), campagne P2P sincronizzabili sull'account
+- ✅ **Test e2e Playwright** (v0.1.71): `playwright.config.ts` + `e2e/app.spec.ts` (flusso: setup → crea PG → tab scheda → tira dado; personalizzazione UI: palette + icone + tab nascoste), job CI `e2e` con Chromium headless (`npx playwright install --with-deps chromium`), script `npm run test:e2e`
+- ✅ **Personalizzazione interfaccia** (v0.1.71): tema auto/scuro/chiaro, 6 palette predefinite + colori custom (accent/accent2 via CSS var su `:root`), stile bordi morbido/squadrato/pill + raggio angoli, set icone "classiche" interne o **Lucide** (open source, ISC — `lucide-react`), riordino (↑↓) e mostra/nascondi delle **tab principali e delle tab della scheda**; scorciatoie 1-9 seguono l'ordine visibile; persistenza `dnd5e.ui.v1` applicata prima del primo render — `uiSettings.ts`, `tabs.ts`, `AppearanceCard.tsx`, `App.tsx`, `main.tsx`
+- 🟡 **iOS via Capacitor**: guida pronta in `docs/IOS.md` (serve macOS + Xcode per build/firma/TestFlight; `apps/web/ios` gitignored come `android`); non buildabile in CI Linux
 
 > Questa sezione riorganizza e dà priorità alle "idee P3" elencate più sotto.
 

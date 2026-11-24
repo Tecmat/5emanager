@@ -1,4 +1,11 @@
 import type { ReactElement } from 'react';
+import {
+  ArrowLeft, Backpack, Bell, BookOpen, Check, Dices, DoorOpen, Eye, FlaskConical, Globe, Home,
+  Key, Lock, Map as MapIcon, Monitor, Moon, Pencil, Play, Plus, QrCode, Radar, RefreshCw, Save,
+  Search, Signal, Sun, Swords, Undo2, User, Users, Wand2, Wifi, WifiOff, X,
+  type LucideIcon,
+} from 'lucide-react';
+import { useUISettings } from './uiSettings.js';
 
 export type IconName =
   | 'home'
@@ -280,6 +287,15 @@ const PATHS: Record<IconName, ReactElement> = {
   ),
 };
 
+/** set di icone open source Lucide (licenza ISC — vedi README, sezione Licenze) */
+const LUCIDE: Record<IconName, LucideIcon> = {
+  home: Home, user: User, wand: Wand2, bag: Backpack, swords: Swords, map: MapIcon, flask: FlaskConical,
+  globe: Globe, plus: Plus, pencil: Pencil, undo: Undo2, moon: Moon, sun: Sun, lock: Lock, eye: Eye,
+  x: X, wifi: Wifi, offline: WifiOff, check: Check, back: ArrowLeft, book: BookOpen, bell: Bell,
+  monitor: Monitor, radar: Radar, play: Play, users: Users, qr: QrCode, dice: Dices, key: Key,
+  door: DoorOpen, signal: Signal, refresh: RefreshCw, search: Search, save: Save,
+};
+
 /** gradienti "candy" (stile KDE/Breeze colorato) per icona: tile arrotondato colorato + glifo bianco */
 const CANDY: Partial<Record<IconName, [string, string]>> = {
   home: ['#f7b731', '#fc5c65'],
@@ -319,7 +335,30 @@ const CANDY: Partial<Record<IconName, [string, string]>> = {
 };
 
 export default function Icon({ name, size = 16, className = '', candy = false }: { name: IconName; size?: number; className?: string; candy?: boolean }) {
+  const { iconSet } = useUISettings();
   const paths = PATHS[name];
+  if (iconSet === 'lucide') {
+    const L = LUCIDE[name] ?? Search;
+    if (candy) {
+      const g = CANDY[name] ?? ['#636e72', '#b2bec3'];
+      const pad = Math.max(2, Math.round(size * 0.18));
+      const box = size + pad * 2;
+      return (
+        <span
+          className={`candy-icon${className ? ` ${className}` : ''}`}
+          style={{
+            display: 'inline-flex', width: box, height: box, borderRadius: Math.round(box * 0.3),
+            background: `linear-gradient(135deg, ${g[0]}, ${g[1]})`, boxShadow: '0 1px 4px rgba(0,0,0,.35)',
+            alignItems: 'center', justifyContent: 'center', flex: 'none',
+          }}
+          aria-hidden="true"
+        >
+          <L size={size} color="#fff" strokeWidth={2} />
+        </span>
+      );
+    }
+    return <L size={size} strokeWidth={1.8} className={`icon${className ? ` ${className}` : ''}`} aria-hidden="true" />;
+  }
   if (candy) {
     const g = CANDY[name] ?? ['#636e72', '#b2bec3'];
     const pad = Math.max(2, Math.round(size * 0.18));

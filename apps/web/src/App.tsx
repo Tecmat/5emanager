@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { totalLevel } from '@dnd5e/core';
 import { useStore, isCampaignSheetId } from './store.js';
 import { useNet, sha256Hex } from './netStore.js';
@@ -8,7 +8,10 @@ import Onboarding, { ONBOARD_KEY } from './Onboarding.js';
 import SetupPage, { isSetupDone, SETUP_KEY } from './SetupPage.js';
 import CommandPalette, { type Command } from './CommandPalette.js';
 import UpdateButton from './UpdateButton.js';
-import Icon, { type IconName } from './icons.js';
+import Icon from './icons.js';
+import { MAIN_PAGES, SHEET_TABS, type Page, type SheetTabId } from './tabs.js';
+import { orderTabs, resolvedTheme, updateUISettings, useUISettings } from './uiSettings.js';
+import { dueReminder, fireNotification, markNotified, type Reminder } from './reminder.js';
 import { requestResume } from './p2pSaved.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
@@ -21,22 +24,6 @@ const CustomTab = lazy(() => import('./CustomTab.js'));
 const CombatTab = lazy(() => import('./CombatTab.js'));
 const CampaignTab = lazy(() => import('./CampaignTab.js'));
 
-/** pagine principali del menu: sempre accessibili */
-type Page = 'home' | 'campagna' | 'custom' | 'p2p' | 'scheda';
-/** tab interne alla pagina scheda (visibile solo con una scheda attiva) */
-type SheetTab = 'panoramica' | 'incantesimi' | 'inventario' | 'combattimento';
-const MAIN_PAGES: { id: Exclude<Page, 'scheda'>; icon: IconName; key: string; fb: string }[] = [
-  { id: 'home', icon: 'home', key: 'tab.home', fb: 'Home' },
-  { id: 'campagna', icon: 'map', key: 'tab.campagna', fb: 'Campagna' },
-  { id: 'p2p', icon: 'save', key: 'tab.p2p', fb: 'Campagne P2P' },
-  { id: 'custom', icon: 'flask', key: 'tab.custom', fb: 'Contenuti custom' },
-];
-const SHEET_TABS: { id: SheetTab; icon: IconName; key: string; fb: string }[] = [
-  { id: 'panoramica', icon: 'user', key: 'tab.panoramica', fb: 'Panoramica' },
-  { id: 'incantesimi', icon: 'wand', key: 'tab.incantesimi', fb: 'Incantesimi' },
-  { id: 'inventario', icon: 'bag', key: 'tab.inventario', fb: 'Inventario' },
-  { id: 'combattimento', icon: 'swords', key: 'tab.combattimento', fb: 'Combattimento' },
-];
 
 const LOCK_KEY = 'dnd5e.lock.v1';
 
@@ -59,8 +46,14 @@ export default function App() {
   const { conn } = useNet();
   // page null = auto: pagina scheda se c'è una scheda attiva, altrimenti home
   const [page, setPage] = useState<Page | null>(null);
-  const [sheetTab, setSheetTab] = useState<SheetTab>('panoramica');
-  const [theme, setTheme] = useState(() => (document.documentElement.dataset.theme === 'light' ? 'light' : localStorage.getItem('dnd5e-theme') ?? 'dark'));
+  const [sheetTab, setSheetTab] = useState<SheetTabId>('panoramica');
+  const ui = useUISettings();
+  const effTheme = resolvedTheme(ui);
+  // tab effettivamente mostrate (ordine/visibilità personalizzabili dalla Home)
+  const visibleMain = useMemo(() => { const v = orderTabs(MAIN_PAGES, ui.mainTabOrder, ui.mainTabHidden); return v.length ? v : [MAIN_PAGES[0]]; }, [ui.mainTabOrder, ui.mainTabHidden]);
+  const visibleSheet = useMemo(() => { const v = orderTabs(SHEET_TABS, ui.sheetTabOrder, ui.sheetTabHidden); return v.length ? v : [SHEET_TABS[0]]; }, [ui.sheetTabOrder, ui.sheetTabHidden]);
+  const [online, setOnline] = useState(() => navigator.onLine);
+  const [reminderBanner, setReminderBanner] = useState<Reminder | null>(null);
   const [creating, setCreating] = useState(false);
   const [editing, setEditing] = useState(false);
   const [lock, setLock] = useState<LockRec>(loadLock);
@@ -125,30 +118,51 @@ export default function App() {
       if (/^[1-9]$/.test(e.key)) {
         const n = Number(e.key);
         if (effPage === 'scheda') {
-          if (n <= SHEET_TABS.length) setSheetTab(SHEET_TABS[n - 1].id);
-        } else if (n <= MAIN_PAGES.length) {
-          setPage(MAIN_PAGES[n - 1].id);
+          if (n <= visibleSheet.length) setSheetTab(visibleSheet[n - 1].id);
+        } else if (n <= visibleMain.length) {
+          setPage(visibleMain[n - 1].id);
         }
       } else if (e.key.toLowerCase() === 'e' && char && !viewChar) setEditing((v) => !v);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [char, viewChar, undo, effPage]);
+  }, [char, viewChar, undo, effPage, visibleMain, visibleSheet]);
 
   useEffect(() => {
     if (conn.phase !== 'online' && viewChar) setViewChar(null);
   }, [conn.phase, viewChar, setViewChar]);
 
+  // indicatore di rete (PWA offline: senza rete l'app gira dalla cache)
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => { window.removeEventListener('online', up); window.removeEventListener('offline', down); };
+  }, []);
+
+  // promemoria di sessione: notifica quando scade (anche all'avvio se era scaduto)
+  useEffect(() => {
+    const check = () => {
+      const r = dueReminder();
+      if (r) {
+        markNotified();
+        fireNotification(r);
+        setReminderBanner(r);
+      }
+    };
+    check();
+    const iv = setInterval(check, 20000);
+    return () => clearInterval(iv);
+  }, []);
+
   const toggleTheme = () => {
-    const t2 = theme === 'dark' ? 'light' : 'dark';
-    setTheme(t2);
-    localStorage.setItem('dnd5e-theme', t2);
-    document.documentElement.dataset.theme = t2;
+    updateUISettings({ theme: effTheme === 'dark' ? 'light' : 'dark' });
   };
 
   // comandi della palette (Ctrl/Cmd+K)
   const commands: Command[] = [
-    ...MAIN_PAGES.map((p, i) => ({ id: 'nav-' + p.id, label: t(p.key, p.fb), hint: `${i + 1}`, run: () => setPage(p.id) })),
+    ...visibleMain.map((p, i) => ({ id: 'nav-' + p.id, label: t(p.key, p.fb), hint: `${i + 1}`, run: () => setPage(p.id) })),
     ...(char ? [{ id: 'nav-scheda', label: `${t('app.openSheet', 'Scheda')}: ${char.name}`, run: () => setPage('scheda') }] : []),
     { id: 'new', label: `${t('app.new', 'Nuovo')} — ${t('cf.title', 'Nuovo personaggio')}`, run: () => setCreating(true) },
     { id: 'theme', label: t('app.theme', 'Cambia tema'), run: () => toggleTheme() },
@@ -252,7 +266,8 @@ export default function App() {
           </span>
           <span className="muted">{t('app.sheets', 'Gestore schede')}{sheets.length > 1 ? ` · ${sheets.length} ${t('app.sheetsCount', 'schede')}` : ''}</span>
           <button onClick={() => setLang(lang === 'it' ? 'en' : 'it')} title="IT / EN" aria-label="IT / EN"><Icon name="globe" size={14} /> {lang.toUpperCase()}</button>
-          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{theme === 'dark' ? <Icon name="moon" size={14} /> : <Icon name="sun" size={14} />}</button>
+          <button onClick={toggleTheme} title={t('app.theme', 'Cambia tema')} aria-label={t('app.theme', 'Cambia tema')}>{effTheme === 'dark' ? <Icon name="moon" size={14} /> : <Icon name="sun" size={14} />}</button>
+          {!online && <span className="tag custom" title={t('app.noNet', 'Senza rete: l\'app funziona dalla cache (PWA offline)')}>⚠️ {t('app.noNetShort', 'senza rete')}</span>}
           <button onClick={() => setPaletteOpen(true)} title={t('cmd.open', 'Comandi rapidi (Ctrl+K)')} aria-label={t('cmd.open', 'Comandi rapidi')}>
             <Icon name="search" size={14} /> <span className="kbd">⌘K</span>
           </button>
@@ -268,6 +283,13 @@ export default function App() {
             </div>
           </div>
         )}
+        {reminderBanner && (
+          <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent)' }}>
+            🔔 <b>{reminderBanner.text}</b>
+            <span className="muted"> — {new Date(reminderBanner.at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}</span>
+            <button style={{ marginLeft: 8 }} onClick={() => setReminderBanner(null)}>{t('app.dismiss', 'Ok')}</button>
+          </div>
+        )}
         {viewChar && (
           <div className="card" style={{ marginBottom: 10, borderColor: 'var(--accent2)' }}>
             <Icon name="eye" size={13} /> {t('app.viewBanner1', 'Modalità vista: stai guardando la scheda di')} <b>{viewLabel}</b> {t('app.viewBanner2', 'come master — è sola lettura e si aggiorna in tempo reale. Per modificarla usa il pannello master in Campagna (azioni). Torna alla tua scheda con "mia scheda" in alto.')}
@@ -280,7 +302,7 @@ export default function App() {
                 <Icon name="back" size={15} /> {t('tab.home', 'Home')}
               </button>
               <span className="tab-sep" aria-hidden="true" />
-              {SHEET_TABS.map((tb, i) => (
+              {visibleSheet.map((tb, i) => (
                 <button
                   key={tb.id}
                   className={sheetTab === tb.id ? 'active' : ''}
@@ -301,7 +323,7 @@ export default function App() {
         ) : (
           <>
             <nav className="tabs" aria-label={t('app.tabs', 'Menu principale')}>
-              {MAIN_PAGES.map((p, i) => (
+              {visibleMain.map((p, i) => (
                 <button
                   key={p.id}
                   className={effPage === p.id ? 'active' : ''}

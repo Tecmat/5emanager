@@ -5,6 +5,7 @@ import { StoreProvider } from './store.js';
 import { NetProvider } from './netStore.js';
 import { initDeepLinks } from './deepLink.js';
 import { requestStartupPermissions } from './permissions.js';
+import { applyUISettings, loadUISettings } from './uiSettings.js';
 import './styles.css';
 
 /**
@@ -48,13 +49,8 @@ window.addEventListener('unhandledrejection', (e) => console.error('[5emanager] 
 void initDeepLinks();
 void requestStartupPermissions();
 
-const savedTheme = localStorage.getItem('dnd5e-theme');
-if (savedTheme) {
-  document.documentElement.dataset.theme = savedTheme;
-} else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
-  // nessun tema salvato: segui il tema di sistema del dispositivo
-  document.documentElement.dataset.theme = 'light';
-}
+// applica subito tema/palette/icone/tab salvati (prima del primo render, niente flash)
+applyUISettings(loadUISettings());
 
 createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
