@@ -135,11 +135,30 @@ Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse prox
 - password salvate con **scrypt + sale** (`scrypt$N$r$p$sale$hash`); i vecchi hash sha256 restano
   verificabili e vengono aggiornati a scrypt al primo login riuscito.
 
-## Registrazione: aperta o con approvazione
+## Registrazione: aperta, con approvazione o solo su invito
 
 - `DND5E_REGISTRATION=approval` (default): `register` crea solo una *richiesta* approvata dall'admin in `/admin`.
 - `DND5E_REGISTRATION=open`: `register` crea subito l'account (e fa login immediato); via HTTP `POST /api/register`.
-- L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data` v7); `/api/info` espone `registration` e `requireAuth`.
+- `DND5E_REGISTRATION=invite` (**solo su invito**): `register`/`POST /api/register` sono **chiusi** (403
+  "solo su invito"); si registra solo da un link di invito creato dall'admin (vedi sotto).
+- L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data` v8);
+  `/api/info` espone `registration` e `requireAuth`.
+
+### Inviti (modalità "solo su invito")
+
+L'admin crea un link dal pannello `/admin` → "Inviti" (`adminCreateInvite { ttlHours? }`, default 24h,
+max 7 giorni; `DND5E_INVITE_TTL_HOURS` per il default): il server risponde `inviteCreated { token, id,
+expiresAt, url: '/invite?token=…' }`. Il token è random a 256 bit e **mai salvato in chiaro** (solo hash
+sha256 in `accounts.data`), è **univoco**, **a scadenza** e **monouso**.
+
+- Pagina pubblica `GET /invite?token=…` (come `/login`, serve anche con `DND5E_REQUIRE_AUTH`): mostra il form
+  di registrazione solo se l'invito è valido.
+- `GET /api/invite?token=…` → `{ valid: true, expiresAt }` oppure `{ valid: false, reason: 'invalid'|'used'|'expired' }`.
+- `POST /api/invite { token, username, password, remember? }` → crea l'account (ruolo `user`, o `admin` se
+  `DND5E_ADMIN_USER`), **marca l'invito come usato** (un secondo uso → 403 "già usato"), imposta il cookie di
+  sessione (auto-login) e risponde come `/api/login`. Rate limit per IP come `/api/register`.
+- L'admin vede gli inviti in `adminState.invites` (id mascherato, creazione, scadenza, stato) e può revocarli
+  prima della scadenza con `adminRevokeInvite { inviteId }`. Gli inviti scaduti vengono ripuliti automaticamente.
 
 ## Mantieni l'accesso (remember me)
 

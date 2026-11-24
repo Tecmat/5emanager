@@ -1,4 +1,4 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Character, SavedCampaignSnapshot } from '@dnd5e/core';
@@ -74,21 +74,32 @@ export interface PendingRequest {
   requestedAt: string;
 }
 
-export type RegistrationMode = 'open' | 'approval';
+export type RegistrationMode = 'open' | 'approval' | 'invite';
+
+/** invito di registrazione (modalita' "solo su invito"): il token vive solo come hash, e' monouso e a scadenza */
+export interface InviteRecord {
+  id: string;
+  createdAt: string;
+  expiresAt: string;
+  usedBy?: string;
+  usedAt?: string;
+}
 
 interface AccountsFile {
-  v: 7;
+  v: 8;
   accounts: Record<string, Account>;
   pending: Record<string, PendingRequest>;
+  invites: Record<string, InviteRecord>;
   settings?: { registration?: RegistrationMode };
 }
 
-/** modalita' di registrazione del server: env DND5E_REGISTRATION > impostazione salvata > 'approval' (default) */
+/** modalita' di registrazione del server: env DND5E_REGISTRATION > impostazione salvata > 'approval' (default).
+ *  'invite' = solo su invito: /api/register e' chiuso, si registra solo da un link /invite?token=… creato dall'admin */
 export function registrationMode(): RegistrationMode {
   const env = (process.env.DND5E_REGISTRATION ?? '').trim().toLowerCase();
-  if (env === 'open' || env === 'approval') return env;
+  if (env === 'open' || env === 'approval' || env === 'invite') return env;
   const saved = loadAccountsFile().settings?.registration;
-  return saved === 'open' ? 'open' : 'approval';
+  return saved === 'open' || saved === 'invite' ? saved : 'approval';
 }
 
 /** l'admin cambia la modalita' di registrazione (persistente su disco) */
@@ -98,7 +109,7 @@ export function setRegistrationMode(mode: RegistrationMode): void {
   saveAccountsFile(f);
 }
 
-/** migrazione v1..v5 -> v6: aggiunge role, savedP2PCampaigns, totp e passkeys */
+/** migrazione v1..v7 -> v8: aggiunge role, savedP2PCampaigns, totp, passkeys e invites */
 function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
   let accounts: Record<string, Account>;
   let pending: Record<string, PendingRequest> = {};
@@ -106,7 +117,8 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
     accounts = (raw.accounts ?? {}) as Record<string, Account>;
     pending = (raw.pending ?? {}) as Record<string, PendingRequest>;
   } else {
-    accounts = raw as unknown as Record<string, Account>; // v1: file era un Record puro
+    accounts = (raw.accounts ?? raw) as unknown as Record<string, Account>; // v1: file era un Record puro
+    if (raw.v !== undefined) pending = (raw.pending ?? {}) as Record<string, PendingRequest>;
   }
   const keys = Object.keys(accounts);
   const first = keys.sort((a, b) => String(accounts[a]?.createdAt ?? '').localeCompare(String(accounts[b]?.createdAt ?? '')))[0];
@@ -120,7 +132,7 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
     a.passkeys = a.passkeys ?? [];
     accounts[k] = a as Account;
   }
-  return { v: 7, accounts, pending, settings: {} };
+  return { v: 8, accounts, pending, invites: (raw.invites ?? {}) as Record<string, InviteRecord>, settings: (raw.settings ?? {}) as AccountsFile['settings'] };
 }
 
 /** sessioni attive in memoria: token -> username (si perdono al riavvio del server) */
@@ -132,18 +144,18 @@ export function loadAccountsFile(): AccountsFile {
   try {
     if (existsSync(ACCOUNTS_FILE)) {
       const raw = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-      if (raw && (raw.v === 7 || raw.v === 6) && raw.accounts) {
+      if (raw && raw.v === 8 && raw.accounts) {
         const f = raw as AccountsFile;
-        f.v = 7;
+        f.invites = f.invites ?? {};
         f.settings = f.settings ?? {};
         return f;
       }
-      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5 || !raw.v)) return migrateAccounts(raw);
+      if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5 || raw.v === 6 || raw.v === 7 || !raw.v)) return migrateAccounts(raw);
     }
   } catch {
     /* file corroto: si riparte da un registro vuoto */
   }
-  return { v: 7, accounts: {}, pending: {}, settings: {} };
+  return { v: 8, accounts: {}, pending: {}, invites: {}, settings: {} };
 }
 
 export function saveAccountsFile(f: AccountsFile): void {
@@ -577,4 +589,99 @@ export function revokeRememberTokens(username: string): void {
   acc.rememberTokens = [];
   f.accounts[username.toLowerCase()] = acc;
   saveAccountsFile(f);
+}
+
+// --- inviti di registrazione (modalita' "solo su invito": link /invite?token=… monouso e a scadenza) ---
+
+/** TTL di default degli inviti (ore); DND5E_INVITE_TTL_HOURS lo sovrascrive; clamp 1..168 (7 giorni) */
+const INVITE_DEFAULT_TTL_H = (() => {
+  const n = Number(process.env.DND5E_INVITE_TTL_HOURS ?? 24);
+  return Number.isFinite(n) && n > 0 ? n : 24;
+})();
+
+function hashInviteToken(t: string): string {
+  return createHash('sha256').update('5e-invite-' + t).digest('hex');
+}
+
+/** elimina gli inviti scaduti (ormai inutilizzabili) */
+function pruneInvites(f: AccountsFile): void {
+  const now = Date.now();
+  for (const [k, rec] of Object.entries(f.invites)) {
+    if (Date.parse(rec.expiresAt) <= now) delete f.invites[k];
+  }
+}
+
+/** crea un invito: token random a 256 bit (mai salvato in chiaro, solo hash), id = prime 10 cifre dell'hash */
+export function createInvite(ttlHours?: number): { token: string; id: string; expiresAt: string } {
+  const ttl = Math.min(168, Math.max(1, Math.round(Number(ttlHours ?? INVITE_DEFAULT_TTL_H) || INVITE_DEFAULT_TTL_H)));
+  const token = randomBytes(32).toString('base64url');
+  const key = hashInviteToken(token);
+  const f = loadAccountsFile();
+  pruneInvites(f);
+  const now = Date.now();
+  const rec: InviteRecord = { id: key.slice(0, 10), createdAt: new Date(now).toISOString(), expiresAt: new Date(now + ttl * 3600_000).toISOString() };
+  f.invites[key] = rec;
+  saveAccountsFile(f);
+  return { token, id: rec.id, expiresAt: rec.expiresAt };
+}
+
+export type InviteCheck = { ok: true; id: string; expiresAt: string } | { ok: false; reason: 'invalid' | 'used' | 'expired' };
+
+/** verifica un token di invito SENZA consumarlo */
+export function checkInvite(token: string): InviteCheck {
+  const key = hashInviteToken(String(token ?? '').trim());
+  const rec = loadAccountsFile().invites[key];
+  if (!rec) return { ok: false, reason: 'invalid' };
+  if (rec.usedBy) return { ok: false, reason: 'used' };
+  if (Date.parse(rec.expiresAt) <= Date.now()) return { ok: false, reason: 'expired' };
+  return { ok: true, id: rec.id, expiresAt: rec.expiresAt };
+}
+
+/** crea l'account da un invito VALIDO e lo marca usato (monouso): un secondo uso fallisce */
+export function createAccountFromInvite(token: string, username: string, password: string): Account {
+  const chk = checkInvite(token);
+  if (!chk.ok) {
+    throw new Error(chk.reason === 'expired' ? 'Invito scaduto' : chk.reason === 'used' ? 'Invito gia usato (monouso)' : 'Invito non valido');
+  }
+  const uname = username.trim();
+  if (!USERNAME_RE.test(uname)) throw new Error('Username non valido (3-24 caratteri: lettere, numeri, _ e -)');
+  if (!password || password.length < 4) throw new Error('Password troppo corta (min 4 caratteri)');
+  const f = loadAccountsFile();
+  const key = uname.toLowerCase();
+  if (f.accounts[key]) throw new Error('Username gia registrato');
+  const acc: Account = {
+    username: uname,
+    passwordHash: hashPassword(password),
+    characters: {},
+    createdAt: new Date().toISOString(),
+    role: ADMIN_USER && key === ADMIN_USER ? 'admin' : 'user',
+    savedP2PCampaigns: {},
+    totp: null,
+    passkeys: [],
+    loginCount: 0,
+  };
+  f.accounts[key] = acc;
+  delete f.pending[key]; // l'invito vale al posto della richiesta di approvazione
+  const ikey = hashInviteToken(String(token).trim());
+  f.invites[ikey].usedBy = uname;
+  f.invites[ikey].usedAt = new Date().toISOString();
+  saveAccountsFile(f);
+  return acc;
+}
+
+/** lista inviti per il pannello admin (id mascherato, mai il token in chiaro) */
+export function listInvites(): InviteRecord[] {
+  const f = loadAccountsFile();
+  pruneInvites(f);
+  return Object.values(f.invites).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+}
+
+/** revoca un invito prima della scadenza (id = prime 10 cifre dell'hash) */
+export function revokeInvite(id: string): boolean {
+  const f = loadAccountsFile();
+  const key = Object.keys(f.invites).find((k) => f.invites[k].id === id);
+  if (!key) return false;
+  delete f.invites[key];
+  saveAccountsFile(f);
+  return true;
 }

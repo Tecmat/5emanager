@@ -39,8 +39,11 @@ export type ClientMessage =
   | { t: 'adminAccountDetail'; username: string }
   | { t: 'adminDeleteCharacter'; username: string; characterId: string }
   | { t: 'adminSetRole'; username: string; role: 'admin' | 'user' }
-  /** l'admin sceglie se la registrazione e' aperta (open) o con approvazione (approval) */
-  | { t: 'adminSetRegistration'; mode: 'open' | 'approval' }
+  /** l'admin sceglie la modalita' di registrazione: aperta (open), con approvazione (approval) o solo su invito (invite) */
+  | { t: 'adminSetRegistration'; mode: 'open' | 'approval' | 'invite' }
+  /** crea un link di invito monouso a scadenza (registrazione "solo su invito"): /invite?token=… */
+  | { t: 'adminCreateInvite'; ttlHours?: number }
+  | { t: 'adminRevokeInvite'; inviteId: string }
   | { t: 'adminResetPassword'; username: string; password: string }
   | { t: 'adminDisableTotp'; username: string }
   | { t: 'adminClearPasskeys'; username: string }
@@ -76,8 +79,10 @@ export type ServerMessage =
       campaigns: { id: string; name: string; players: number; inCombat: boolean; characters: number; createdAt: string; updatedAt: string }[];
       accounts: { username: string; role: 'admin' | 'user'; characters: number; createdAt: string; lastLoginAt?: string; loginCount?: number; totp: boolean; passkeys: number; p2p: number }[];
       pending: { username: string; requestedAt: string }[];
-      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[]; requireAuth: boolean; registration: 'open' | 'approval' };
+      invites: { id: string; createdAt: string; expiresAt: string; usedBy?: string; usedAt?: string }[];
+      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[]; requireAuth: boolean; registration: 'open' | 'approval' | 'invite' };
     }
+  | { t: 'inviteCreated'; token: string; id: string; expiresAt: string; url: string }
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
   | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }
   | { t: 'kicked' }

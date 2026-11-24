@@ -31,7 +31,12 @@ import {
   accountTotpEnabled,
   ADMIN_USER,
   USERNAME_RE,
+  checkInvite,
+  createAccountFromInvite,
+  createInvite,
   createRememberToken,
+  listInvites,
+  revokeInvite,
   deleteSession,
   loginByRememberToken,
   registrationMode,
@@ -210,6 +215,7 @@ function isPublicPath(path: string): boolean {
     path === '/api/login' || path === '/api/login-token' || path === '/api/register' ||
     path === '/api/logout' || path === '/api/me' || path === '/api/info' ||
     path === '/api/setup' || path === '/setup' || path === '/setup.html' ||
+    path === '/invite' || path === '/invite.html' || path === '/api/invite' ||
     path === '/version.json' || path === '/api/update' || path === '/api/update/asset'
   );
 }
@@ -269,7 +275,7 @@ function serveAdminForbidden(res: ServerResponse): void {
 function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
   // PRIMO AVVIO senza account: mostra subito il setup admin (creazione primo admin) invece dell'app/login/admin
-  if (REQUIRE_AUTH && req.method === 'GET' && setupRequired() && (rawPath === '/' || rawPath === '/login' || rawPath === '/login.html' || rawPath === '/admin' || rawPath === '/admin.html')) {
+  if (REQUIRE_AUTH && req.method === 'GET' && setupRequired() && (rawPath === '/' || rawPath === '/login' || rawPath === '/login.html' || rawPath === '/admin' || rawPath === '/admin.html' || rawPath === '/invite' || rawPath === '/invite.html')) {
     res.writeHead(302, { location: '/setup' });
     res.end();
     return;
@@ -332,6 +338,22 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
       res.writeHead(404);
       res.end('setup page non trovata');
     }
+    return;
+  }
+  // pagina pubblica del link di invito (registrazione "solo su invito")
+  if (rawPath === '/invite' || rawPath === '/invite.html') {
+    if (existsSync(INVITE_PAGE)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(INVITE_PAGE));
+    } else {
+      res.writeHead(404);
+      res.end('invite page non trovata');
+    }
+    return;
+  }
+  // GET /api/invite?token=… -> validita'; POST /api/invite {token,username,password,remember} -> crea account (monouso) + cookie
+  if (rawPath === '/api/invite') {
+    void handleInviteApi(req, res).then((handled) => { if (!handled) serveStaticNext(req, res); });
     return;
   }
   if (!existsSync(STATIC_DIR)) {
@@ -623,6 +645,9 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
       loginNoteAttempt(key);
       const username = String(body.username ?? '').trim();
       const password = String(body.password ?? '');
+      if (registrationMode() === 'invite') {
+        return void json(403, { error: 'Registrazione solo su invito: usa un link /invite?token=… creato dall\'admin' }), true;
+      }
       if (registrationMode() === 'open') {
         // registrazione aperta: account creato subito (role user, a meno di DND5E_ADMIN_USER)
         const f = loadAccountsFile();
@@ -678,6 +703,49 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
 }
 
 
+/** pagina pubblica del link invito /invite?token=… (registrazione solo su invito) */
+const INVITE_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'invite.html');
+
+/**
+ * API del link di invito (pubblica come /login): 
+ *   GET  /api/invite?token=…                    -> { valid, expiresAt? , reason? }
+ *   POST /api/invite { token, username, password, remember? } -> crea l'account, marca l'invito usato (monouso)
+ *                                                          e imposta il cookie di sessione (auto-login come /api/register aperta)
+ */
+async function handleInviteApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  if (url.pathname !== '/api/invite') return false;
+  const secure = isSecureReq(req);
+  const json = (code: number, obj: unknown, token?: string, remember = false) => {
+    if (token) setSessionCookie(res, token, remember, secure);
+    res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    res.end(JSON.stringify(obj));
+  };
+  if (req.method === 'GET') {
+    const chk = checkInvite(url.searchParams.get('token') ?? '');
+    return void json(200, chk.ok ? { valid: true, expiresAt: chk.expiresAt } : { valid: false, reason: chk.reason }), true;
+  }
+  if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
+  // anti-bruteforce sul token (256 bit, ma contiamo lo stesso per IP) e sui fallimenti
+  const key = 'inv|' + clientIpOf(req);
+  if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+  try {
+    const body = await readJsonBody(req);
+    const acc = createAccountFromInvite(String(body.token ?? ''), String(body.username ?? ''), String(body.password ?? ''));
+    loginAttempts.delete(key);
+    const remember = body.remember === true;
+    const token = createSession(acc.username);
+    noteLogin(acc.username);
+    const remTok = remember ? createRememberToken(acc.username) : undefined;
+    return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
+  } catch (e) {
+    loginNoteAttempt(key);
+    const msg = (e as Error).message;
+    const code = /scaduto|gia usato|non valido/.test(msg) ? 403 : 400;
+    return void json(code, { error: msg }), true;
+  }
+}
+
 /** pagina di login standalone servita al posto dell'app quando DND5E_REQUIRE_AUTH=true e senza sessione */
 const LOGIN_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'login.html');
 function serveLoginPage(res: ServerResponse): void {
@@ -709,6 +777,7 @@ function sendAdminState(ws: WebSocket): void {
       p2p: Object.keys(a.savedP2PCampaigns ?? {}).length,
     })),
     pending: pending.map((p) => ({ username: p.username, requestedAt: p.requestedAt })),
+    invites: listInvites(),
     server: {
       startedAt: STARTED_AT.toISOString(),
       uptimeSec: Math.floor((Date.now() - STARTED_AT.getTime()) / 1000),
@@ -823,6 +892,10 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   if (msg.t === 'register') {
     try {
       const username = msg.username.trim();
+      if (registrationMode() === 'invite') {
+        send(conn.ws, { t: 'error', message: 'Registrazione solo su invito: chiedi all\'admin un link /invite?token=…' });
+        return;
+      }
       if (registrationMode() === 'open') {
         // registrazione APERTA: account creato subito e login immediato
         const f = loadAccountsFile();
@@ -1105,7 +1178,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -1130,7 +1203,14 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       if (msg.t === 'adminRejectAccount') rejectAccount(msg.username);
       if (msg.t === 'adminDeleteCharacter') deleteAccountCharacter(msg.username, msg.characterId);
       if (msg.t === 'adminSetRole') setAccountRole(msg.username, msg.role === 'admin' ? 'admin' : 'user');
-      if (msg.t === 'adminSetRegistration') setRegistrationMode(msg.mode === 'open' ? 'open' : 'approval');
+      if (msg.t === 'adminSetRegistration') setRegistrationMode(msg.mode === 'open' || msg.mode === 'invite' ? msg.mode : 'approval');
+      if (msg.t === 'adminCreateInvite') {
+        const inv = createInvite(msg.ttlHours);
+        send(conn.ws, { t: 'inviteCreated', token: inv.token, id: inv.id, expiresAt: inv.expiresAt, url: '/invite?token=' + encodeURIComponent(inv.token) });
+      }
+      if (msg.t === 'adminRevokeInvite') {
+        if (!revokeInvite(msg.inviteId)) throw new Error('Invito non trovato: ' + msg.inviteId);
+      }
       if (msg.t === 'adminResetPassword') resetAccountPassword(msg.username, msg.password);
       if (msg.t === 'adminDisableTotp') adminDisableTotp(msg.username);
       if (msg.t === 'adminClearPasskeys') adminClearPasskeys(msg.username);
