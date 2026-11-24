@@ -49,7 +49,7 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Sync cloud opzionale** (v0.1.68): login multi-dispositivo con libreria schede sull'account (`saveCharacter` per id = last-write-wins), campagne P2P sincronizzabili sull'account
 - ✅ **Test e2e Playwright** (v0.1.71): `playwright.config.ts` + `e2e/app.spec.ts` (flusso: setup → crea PG → tab scheda → tira dado; personalizzazione UI: palette + icone + tab nascoste), job CI `e2e` con Chromium headless (`npx playwright install --with-deps chromium`), script `npm run test:e2e`
 - ✅ **Personalizzazione interfaccia** (v0.1.71): tema auto/scuro/chiaro, 6 palette predefinite + colori custom (accent/accent2 via CSS var su `:root`), stile bordi morbido/squadrato/pill + raggio angoli, set icone "classiche" interne o **Lucide** (open source, ISC — `lucide-react`), riordino (↑↓) e mostra/nascondi delle **tab principali e delle tab della scheda**; scorciatoie 1-9 seguono l'ordine visibile; persistenza `dnd5e.ui.v1` applicata prima del primo render — `uiSettings.ts`, `tabs.ts`, `AppearanceCard.tsx`, `App.tsx`, `main.tsx`
-- 🟡 **iOS via Capacitor**: guida pronta in `docs/IOS.md` (serve macOS + Xcode per build/firma/TestFlight; `apps/web/ios` gitignored come `android`); non buildabile in CI Linux
+- ✅ **iOS via Capacitor** (v0.1.71): job CI `ios` in `release.yml` (runner macos) builda un **IPA unsigned** per sideload (AltStore/Sideloadly) e lo allega alla release; guida firma/TestFlight/App Store in `docs/IOS.md` (`apps/web/ios` gitignored come `android`)
 
 > Questa sezione riorganizza e dà priorità alle "idee P3" elencate più sotto.
 

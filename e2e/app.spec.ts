@@ -45,19 +45,21 @@ test('personalizza interfaccia: cambia palette e nasconde una tab principale', a
 
   // torna alla Home e apri la card di personalizzazione
   await page.getByRole('button', { name: 'Home' }).first().click();
-  await expect(page.getByText('Personalizza interfaccia').first()).toBeVisible();
+  const card = page.locator('.card', { hasText: 'Personalizza interfaccia' }).first();
+  await expect(card).toBeVisible();
 
-  // cambia palette (swatch "Oceano"): il :root prende il nuovo --accent
+  // tema scuro (il runner headless parte in light con tema auto), poi palette "Oceano"
+  await card.getByRole('combobox').nth(0).selectOption('dark');
   await page.getByRole('button', { name: 'Oceano' }).click();
   const accent = await page.evaluate(() => document.documentElement.style.getPropertyValue('--accent'));
   expect(accent.toLowerCase()).toBe('#4f9dd8');
 
-  // set icone Lucide: un'icona della tab Home diventa il componente lucide (svg con path di Lucide)
-  await page.getByRole('combobox').nth(1).selectOption('lucide');
+  // set icone Lucide (secondo combobox della card)
+  await card.getByRole('combobox').nth(1).selectOption('lucide');
   await expect(page.locator('nav.tabs svg').first()).toBeVisible();
 
-  // nascondi la tab "Contenuti custom": resta solo home/campagna/p2p nel menu principale
-  const customRow = page.locator('div.row', { hasText: 'Contenuti custom' }).last();
+  // nascondi la tab "Contenuti custom": nel menu principale restano home/campagna/p2p
+  const customRow = card.locator('div.row', { hasText: 'Contenuti custom' }).first();
   await customRow.getByRole('checkbox').uncheck();
   await expect(page.locator('nav.tabs button', { hasText: 'Contenuti custom' })).toHaveCount(0);
   await expect(page.locator('nav.tabs button', { hasText: 'Campagna' })).toHaveCount(1);
