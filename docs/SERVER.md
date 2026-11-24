@@ -195,9 +195,18 @@ Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse prox
 Il server serve una pagina di amministrazione su `http://<server>:3001/admin` (funziona anche
 senza build della web app): elenca campagne (con stato combattimento) e account, con
 eliminazione. I comandi admin viaggiano sullo stesso WebSocket (`adminAuth`/`adminList`/
-`adminDeleteCampaign`/`adminDeleteAccount`). Se la variabile d'ambiente
-**`DND5E_ADMIN_TOKEN`** è impostata, `adminAuth` deve contenere quel token; se non è
-impostata l'accesso è libero (ok per LAN — vedi sotto).
+`adminDeleteCampaign`/`adminDeleteAccount`).
+
+**Gate della pagina `/admin`** (la pagina non è mai pubblica):
+- con `DND5E_REQUIRE_AUTH=true`: senza sessione → 302 a `/login`; sessione di account **non admin** → 403;
+  sessione di account **admin** → 200;
+- senza REQUIRE_AUTH ma con `DND5E_ADMIN_TOKEN`: serve il token (`/admin?token=…` o header `x-admin-token`), altrimenti 403;
+- senza né REQUIRE_AUTH né token: aperta solo finché non esistono account (LAN fresca, flusso `/setup`).
+
+Su WebSocket `adminAuth` vale con **token admin valido** (`DND5E_ADMIN_TOKEN`) **oppure** sessione di account
+admin; senza token configurato è accettata solo su server fresco (zero account). Gli altri messaggi
+`admin*` richiedono `conn.admin`. Anche `POST /api/update/apply` (self-update) con REQUIRE_AUTH è
+riservato a sessione admin o `x-admin-token` (altrimenti 403).
 
 Il pannello mostra ora anche **statistiche**: per account numero login e ultimo login, 2FA attiva,
 passkey registrate, campagne P2P salvate, schede in libreria; per campagna numero di schede caricate;

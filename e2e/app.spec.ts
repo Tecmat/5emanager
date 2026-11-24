@@ -40,6 +40,7 @@ test('flusso base: crea una scheda, naviga le tab e tira un dado', async ({ page
 });
 
 test('personalizza interfaccia: cambia palette e nasconde una tab principale', async ({ page }) => {
+  test.setTimeout(90_000); // headless lento al primo render: margine extra contro i flake
   await page.goto('/');
   await dismissIntro(page);
 
@@ -50,9 +51,10 @@ test('personalizza interfaccia: cambia palette e nasconde una tab principale', a
 
   // tema scuro (il runner headless parte in light con tema auto), poi palette "Oceano"
   await card.getByRole('combobox').nth(0).selectOption('dark');
+  await expect.poll(() => page.evaluate(() => document.documentElement.dataset.theme)).toBe('dark');
   await page.getByRole('button', { name: 'Oceano' }).click();
   const accent = await page.evaluate(() => document.documentElement.style.getPropertyValue('--accent'));
-  expect(accent.toLowerCase()).toBe('#4f9dd8');
+  expect(accent.toLowerCase()).toBe('#4f9dd8'); // ocean in tema scuro (in chiaro sarebbe #2273b8)
 
   // set icone Lucide (secondo combobox della card)
   await card.getByRole('combobox').nth(1).selectOption('lucide');

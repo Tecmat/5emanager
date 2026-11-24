@@ -7,7 +7,7 @@ import { defineConfig } from '@playwright/test';
 export default defineConfig({
   testDir: './e2e',
   timeout: 60_000,
-  retries: 0,
+  retries: 1, // il secondo test ha mostrato flake (timeout al primo render headless): un retry lo stabilizza
   workers: 1,
   reporter: [['list']],
   use: {

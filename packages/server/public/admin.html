@@ -49,7 +49,9 @@
       <button id="connect" class="primary">Connetti</button>
     </div>
     <div class="muted" style="margin-top:6px">
-      Server: <code id="wsurl"></code> — se il server non ha <code>DND5E_ADMIN_TOKEN</code> qualsiasi token va bene (pensato per LAN; non esporlo su Internet pubblico).
+      Server: <code id="wsurl"></code> — con <code>DND5E_REQUIRE_AUTH</code> la pagina si apre solo da loggati come account <b>admin</b>;
+      senza token admin bastano sessione admin o nessun account ancora (LAN fresca); con <code>DND5E_ADMIN_TOKEN</code> serve il token
+      (puoi anche aprire <code>/admin?token=…</code>).
     </div>
     <div id="err" class="error"></div>
   </div>
@@ -144,7 +146,7 @@ const wsurl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.h
 document.getElementById('wsurl').textContent = wsurl;
 let ws = null;
 const tokenInput = document.getElementById('token');
-tokenInput.value = sessionStorage.getItem('dnd5e.admin.token') || '';
+tokenInput.value = sessionStorage.getItem('dnd5e.admin.token') || new URLSearchParams(location.search).get('token') || '';
 
 function setStatus(t, ok) {
   const el = document.getElementById('status');

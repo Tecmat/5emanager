@@ -203,15 +203,14 @@ function setSessionCookie(res: ServerResponse, token: string, remember: boolean,
   res.setHeader('Set-Cookie', parts.join('; '));
 }
 
-/** path pubblici anche con REQUIRE_AUTH (login, setup, info, update check, admin con proprio token) */
+/** path pubblici anche con REQUIRE_AUTH (login, setup, info, update check). /admin NO: ha il suo gate sotto */
 function isPublicPath(path: string): boolean {
   return (
     path === '/login' || path === '/login.html' ||
     path === '/api/login' || path === '/api/login-token' || path === '/api/register' ||
     path === '/api/logout' || path === '/api/me' || path === '/api/info' ||
     path === '/api/setup' || path === '/setup' || path === '/setup.html' ||
-    path === '/version.json' || path === '/api/update' || path === '/api/update/asset' ||
-    path === '/admin' || path === '/admin.html'
+    path === '/version.json' || path === '/api/update' || path === '/api/update/asset'
   );
 }
 const STATIC_DIR = process.env.DND5E_STATIC_DIR ?? join(process.cwd(), 'apps', 'web', 'dist');
@@ -235,12 +234,70 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
   serveStaticNext(req, res);
 }
 
+/**
+ * Gate della pagina /admin: la vede SOLO chi ha una sessione cookie con ruolo admin oppure,
+ * se il server non usa REQUIRE_AUTH e ha DND5E_ADMIN_TOKEN, chi passa il token (?token= o header
+ * x-admin-token). Senza sessione con REQUIRE_AUTH -> redirect al login; sessione non-admin -> 403.
+ * Senza REQUIRE_AUTH e senza token resta aperta SOLO se non esistono ancora account (LAN fresca).
+ */
+function adminPageDecision(req: IncomingMessage): 'serve' | 'login' | 'forbidden' {
+  const tok = sessionTokenOf(req);
+  const uname = tok ? sessionUsername(tok) ?? loginByRememberToken(tok)?.username : undefined;
+  if (uname) return accountRole(uname) === 'admin' ? 'serve' : 'forbidden';
+  if (REQUIRE_AUTH) return 'login';
+  if (ADMIN_TOKEN) {
+    const q = new URL(req.url ?? '/', 'http://localhost').searchParams.get('token') ?? '';
+    const h = String(req.headers['x-admin-token'] ?? '');
+    return (q !== '' && q === ADMIN_TOKEN) || (h !== '' && h === ADMIN_TOKEN) ? 'serve' : 'forbidden';
+  }
+  return Object.keys(loadAccountsFile().accounts).length === 0 ? 'serve' : 'forbidden';
+}
+
+/** pagina 403 minimale per /admin: chi non e' admin non vede nemmeno il pannello */
+function serveAdminForbidden(res: ServerResponse): void {
+  res.writeHead(403, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+  res.end(
+    '<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>403 — 5e Manager</title></head>' +
+    '<body style="margin:0;font:15px/1.5 system-ui,sans-serif;background:#14161c;color:#e8eaf2;display:flex;min-height:100vh;align-items:center;justify-content:center">' +
+    '<div style="max-width:440px;text-align:center;padding:16px"><h1 style="font-size:20px">🔒 403 — Area riservata agli admin</h1>' +
+    '<p style="color:#9aa0b4">Per aprire il pannello devi essere loggato con un account <b>admin</b>' +
+    (ADMIN_TOKEN ? ' (oppure aprirlo come <code>/admin?token=…</code> con il token admin)' : '') + '.</p>' +
+    '<p><a href="/" style="color:#7c5cff">⬅️ App</a>' + (REQUIRE_AUTH ? ' &nbsp;·&nbsp; <a href="/login" style="color:#7c5cff">Login</a>' : '') + '</p></div></body></html>',
+  );
+}
+
 function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
-  // PRIMO AVVIO senza account: mostra subito il setup admin (creazione primo admin) invece dell'app/login
-  if (REQUIRE_AUTH && req.method === 'GET' && setupRequired() && (rawPath === '/' || rawPath === '/login' || rawPath === '/login.html')) {
+  // PRIMO AVVIO senza account: mostra subito il setup admin (creazione primo admin) invece dell'app/login/admin
+  if (REQUIRE_AUTH && req.method === 'GET' && setupRequired() && (rawPath === '/' || rawPath === '/login' || rawPath === '/login.html' || rawPath === '/admin' || rawPath === '/admin.html')) {
     res.writeHead(302, { location: '/setup' });
     res.end();
+    return;
+  }
+  // /admin ha il suo gate: MAI pubblica — vedi adminPageDecision
+  if (rawPath === '/admin' || rawPath === '/admin.html') {
+    if (req.method !== 'GET' && req.method !== 'HEAD') {
+      res.writeHead(405, { 'content-type': 'text/plain; charset=utf-8' });
+      res.end('usa GET');
+      return;
+    }
+    const decision = adminPageDecision(req);
+    if (decision === 'login') {
+      res.writeHead(302, { location: '/login' });
+      res.end();
+      return;
+    }
+    if (decision === 'forbidden') {
+      serveAdminForbidden(res);
+      return;
+    }
+    if (existsSync(ADMIN_PAGE)) {
+      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+      res.end(readFileSync(ADMIN_PAGE));
+    } else {
+      res.writeHead(404);
+      res.end('admin page non trovata');
+    }
     return;
   }
   // DND5E_REQUIRE_AUTH: senza sessione valida si serve SOLO la pagina di login (niente app)
@@ -251,6 +308,18 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   // check-update lato server (funziona anche con repo privato se GITHUB_TOKEN è impostato)
   // /api/update/apply aggiorna la web app servita da questo server (POST, niente terminale)
   if (rawPath === '/api/update' || rawPath === '/api/update/asset' || rawPath === '/api/update/apply') {
+    // self-update (apply): con REQUIRE_AUTH serve una sessione admin o un x-admin-token valido
+    if (rawPath === '/api/update/apply' && REQUIRE_AUTH) {
+      const tok = sessionTokenOf(req);
+      const uname = tok ? sessionUsername(tok) : undefined;
+      const adminSession = !!uname && accountRole(uname) === 'admin';
+      const tokenOk = ADMIN_TOKEN !== '' && String(req.headers['x-admin-token'] ?? '') === ADMIN_TOKEN;
+      if (!adminSession && !tokenOk) {
+        res.writeHead(403, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+        res.end(JSON.stringify({ error: 'Non autorizzato: self-update riservato agli admin (sessione admin o x-admin-token)' }));
+        return;
+      }
+    }
     void handleUpdateApi(req, res);
     return;
   }
@@ -262,16 +331,6 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
     if (!serveSetupPage(res)) {
       res.writeHead(404);
       res.end('setup page non trovata');
-    }
-    return;
-  }
-  if (rawPath === '/admin' || rawPath === '/admin.html') {
-    if (existsSync(ADMIN_PAGE)) {
-      res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-      res.end(readFileSync(ADMIN_PAGE));
-    } else {
-      res.writeHead(404);
-      res.end('admin page non trovata');
     }
     return;
   }
@@ -1031,8 +1090,14 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   }
 
   if (msg.t === 'adminAuth') {
-    if (ADMIN_TOKEN && msg.token !== ADMIN_TOKEN) {
-      send(conn.ws, { t: 'error', message: 'Token admin non valido' });
+    // permessi admin via: token admin valido (DND5E_ADMIN_TOKEN) OPPURE sessione di un account con ruolo admin.
+    // Senza token configurato vale solo su server fresco (nessun account) — mai per utenti non-admin loggati.
+    const uname = conn.token ? sessionUsername(conn.token) : undefined;
+    const isAdminAccount = !!uname && accountRole(uname) === 'admin';
+    const tokenOk = ADMIN_TOKEN !== '' && msg.token === ADMIN_TOKEN;
+    const openLanFresh = ADMIN_TOKEN === '' && Object.keys(loadAccountsFile().accounts).length === 0;
+    if (!tokenOk && !isAdminAccount && !openLanFresh) {
+      send(conn.ws, { t: 'error', message: 'Token admin non valido (o serve login come account admin)' });
       return;
     }
     conn.admin = true;

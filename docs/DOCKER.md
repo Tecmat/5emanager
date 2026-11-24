@@ -42,7 +42,8 @@ docker compose up -d --build
 
 - Web app: `http://<ip-server>:3001`
 - Multiplayer (dalle app): `ws://<ip-server>:3001` — le app lo trovano da sole con "🔍 Scansiona rete"
-- Pannello admin: `http://<ip-server>:3001/admin`
+- Pannello admin: `http://<ip-server>:3001/admin` — **non pubblico**: con `DND5E_REQUIRE_AUTH=true` serve
+  il login come account admin (senza sessione → redirect a `/login`, account non-admin → 403)
 - Dati persistenti: `docker/data/`
 
 ## 2) HTTPS su Internet — con il TUO reverse proxy (scegli tu quale)
@@ -65,6 +66,9 @@ Sicurezza già attiva lato server (non serve configurare nulla, ma il proxy deve
 - primo avvio con zero account: `/` redirecta a `/setup` (creazione primo admin, protetta dal token admin
   generato da Docker); login pagina `/login` per gli altri; una volta loggati la webapp non chiede più
   user/password (sessione cookie) e su Home non mostra "Connetti online" se sei già dentro una campagna;
+- `/admin` non è mai pubblica: con `DND5E_REQUIRE_AUTH=true` senza sessione → redirect a `/login`,
+  account non-admin → 403, solo account admin vedono il pannello (stesso gate su `adminAuth` WS e su
+  `POST /api/update/apply`);
 - password degli account con **scrypt + sale** (i vecchi hash sha256 vengono aggiornati al login);
   rate limit sui tentativi di login (default 10 falliti/minuto per username+IP, `DND5E_LOGIN_MAX_ATTEMPTS`).
 
