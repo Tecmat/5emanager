@@ -7,7 +7,7 @@
 #
 # Poi apri http://<ip-del-server>:3001 (web app) e usa ws://<ip-del-server>:3001 per il multiplayer.
 # Pannello admin: http://<ip-del-server>:3001/admin
-# Per esporlo su Internet con HTTPS: docker-compose.nginx.yml (certificati in ./certs)
+# Per esporlo su Internet con HTTPS: metti davanti alla 3001 il TUO reverse proxy (TLS + WebSocket) — vedi docs/DOCKER.md §2
 # Dati persistenti (campagne, account, schede in libreria): ./data
 
 services:

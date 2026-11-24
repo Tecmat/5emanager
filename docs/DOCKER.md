@@ -1,6 +1,6 @@
 # 5e Manager — Server in Docker (docker compose)
 
-> ⚠️ **Non modificare i file tracciati** (`docker-compose*.yml`, `Dockerfile`, `docker/nginx/*`):
+> ⚠️ **Non modificare i file tracciati** (`docker-compose*.yml`, `Dockerfile`):
 > le personalizzazioni vanno in `docker/.env` (non tracciato). Se li modifichi, `git pull` va in conflitto:
 > backup (`cp file /tmp/`) + `git checkout -- <path>` + `git pull`.
 > Nota: se crei/modifichi `docker/.env` con `sudo` resta di root (permessi 600/root) → per modificarlo usa di nuovo `sudo`
@@ -45,137 +45,82 @@ docker compose up -d --build
 - Pannello admin: `http://<ip-server>:3001/admin`
 - Dati persistenti: `docker/data/`
 
-## 2) HTTPS su Internet con nginx (tu gestisci certificati e reverse proxy)
+## 2) HTTPS su Internet — con il TUO reverse proxy (scegli tu quale)
+
+Il progetto **non include più nginx**: il server gira solo sulla porta `3001` e sta a te esporlo
+su Internet con il reverse proxy e il servizio HTTPS che preferisci (Caddy, Traefik, nginx, HAProxy,
+Cloudflare Tunnel, ecc.). Requisiti minimi del proxy:
+
+- **TLS** con certificato valido (es. Let's Encrypt) e redirect da http a https
+- **WebSocket upgrade**: passare gli header `Upgrade`/`Connection` (la web app passa a `wss://` in automatico)
+- passare `Host` e `X-Forwarded-Proto: https`
+- timeout di lettura alto (le sessioni WS del multiplayer restano aperte a lungo)
+
+Esempio con **Caddy** (HTTPS automatico con Let's Encrypt, Caddyfile di 3 righe), server su `127.0.0.1:3001`:
 
 ```bash
+sudo apt install -y caddy   # oppure il proxy che preferisci
+sudo sh -c 'printf "dnd.tuosito.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo systemctl enable --now caddy
+```
+
+Per le **passkey WebAuthn** (login senza password) servono HTTPS + queste env sul container
+(se il proxy non passa `Host` intatto; altrimenti il server le deriva da solo):
+
+```bash
+# in docker/.env (o .env della root del clone)
+DND5E_RP_ID=dnd.tuosito.it
+DND5E_RP_ORIGIN=https://dnd.tuosito.it
+```
+
+### Accesso anche dalla LAN (oltre a https dal tuo proxy)
+
+Se vuoi che le app in LAN trovino il server con la scansione rete (`ws://192.168.1.36:3001`) mentre
+da remoto si passa dal tuo proxy su 443, avvia con l'override LAN (bind solo sull'IP LAN: la 3001
+resta chiusa verso Internet):
+
+```bash
+# in docker/.env: DND5E_LAN_IP=192.168.1.36
 cd docker
-# cp .env.example .env   # poi modifica solo DND5E_DOMAIN (es. dnd.tuosito.it) e DND5E_ADMIN_TOKEN
-mkdir -p certs data certbot-webroot
-# certificati (esempio con certbot/acme):
-#   certbot certonly --webroot -w docker/certbot-webroot -d dnd.tuosito.it
-#   cp /etc/letsencrypt/live/<dominio>/fullchain.pem docker/certs/
-#   cp /etc/letsencrypt/live/<dominio>/privkey.pem    docker/certs/
-docker compose -f docker-compose.nginx.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
+docker ps   # 5emanager-server mostra 192.168.1.36:3001:3001
 ```
 
-- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin`
-- Multiplayer remoto dalle app: `wss://dnd.tuosito.it` (l'upgrade WebSocket passa da nginx in automatico, vedi `docker/nginx/default.conf.template`)
+## 3) Deploy remoto passo-passo (VPS + dominio + tuo reverse proxy)
 
-### Se hai già un nginx esterno (cert tuoi sull'host) — usa i file pronti
-
-Non serve il container nginx: vai alla **sezione 2b** qui sotto (`docker-compose.external-nginx.yml` +
-`deploy/nginx-external.conf` + `deploy/nginx-upgrade-map.conf`). Snippet minimo equivalente:
-Punta il tuo server block al container (porta interna esposta solo sulla rete docker, oppure
-pubblica `3001` e fai proxy dal tuo nginx host):
-
-```nginx
-location / {
-    proxy_pass http://127.0.0.1:3001;
-    proxy_http_version 1.1;
-    proxy_set_header Upgrade $http_upgrade;
-    proxy_set_header Connection "upgrade";
-    proxy_set_header Host $host;
-    proxy_set_header X-Forwarded-Proto $scheme;
-    proxy_read_timeout 86400s;
-}
-```
-
-## 2b) HTTPS con il TUO nginx esterno (certificati gestiti da te)
-
-Se hai già nginx sull'host e gestisci i certificati da lì (es. Let's Encrypt con certbot), non serve
-il container nginx: usa **`docker/docker-compose.external-nginx.yml`**, che pubblica il server SOLO su
-`127.0.0.1:3001` (la porta resta chiusa verso l'esterno; apri solo 80/443 nel firewall).
-
-```bash
-# --- sull'HOST (nginx tuo) ---
-sudo cp deploy/nginx-upgrade-map.conf /etc/nginx/conf.d/     # map per WebSocket
-sudo cp deploy/nginx-external.conf /etc/nginx/sites-available/dnd.conf
-sudo sed -i 's/<DOMAIN>/dnd.tuosito.it/g' /etc/nginx/sites-available/dnd.conf
-sudo ln -sf /etc/nginx/sites-available/dnd.conf /etc/nginx/sites-enabled/dnd.conf
-sudo nginx -t && sudo systemctl reload nginx                  # blocco :80 attivo (challenge ACME)
-sudo certbot certonly --webroot -w /var/www/certbot -d dnd.tuosito.it
-sudo nginx -t && sudo systemctl reload nginx                  # blocco 443 attivo
-sudo ufw allow 80/tcp && sudo ufw allow 443/tcp              # 3001 resta solo su 127.0.0.1
-
-# --- sul server, il container ---
-cd /opt/5emanager/docker
-cp -n .env.example .env
-sed -i 's/^DND5E_DOMAIN=.*/DND5E_DOMAIN=dnd.tuosito.it/' .env
-sed -i 's/^DND5E_ADMIN_TOKEN=.*/DND5E_ADMIN_TOKEN=<token-lungo-casuale>/' .env
-docker compose -f docker-compose.external-nginx.yml up -d --build
-
-# --- verifica ---
-/opt/5emanager/deploy/smoke-test.sh https://dnd.tuosito.it
-```
-
-- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` · Multiplayer: `wss://dnd.tuosito.it`
-  (la web app lo deriva in automatico; nelle app native inserisci `wss://dnd.tuosito.it`).
-- Il compose imposta `DND5E_RP_ID`/`DND5E_RP_ORIGIN` dal dominio → **passkey attive** su HTTPS.
-- Lo snippet nginx (`deploy/nginx-external.conf`) passa `Upgrade`/`Connection` (WebSocket), `Host` e
-  `X-Forwarded-Proto: https`, con `proxy_read_timeout` alto per le sessioni WS lunghe.
-- Se preferisci nginx dentro Docker (tutto in un container): resta `docker-compose.nginx.yml` (sezione 2).
-
-### Accesso anche dalla LAN (oltre a https dal tuo nginx)
-
-Di default il compose external pubblica `3001` solo su `127.0.0.1` (per il tuo nginx). Per far trovare
-il server anche alle app in LAN (scansione rete → `ws://192.168.1.36:3001`), avvia con l'override:
-
-```bash
-# in docker/.env deve esserci gia': DND5E_LAN_IP=192.168.1.36
-docker compose -f docker-compose.external-nginx.yml -f docker-compose.lan.yml up -d --build
-docker ps   # 5emanager-server mostrera' sia 127.0.0.1:3001 che 192.168.1.36:3001
-```
-
-Il bind è solo sull'IP LAN: la 3001 resta chiusa verso Internet (da remoto si passa solo da
-`https://<dominio>`). Se non ti serve l'accesso LAN diretto, non usare l'override.
-
-## 3) Deploy remoto passo-passo (VPS + dominio + HTTPS con nginx)
-
-Prerequisiti: un dominio con **record A** che punta all'IP pubblico del server, porte **80 e 443 aperte**
+Prerequisiti: dominio con **record A** → IP pubblico del server, porte **80/443 aperte** nel firewall
 (es. `ufw allow 80/tcp && ufw allow 443/tcp`), Docker + compose installati, repo clonato in `/opt/5emanager`.
 
 ```bash
-# 1) dominio e token
-cd /opt/5emanager/docker
-cp -n .env.example .env   # -n: non sovrascrivere se esiste già
-sed -i 's/^DND5E_DOMAIN=.*/DND5E_DOMAIN=dnd.tuosito.it/' .env
-sed -i 's/^DND5E_ADMIN_TOKEN=.*/DND5E_ADMIN_TOKEN=<token-lungo-casuale>/' .env
-# opzionale: primo admin bootstrap
-# echo 'DND5E_ADMIN_USER=admin' >> .env
+# 1) server in HTTP/LAN (build sempre dal sorgente locale)
+cd /opt/5emanager
+docker compose up -d        # dalla root del clone; oppure: cd docker && cp .env.example .env && docker compose up -d --build
 
-# 2) certificato Let's Encrypt (webroot servita dal container nginx)
-mkdir -p certs data certbot-webroot
-certbot certonly --webroot -w /opt/5emanager/docker/certbot-webroot -d dnd.tuosito.it
-cp /etc/letsencrypt/live/dnd.tuosito.it/fullchain.pem certs/fullchain.pem
-cp /etc/letsencrypt/live/dnd.tuosito.it/privkey.pem    certs/privkey.pem
-chmod 600 certs/privkey.pem
+# 2) token admin e (per le passkey) RP ID/origin — in .env (root o docker/.env):
+#    DND5E_ADMIN_TOKEN=<token-lungo-casuale>
+#    DND5E_RP_ID=dnd.tuosito.it
+#    DND5E_RP_ORIGIN=https://dnd.tuosito.it
 
-# 3) avvio: server (solo rete docker interna) + nginx esposto su 80/443
-docker compose -f docker-compose.nginx.yml up -d --build
+# 3) il TUO reverse proxy con HTTPS (esempio Caddy, cert automatico)
+sudo apt install -y caddy
+sudo sh -c 'printf "dnd.tuosito.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo systemctl enable --now caddy
 
 # 4) verifica automatica
-docker compose -f docker-compose.nginx.yml ps
-./../../deploy/smoke-test.sh https://dnd.tuosito.it
+./deploy/smoke-test.sh https://dnd.tuosito.it
 # (controlla: index, /version.json, /api/info, /admin, handshake WebSocket 101, redirect http->https)
 ```
 
-- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` (chiede `DND5E_ADMIN_TOKEN`)
-- Multiplayer remoto: `wss://dnd.tuosito.it` — la web app lo deriva **in automatico** dall'origin della
-  pagina (`wss://` se https, fix v0.1.60); nelle app native (APK/desktop) inserisci `wss://dnd.tuosito.it`
-  nel campo server (accetta anche `wss://`).
-- **Passkey WebAuthn**: funzionano perché ora c'è HTTPS (secure context). Il compose imposta
-  `DND5E_RP_ID`/`DND5E_RP_ORIGIN` dal dominio (nginx passa `Host $host`, quindi anche senza env
-  il server li deriva giusti). In Campagna → Account → "Aggiungi passkey".
-- **Primo admin**: registra il tuo account dalla web app (richiesta in attesa), poi approv yourself da
-  `/admin` (token), oppure imposta `DND5E_ADMIN_USER` prima del primo avvio.
-- **Aggiornamenti**: dal pannello `/admin` → "⬇️ Aggiorna la webapp del server ora" (scarica `web-dist.zip`
-  dalla release GitHub con backup/rollback). Per il container server: `git pull && docker compose -f
-  docker-compose.nginx.yml up -d --build`.
-- **Rinnovo certificato** (ogni 90 gg): `certbot renew` poi copia di nuovo i pem in `docker/certs/` e
-  `docker compose -f docker-compose.nginx.yml restart nginx`.
-- **Backup dati**: `tar czf backup-data.tgz -C /opt/5emanager/docker data` (campagne, account incl. TOTP/passkey, librerie).
-- **Sicurezza**: tieni `DND5E_ADMIN_TOKEN` segreto, limita `/admin` se vuoi (es. allowlist IP in nginx),
-  proteggi `docker/data` (contiene hash password, secret TOTP e chiavi pubbliche delle passkey).
+- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` · Multiplayer: `wss://dnd.tuosito.it`
+  (la web app deriva `wss://` in automatico dall'origin https; nelle app native inserisci `wss://dnd.tuosito.it`).
+- **Passkey**: su HTTPS con `DND5E_RP_ID`/`DND5E_RP_ORIGIN` (o `Host` passato dal proxy).
+- **Primo admin**: con zero account apri `/setup` e crea il primo admin; poi pannello `/admin` col token.
+  In alternativa imposta `DND5E_ADMIN_USER` prima del primo avvio.
+- **Aggiornamenti**: `/admin` → "⬇️ Aggiorna la webapp del server ora" (scarica `web-dist.zip` dalla
+  release GitHub con backup/rollback). Per il container: `git pull && docker compose up -d --build`.
+- **Backup dati**: `tar czf backup-data.tgz -C docker data` (campagne, account incl. TOTP/passkey, librerie).
+- **Sicurezza**: tieni `DND5E_ADMIN_TOKEN` segreto, **non esporre mai la 3001 su Internet senza TLS**,
+  limita `/admin` se vuoi (allowlist IP nel tuo proxy), proteggi `docker/data` (hash password, secret TOTP, chiavi pubbliche passkey).
 
 ## Variabili d'ambiente utili (container `5emanager`)
 
@@ -186,7 +131,7 @@ docker compose -f docker-compose.nginx.yml ps
 | `DND5E_STATIC_DIR` | `/app/apps/web/dist` | web app servita (buildata dentro l'immagine) |
 | `DND5E_ADMIN_TOKEN` | *(vuoto)* | token per `/admin`, `/api/setup` e `POST /api/update/apply`. Se mancante, l'entrypoint Docker ne genera uno (log + `/data/admin-token.txt`) — **impostalo o prendilo dai log in produzione** |
 | `GITHUB_TOKEN` | *(vuoto)* | solo se il repo GitHub fosse privato: sblocca check-update e self-update |
-| `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https (impostati in automatico dal compose nginx dal `DND5E_DOMAIN`) |
+| `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https — impostali se il tuo reverse proxy non passa `Host` intatto (vedi §2) |
 | `DND5E_ADMIN_USER` | *(vuoto)* | username che diventa admin a prescindere dal file (bootstrap primo admin) |
 | `DND5E_LAN_IP` / `DND5E_LAN_IPS` | auto (interfacce di rete) | in Docker gli IP rilevati sono quelli del bridge (172.x): impostali con l'IP LAN reale dell'host (es. `DND5E_LAN_IP=192.168.1.36`) così la scansione LAN delle app mostra l'indirizzo giusto |
 | `DND5E_REQUIRE_AUTH` | `true` (nei compose) | **webapp di Docker chiusa**: senza account non si accede al sito (si vede solo la pagina di login; `/api/login`, `/api/register`, `/api/info`, `/setup`, `/version.json` restano pubblici). Sui WS `create`/`join`/`action` richiedono la sessione. Le app scaricabili (AppImage/APK/…) restano indipendenti: là il login è facoltativo. Mettilo `false` solo in LAN fidata |

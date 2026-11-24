@@ -1,7 +1,7 @@
 # 5e Manager — SERVER (web app + WebSocket multiplayer + pannello /admin + account con libreria schede)
 #
 # Build:  docker build -f docker/Dockerfile -t 5emanager-server:latest .
-# Run:    vedi docker/docker-compose.yml (HTTP/LAN) oppure docker/docker-compose.nginx.yml (HTTPS via nginx)
+# Run:    vedi docker/docker-compose.yml (HTTP/LAN); per HTTPS metti il tuo reverse proxy davanti alla 3001 (docs/DOCKER.md §2)
 #
 # Variabili d'ambiente principali:
 #   PORT (default 3001), HOST (default 0.0.0.0)

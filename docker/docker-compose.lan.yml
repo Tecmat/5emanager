@@ -1,11 +1,11 @@
-# Override OPZIONALE: espone il server ANCHE sull'IP LAN, oltre a 127.0.0.1 (per il tuo nginx).
+# Override OPZIONALE: limita il bind della 3001 SOLO all'IP LAN (utile quando da remoto si
+# passa dal TUO reverse proxy su 443 e non vuoi la 3001 pubblica su Internet).
 #
-#   docker compose -f docker-compose.external-nginx.yml -f docker-compose.lan.yml up -d --build
+#   docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
 #
 # Richiede DND5E_LAN_IP in docker/.env (es. DND5E_LAN_IP=192.168.1.36).
-# Il bind avviene SOLO su quell'IP (interfaccia LAN): la porta 3001 NON viene esposta su Internet.
 # Così le app in LAN trovano il server con la scansione rete (ws://192.168.1.36:3001),
-# mentre da remoto si passa sempre da https://<dominio> / wss://<dominio> (tuo nginx).
+# mentre da remoto si passa sempre da https://<dominio> / wss://<dominio> (tuo reverse proxy).
 services:
   5emanager:
     ports:

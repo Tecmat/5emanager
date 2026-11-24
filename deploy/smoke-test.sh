@@ -35,7 +35,7 @@ hs=$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 \
 if [ "$hs" = "101" ]; then
   echo "ok   WebSocket handshake ($BASE -> 101)"
 else
-  echo "FAIL WebSocket handshake: HTTP $hs (atteso 101) — controlla Upgrade/Connection in nginx"
+  echo "FAIL WebSocket handshake: HTTP $hs (atteso 101) — controlla Upgrade/Connection nel tuo reverse proxy"
   fail=1
 fi
 

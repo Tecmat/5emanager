@@ -1,9 +1,9 @@
-# Deploy su server Debian (systemd + nginx opzionale)
+# Deploy su server Debian (systemd + reverse proxy opzionale)
 
 > **Alternativa Docker (più semplice, niente Node sul server):** dopo il clone in `/opt/5emanager`,
 > dalla **root del clone** basta `docker compose up -d` — il compose alla root builda l'immagine
 > `5emanager-server:latest` dal sorgente locale (`pull_policy: build`: niente pull da registry,
-> niente `docker login`). Vedi [DOCKER.md](DOCKER.md) per i dettagli e la modalità HTTPS con nginx.
+> niente `docker login`). Vedi [DOCKER.md](DOCKER.md) per i dettagli e la modalità HTTPS con il reverse proxy che preferisci.
 
 ## 1. Prerequisiti
 
@@ -74,38 +74,21 @@ Crea il token su GitHub → Settings → Developer settings → Fine-grained tok
 `Tecmat/5emanager`, permission: Contents read-only). Poi `sudo systemctl restart 5emanager`.
 Verifica: `curl http://localhost:3001/api/update`. Dettagli in [UPDATE.md](UPDATE.md).
 
-## 4. (Opzionale) Dominio + HTTPS con nginx + certbot
+## 4. (Opzionale) Dominio + HTTPS con il TUO reverse proxy
 
 Solo se vuoi esporlo fuori dalla LAN — **mai esporre la porta 3001 direttamente su Internet senza TLS**.
+Scegli tu il proxy (Caddy, Traefik, nginx, HAProxy, Cloudflare Tunnel...): basta che faccia TLS e passi
+a `127.0.0.1:3001` gli header WebSocket (`Upgrade`/`Connection`), `Host` e `X-Forwarded-Proto`, con
+timeout di lettura alto. Esempio con **Caddy** (certificato automatico):
 
 ```bash
-sudo apt install -y nginx certbot python3-certbot-nginx
+sudo apt install -y caddy
+sudo sh -c 'printf "dnd.tuo-dominio.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo systemctl enable --now caddy
 ```
 
-`/etc/nginx/sites-available/5emanager`:
-
-```nginx
-server {
-    listen 80;
-    server_name dnd.tuo-dominio.it;
-
-    location / {
-        proxy_pass http://127.0.0.1:3001;
-        proxy_http_version 1.1;
-        proxy_set_header Upgrade $http_upgrade;
-        proxy_set_header Connection "upgrade";
-        proxy_set_header Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_read_timeout 86400;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/5emanager /etc/nginx/sites-enabled/
-sudo nginx -t && sudo systemctl reload nginx
-sudo certbot --nginx -d dnd.tuo-dominio.it
-```
+Per le **passkey WebAuthn** imposta sull'app `DND5E_RP_ID=dnd.tuo-dominio.it` e
+`DND5E_RP_ORIGIN=https://dnd.tuo-dominio.it` (o lascia che le derivi dall'header `Host`).
 
 Poi i giocatori usano `https://dnd.tuo-dominio.it/` e nell'app `wss://dnd.tuo-dominio.it`.
 

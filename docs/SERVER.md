@@ -73,7 +73,7 @@ dispositivo, chiavetta di sicurezza o password manager) con `@simplewebauthn/ser
 
 - **Requisito**: WebAuthn funziona solo in **secure context** — HTTPS (o `localhost`).
   Su LAN in chiaro (`http://192.168.x.x`) il browser blocca la API: configura HTTPS
-  (nginx reverse proxy, vedi [docs/DOCKER.md](docs/DOCKER.md)). L'app nasconde i bottoni
+  (il tuo reverse proxy HTTPS, vedi [docs/DOCKER.md](docs/DOCKER.md)). L'app nasconde i bottoni
   passkey quando `window.isSecureContext` è falso e mostra un avviso.
 - **RP ID / origin**: derivati dall'header `Host` della connessione WS (in locale `http://localhost:3001`,
   dietro proxy `https://<dominio>`), con override da env:
@@ -162,7 +162,7 @@ Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messag
 - In **Docker** l'entrypoint (`docker/entrypoint.sh`) genera `DND5E_ADMIN_TOKEN` se mancante:
   lo stampa nei log del container e lo salva in `/data/admin-token.txt` (chmod 600).
   ```bash
-  docker compose -f docker-compose.external-nginx.yml logs 5emanager | grep -A3 'Token admin'
+  docker compose logs 5emanager | grep -A3 'Token admin'
   # oppure: docker exec 5emanager-server cat /data/admin-token.txt
   ```
 - Con **zero account**, `/setup` (pagina) + `POST /api/setup` creano il primo account (sempre
