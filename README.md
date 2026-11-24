@@ -140,4 +140,12 @@ Icone del set "Lucide": [Lucide](https://lucide.dev), licenza ISC (Copyright © 
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 24/24 UI jsdom + e2e Playwright e validazione PKGBUILD AUR in CI (job `e2e`, `aur`).
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 30/30 UI jsdom + e2e Playwright e validazione PKGBUILD AUR in CI (job `e2e`, `aur`).
+
+### FAQ — dopo un update su Windows non si vedono le tab?
+Le impostazioni dell'interfaccia (tema/palette/ordine tab) sono salvate nel profilo WebView2
+(`AppData/Local/com.tecmat.5emanager`). Se una chiave si corrompe, ora l'app la ignora e torna
+ai default da sola (self-heal). In più c'è un recovery senza cancellare nulla: apri l'app con
+`?resetui=1` (es. `5e.Manager.exe` → aggiungi `?resetui=1` all'URL della finestra, oppure usa il
+tasto "🧹 Ripristina impostazioni UI" nella schermata di errore) — cancella solo tema/palette/tab,
+**le schede restano** (sono in IndexedDB).

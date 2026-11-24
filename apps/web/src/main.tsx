@@ -5,7 +5,7 @@ import { StoreProvider } from './store.js';
 import { NetProvider } from './netStore.js';
 import { initDeepLinks } from './deepLink.js';
 import { requestStartupPermissions } from './permissions.js';
-import { applyUISettings, loadUISettings } from './uiSettings.js';
+import { applyUISettings, loadUISettings, UI_KEY } from './uiSettings.js';
 import './styles.css';
 
 /**
@@ -32,7 +32,18 @@ class ErrorBoundary extends Component<{ children: ReactNode }, { error: string |
             <div className="muted" style={{ margin: '10px 0' }}>
               Le schede salvate sono al sicuro (IndexedDB). Se l'errore si ripete, annota il messaggio qui sopra.
             </div>
-            <button className="primary" onClick={() => window.location.reload()}>🔄 Ricarica l'app</button>
+            <div className="row" style={{ gap: 8 }}>
+              <button className="primary" onClick={() => window.location.reload()}>🔄 Ricarica l'app</button>
+              <button
+                title="Cancella solo le impostazioni dell'interfaccia (tema/palette/tab) e ricarica: non tocca le schede (sono in IndexedDB)"
+                onClick={() => {
+                  try { localStorage.removeItem(UI_KEY); localStorage.removeItem('dnd5e-theme'); } catch { /* ignora */ }
+                  window.location.href = window.location.pathname; // senza query
+                }}
+              >
+                🧹 Ripristina impostazioni UI
+              </button>
+            </div>
           </div>
         </main>
       );
@@ -48,6 +59,15 @@ window.addEventListener('unhandledrejection', (e) => console.error('[5emanager] 
 // Android: deep link dai QR (5ELAN:/5EP2P1: aperti dalla fotocamera di sistema) + permessi all'avvio
 void initDeepLinks();
 void requestStartupPermissions();
+
+// recovery: ?resetui=1 cancella SOLO le impostazioni UI (tema/palette/tab) — le schede restano in IndexedDB.
+// Utile se dopo un update l'app non mostra le tab (su Windows prima si debíaa cancellare AppData/Local/com.tecmat.5emanager).
+try {
+  if (new URLSearchParams(window.location.search).has('resetui')) {
+    localStorage.removeItem(UI_KEY);
+    localStorage.removeItem('dnd5e-theme');
+  }
+} catch { /* ignora */ }
 
 // applica subito tema/palette/icone/tab salvati (prima del primo render, niente flash)
 applyUISettings(loadUISettings());

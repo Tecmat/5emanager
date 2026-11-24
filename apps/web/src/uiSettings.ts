@@ -76,13 +76,41 @@ export function defaultUISettings(): UISettings {
   };
 }
 
+const HEX_RE = /^#[0-9a-f]{6}$/i;
+
+function strArr(v: unknown): string[] {
+  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+}
+
+/**
+ * Carica e VALIDA le impostazioni UI: un valore corrotto (JSON parziale, tipi sbagliati,
+ * colori non-hex) cade sul default campo per campo; se il JSON non parseggia la chiave
+ * viene rimossa (self-heal) — così un file corrotto non rompe più l'app all'avvio
+ * (su Windows prima bisognava cancellare AppData/Local/com.tecmat.5emanager).
+ */
 export function loadUISettings(): UISettings {
+  const d = defaultUISettings();
   try {
     const raw = localStorage.getItem(UI_KEY);
-    if (!raw) return defaultUISettings();
-    return { ...defaultUISettings(), ...(JSON.parse(raw) as Partial<UISettings>) };
+    if (!raw) return d;
+    const p = JSON.parse(raw) as Partial<UISettings>;
+    if (!p || typeof p !== 'object' || Array.isArray(p)) throw new Error('ui settings non valide');
+    return {
+      theme: p.theme === 'dark' || p.theme === 'light' || p.theme === 'auto' ? p.theme : d.theme,
+      paletteId: typeof p.paletteId === 'string' && (p.paletteId === 'custom' || PALETTES.some((x) => x.id === p.paletteId)) ? p.paletteId : d.paletteId,
+      accent: typeof p.accent === 'string' && HEX_RE.test(p.accent) ? p.accent : d.accent,
+      accent2: typeof p.accent2 === 'string' && HEX_RE.test(p.accent2) ? p.accent2 : d.accent2,
+      radius: typeof p.radius === 'number' && Number.isFinite(p.radius) ? p.radius : d.radius,
+      border: p.border === 'soft' || p.border === 'sharp' || p.border === 'pill' ? p.border : d.border,
+      iconSet: p.iconSet === 'classic' || p.iconSet === 'lucide' ? p.iconSet : d.iconSet,
+      mainTabOrder: strArr(p.mainTabOrder),
+      mainTabHidden: strArr(p.mainTabHidden),
+      sheetTabOrder: strArr(p.sheetTabOrder),
+      sheetTabHidden: strArr(p.sheetTabHidden),
+    };
   } catch {
-    return defaultUISettings();
+    try { localStorage.removeItem(UI_KEY); } catch { /* quota */ }
+    return d;
   }
 }
 
@@ -122,14 +150,16 @@ export function applyUISettings(s: UISettings): void {
   root.dataset.theme = theme;
   try { localStorage.setItem('dnd5e-theme', theme); } catch { /* quota */ }
   const pal = s.paletteId === 'custom' ? null : (PALETTES.find((p) => p.id === s.paletteId) ?? PALETTES[0]);
-  const accent = theme === 'light' ? (pal?.light.accent ?? darken(s.accent, 0.3)) : (pal?.dark.accent ?? s.accent);
-  const accent2 = theme === 'light' ? (pal?.light.accent2 ?? darken(s.accent2, 0.15)) : (pal?.dark.accent2 ?? s.accent2);
+  const rawAccent = HEX_RE.test(s.accent) ? s.accent : PALETTES[0].dark.accent;
+  const rawAccent2 = HEX_RE.test(s.accent2) ? s.accent2 : PALETTES[0].dark.accent2;
+  const accent = theme === 'light' ? (pal?.light.accent ?? darken(rawAccent, 0.3)) : (pal?.dark.accent ?? rawAccent);
+  const accent2 = theme === 'light' ? (pal?.light.accent2 ?? darken(rawAccent2, 0.15)) : (pal?.dark.accent2 ?? rawAccent2);
   root.style.setProperty('--accent', accent);
   root.style.setProperty('--accent2', accent2);
   root.style.setProperty('--accent-dim', rgba(accent, 0.5));
   root.style.setProperty('--stripe', rgba(accent, 0.05));
   root.style.setProperty('--gridline', rgba(accent, 0.06));
-  const r = s.border === 'sharp' ? 2 : Math.max(0, Math.min(20, Math.round(s.radius)));
+  const r = s.border === 'sharp' ? 2 : Math.max(0, Math.min(20, Math.round(Number.isFinite(s.radius) ? s.radius : 8)));
   root.style.setProperty('--radius', `${r}px`);
   root.style.setProperty('--btn-radius', s.border === 'pill' ? '999px' : `${r}px`);
   root.style.setProperty('--tag-radius', s.border === 'pill' ? '999px' : s.border === 'sharp' ? '4px' : '20px');
@@ -162,14 +192,16 @@ export function useUISettings(): UISettings {
 
 /** ordina una lista di tab secondo `order` (id sconosciuti in coda, ordine originale) e filtra le nascoste */
 export function orderTabs<T extends { id: string }>(items: T[], order: string[], hidden: string[]): T[] {
-  const rank = new Map(order.map((id, i) => [id, i]));
+  const ord = Array.isArray(order) ? order : [];
+  const hid = Array.isArray(hidden) ? hidden : [];
+  const rank = new Map(ord.map((id, i) => [id, i]));
   const sorted = [...items].sort((a, b) => (rank.get(a.id) ?? 999 + items.indexOf(a)) - (rank.get(b.id) ?? 999 + items.indexOf(b)));
-  return sorted.filter((t) => !hidden.includes(t.id));
+  return sorted.filter((t) => !hid.includes(t.id));
 }
 
 /** sposta un id in su/giù nell'array di ordinamento */
 export function moveId(order: string[], id: string, dir: -1 | 1): string[] {
-  const arr = [...order];
+  const arr = Array.isArray(order) ? [...order] : [];
   const from = arr.indexOf(id);
   const base = from === -1 ? arr.length : from;
   const to = Math.max(0, Math.min(arr.length - 1, base + dir));

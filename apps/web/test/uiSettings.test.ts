@@ -108,6 +108,59 @@ describe('uiSettings', () => {
   });
 });
 
+describe('robustezza impostazioni UI (fix v0.1.73: tab scomparse dopo update su Windows)', () => {
+  it('JSON corrotto -> default + chiave rimossa (self-heal, niente AppData da cancellare)', () => {
+    localStorage.setItem(UI_KEY, '{non json');
+    const s = loadUISettings();
+    expect(s.paletteId).toBe('gold');
+    expect(s.mainTabOrder).toEqual([]);
+    expect(localStorage.getItem(UI_KEY)).toBeNull();
+  });
+
+  it('tipi sbagliati -> default campo per campo, senza crash', () => {
+    localStorage.setItem(UI_KEY, JSON.stringify({
+      theme: 'rosa', accent: 'red', accent2: 42, radius: 'tanto', border: 'x', iconSet: 7,
+      paletteId: 'inesistente', mainTabOrder: { 0: 'home' }, mainTabHidden: 'home', sheetTabOrder: null,
+    }));
+    const s = loadUISettings();
+    expect(s.theme).toBe('auto');
+    expect(s.accent).toBe('#c9a227');
+    expect(s.accent2).toBe('#8a6fd8');
+    expect(s.radius).toBe(8);
+    expect(s.border).toBe('soft');
+    expect(s.iconSet).toBe('classic');
+    expect(s.paletteId).toBe('gold');
+    expect(s.mainTabOrder).toEqual([]);
+    expect(s.mainTabHidden).toEqual([]);
+    expect(s.sheetTabOrder).toEqual([]);
+  });
+
+  it('valori validi vengono mantenuti', () => {
+    localStorage.setItem(UI_KEY, JSON.stringify({
+      theme: 'light', paletteId: 'ocean', accent: '#aabbcc', accent2: '#112233', radius: 12,
+      border: 'pill', iconSet: 'lucide', mainTabOrder: ['custom', 'home'], mainTabHidden: ['p2p'],
+    }));
+    const s = loadUISettings();
+    expect(s).toMatchObject({ theme: 'light', paletteId: 'ocean', accent: '#aabbcc', radius: 12, border: 'pill', iconSet: 'lucide', mainTabOrder: ['custom', 'home'], mainTabHidden: ['p2p'] });
+  });
+
+  it('orderTabs/moveId non si rompono con input non-array', () => {
+    expect(orderTabs(MAIN_PAGES, 'garbage' as never, 42 as never).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom']);
+    expect(moveId(null as never, 'home', -1)).toEqual(['home']);
+  });
+
+  it('applyUISettings ignora un colore non-hex (fallback alla palette di default)', () => {
+    applyUISettings({ ...defaultUISettings(), theme: 'dark', paletteId: 'custom', accent: 'non-un-colore', accent2: '#00ff00' });
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#c9a227');
+    expect(document.documentElement.style.getPropertyValue('--accent2')).toBe('#00ff00');
+  });
+
+  it('applyUISettings con radius non numerico non scrive NaN', () => {
+    applyUISettings({ ...defaultUISettings(), border: 'soft', radius: NaN });
+    expect(document.documentElement.style.getPropertyValue('--radius')).toBe('8px');
+  });
+});
+
 describe('import D&D Beyond (ddbImport)', () => {
   const reg = createSrdRegistry();
   const sample = {
