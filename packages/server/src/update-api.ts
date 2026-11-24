@@ -5,6 +5,7 @@ import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeF
 import { dirname, join } from 'node:path';
 import { hostname } from 'node:os';
 import { registrationMode } from './accounts.js';
+import { audit } from './audit.js';
 
 /**
  * Endpoint di check-update lato server (utile quando il repo GitHub è PRIVATO):
@@ -187,6 +188,7 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
       if (existsSync(bak)) moveDir(bak, STATIC_DIR); // ripristina la vecchia build
       throw e;
     }
+    audit('admin', 'update-apply', `webapp -> ${rel.tag}`, String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, ''));
     return void json(200, { ok: true, version: rel.tag });
   } catch (e) {
     return void json(502, { error: (e as Error).message });

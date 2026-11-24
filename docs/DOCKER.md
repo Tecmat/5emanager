@@ -69,6 +69,8 @@ Sicurezza già attiva lato server (non serve configurare nulla, ma il proxy deve
 - `/admin` non è mai pubblica: con `DND5E_REQUIRE_AUTH=true` senza sessione → redirect a `/login`,
   account non-admin → 403, solo account admin vedono il pannello (stesso gate su `adminAuth` WS e su
   `POST /api/update/apply`);
+- **audit log** su `docker/data/audit.log` (JSONL, ruotato a `.1` oltre 5 MB): login, azioni admin,
+  inviti, self-update — leggibile dal pannello `/admin` (card "Audit log");
 - password degli account con **scrypt + sale** (i vecchi hash sha256 vengono aggiornati al login);
   rate limit sui tentativi di login (default 10 falliti/minuto per username+IP, `DND5E_LOGIN_MAX_ATTEMPTS`).
 

@@ -3,6 +3,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { existsSync, readFileSync } from 'node:fs';
 import { createFirstAdmin, setupRequired } from './accounts.js';
+import { audit } from './audit.js';
 
 export const SETUP_PAGE = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'setup.html');
 
@@ -41,6 +42,7 @@ export async function handleSetupApi(req: IncomingMessage, res: ServerResponse):
     }
     const body = JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}');
     const acc = createFirstAdmin(String(body.username ?? ''), String(body.password ?? ''));
+    audit('setup', 'first-admin', acc.username, String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, ''));
     return void json(200, { ok: true, username: acc.username, role: 'admin' as const, next: '/admin' }), true;
   } catch (e) {
     const msg = (e as Error).message;

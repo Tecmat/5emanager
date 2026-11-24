@@ -87,6 +87,7 @@ import {
 import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
 import { handleSetupApi, serveSetupPage } from './setup-api.js';
+import { audit, readAudit } from './audit.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -551,6 +552,22 @@ function loginNoteAttempt(key: string): void {
   loginAttempts.set(key, arr);
 }
 
+/** attore per l'audit log: username della sessione, oppure 'admin-token'/'ip:…' se anonimo */
+function connActor(conn: Conn): string {
+  const un = conn.token ? sessionUsername(conn.token) : undefined;
+  return un ?? (conn.admin ? 'admin-token' : 'ip:' + (connIp(conn) ?? '?'));
+}
+
+/** dettaglio compatto per l'audit log delle azioni admin (mai password/token) */
+function adminDetail(msg: Record<string, unknown>): string | undefined {
+  const parts: string[] = [];
+  for (const k of ['username', 'id', 'name', 'role', 'mode', 'inviteId', 'campaignId', 'playerId', 'message', 'ttlHours']) {
+    const v = msg[k];
+    if (v !== undefined && v !== '') parts.push(`${k}=${String(v).slice(0, 120)}`);
+  }
+  return parts.join(' ') || undefined;
+}
+
 /** manda il messaggio auth completo (con ruolo) dopo un login riuscito */
 function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: boolean, rememberToken?: string): void {
   send(ws, {
@@ -618,6 +635,8 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
 
   if (path === '/api/logout') {
     const tok = cookieOf(req, SESSION_COOKIE);
+    const uname = tok ? sessionUsername(tok) ?? loginByRememberToken(tok)?.username : undefined;
+    if (uname) audit(uname, 'logout', undefined, clientIpOf(req));
     if (tok) deleteSession(tok);
     const parts = [`${SESSION_COOKIE}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
     if (secure) parts.push('Secure');
@@ -633,10 +652,11 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
       const key = 'tok|' + clientIpOf(req);
       if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
       const acc = loginByRememberToken(String(body.token ?? ''));
-      if (!acc) { loginNoteAttempt(key); return void json(401, { error: 'Token non valido o revocato' }), true; }
+      if (!acc) { loginNoteAttempt(key); audit('ip:' + clientIpOf(req), 'login-token-failed', undefined, clientIpOf(req)); return void json(401, { error: 'Token non valido o revocato' }), true; }
       const remember = body.remember === true;
       const token = createSession(acc.username);
       noteLogin(acc.username);
+      audit(acc.username, 'login', 'via remember-token', clientIpOf(req));
       return void json(200, authJson(token, acc.username, remember ? createRememberToken(acc.username) : undefined), remember ? String(body.token) : token, remember), true;
     }
     if (path === '/api/register') {
@@ -667,9 +687,11 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
         const token = createSession(acc.username);
         noteLogin(acc.username);
         const remTok = remember ? createRememberToken(acc.username) : undefined;
+        audit(acc.username, 'register', 'account creato (open)', clientIpOf(req));
         return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
       }
       requestAccount(username, password);
+      audit(username, 'register-request', 'in attesa di approvazione', clientIpOf(req));
       return void json(200, { pending: true, message: 'Richiesta inviata: attendi l\'approvazione dell\'admin' }), true;
     }
     if (path === '/api/login') {
@@ -684,15 +706,17 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
         if (accountTotpEnabled(acc.username)) {
           const code = String(body.code ?? '').trim();
           if (!code) return void json(401, { totpRequired: true, username: acc.username }), true;
-          if (!verifyAccountTotp(acc.username, code)) { loginNoteAttempt(key); return void json(401, { error: 'Codice 2FA non valido' }), true; }
+          if (!verifyAccountTotp(acc.username, code)) { loginNoteAttempt(key); audit(username, 'login-failed', '2FA non valida', clientIpOf(req)); return void json(401, { error: 'Codice 2FA non valido' }), true; }
         }
         const remember = body.remember === true;
         const token = createSession(acc.username);
         noteLogin(acc.username);
+        audit(acc.username, 'login', undefined, clientIpOf(req));
         const remTok = remember ? createRememberToken(acc.username) : undefined;
         return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
       } catch (e) {
         loginNoteAttempt(key);
+        audit(username, 'login-failed', undefined, clientIpOf(req));
         return void json(400, { error: (e as Error).message }), true;
       }
     }
@@ -736,11 +760,13 @@ async function handleInviteApi(req: IncomingMessage, res: ServerResponse): Promi
     const remember = body.remember === true;
     const token = createSession(acc.username);
     noteLogin(acc.username);
+    audit(acc.username, 'invite-used', 'account creato da invito', clientIpOf(req));
     const remTok = remember ? createRememberToken(acc.username) : undefined;
     return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
   } catch (e) {
     loginNoteAttempt(key);
     const msg = (e as Error).message;
+    audit('ip:' + clientIpOf(req), 'invite-failed', msg, clientIpOf(req));
     const code = /scaduto|gia usato|non valido/.test(msg) ? 403 : 400;
     return void json(code, { error: msg }), true;
   }
@@ -933,12 +959,14 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     try {
       const acc = loginByRememberToken(String(msg.token ?? ''));
       if (!acc) {
+        audit('ip:' + (connIp(conn) ?? '?'), 'login-token-failed', undefined, connIp(conn));
         send(conn.ws, { t: 'error', message: 'Token "mantieni l\'accesso" non valido o revocato: rifai il login' });
         return;
       }
       conn.token = createSession(acc.username);
       if (accountRole(acc.username) === 'admin') conn.admin = true;
       noteLogin(acc.username);
+      audit(acc.username, 'login', 'via remember-token', connIp(conn));
       sendAuth(conn.ws, conn.token, acc.username, accountTotpEnabled(acc.username), msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
@@ -973,9 +1001,11 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
       if (accountRole(acc.username) === 'admin') conn.admin = true;
       noteLogin(acc.username);
+      audit(acc.username, 'login', undefined, connIp(conn));
       sendAuth(conn.ws, conn.token, acc.username, false, msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       loginNoteAttempt(key);
+      audit(msg.username.trim(), 'login-failed', undefined, connIp(conn));
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
     return;
@@ -999,6 +1029,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       conn.token = createSession(acc.username);
       if (accountRole(acc.username) === 'admin') conn.admin = true;
       noteLogin(acc.username);
+      audit(acc.username, 'login', '2FA', connIp(conn));
       sendAuth(conn.ws, conn.token, acc.username, true, msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
@@ -1128,6 +1159,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
           conn.token = createSession(owner.username);
           if (accountRole(owner.username) === 'admin') conn.admin = true;
           noteLogin(owner.username);
+          audit(owner.username, 'login-passkey', undefined, connIp(conn));
           sendAuth(conn.ws, conn.token, owner.username, accountTotpEnabled(owner.username));
         } catch (e) {
           totpNoteAttempt(key);
@@ -1170,6 +1202,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     const tokenOk = ADMIN_TOKEN !== '' && msg.token === ADMIN_TOKEN;
     const openLanFresh = ADMIN_TOKEN === '' && Object.keys(loadAccountsFile().accounts).length === 0;
     if (!tokenOk && !isAdminAccount && !openLanFresh) {
+      audit(connActor(conn), 'adminauth-failed', undefined, connIp(conn));
       send(conn.ws, { t: 'error', message: 'Token admin non valido (o serve login come account admin)' });
       return;
     }
@@ -1178,7 +1211,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite' || msg.t === 'adminAudit') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -1206,6 +1239,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       if (msg.t === 'adminSetRegistration') setRegistrationMode(msg.mode === 'open' || msg.mode === 'invite' ? msg.mode : 'approval');
       if (msg.t === 'adminCreateInvite') {
         const inv = createInvite(msg.ttlHours);
+        audit(connActor(conn), 'invite-create', `id=${inv.id} ttl=${msg.ttlHours ?? 'default'}h scade=${inv.expiresAt}`, connIp(conn));
         send(conn.ws, { t: 'inviteCreated', token: inv.token, id: inv.id, expiresAt: inv.expiresAt, url: '/invite?token=' + encodeURIComponent(inv.token) });
       }
       if (msg.t === 'adminRevokeInvite') {
@@ -1253,6 +1287,16 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     } catch (e) {
       send(conn.ws, { t: 'error', message: (e as Error).message });
       return;
+    }
+    if (msg.t === 'adminAudit') {
+      const limit = Number(msg.limit);
+      send(conn.ws, { t: 'auditLog', entries: readAudit(Number.isFinite(limit) && limit > 0 ? Math.min(500, limit) : 100) });
+      return;
+    }
+    // ogni azione admin risuscia finisce nell'audit log (actor + dettaglio, mai password/token).
+    // adminCreateInvite e' gia' auditato sopra con l'id dell'invito: non duplicare.
+    if (msg.t !== 'adminCreateInvite') {
+      audit(connActor(conn), msg.t, adminDetail(msg as unknown as Record<string, unknown>), connIp(conn));
     }
     sendAdminState(conn.ws);
     return;

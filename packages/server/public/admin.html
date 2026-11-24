@@ -110,6 +110,19 @@
   </div>
 
   <div class="card">
+    <h2>Audit log</h2>
+    <div class="row" style="margin-bottom:8px">
+      <button id="audit-refresh">🔄 Aggiorna</button>
+      <span class="muted">ultimi eventi del server (login, azioni admin, inviti, self-update) — salvati su <code>audit.log</code> in <code>DND5E_DATA_DIR</code></span>
+    </div>
+    <table>
+      <thead><tr><th>Quando</th><th>Attore</th><th>Azione</th><th>Dettagli</th><th>IP</th></tr></thead>
+      <tbody id="audit"></tbody>
+    </table>
+    <div id="audit-empty" class="muted">Nessun evento.</div>
+  </div>
+
+  <div class="card">
     <h2>Richieste di registrazione (in attesa)</h2>
     <table>
       <thead><tr><th>Username</th><th>Richiesta il</th><th></th></tr></thead>
@@ -179,6 +192,17 @@ function err(m) { document.getElementById('err').textContent = m; }
 function fmtDate(iso) { try { return new Date(iso).toLocaleString('it-IT'); } catch { return iso; } }
 
 function esc(s) { return String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+
+function renderAudit(entries) {
+  const tb = document.getElementById('audit');
+  tb.innerHTML = '';
+  document.getElementById('audit-empty').style.display = entries.length ? 'none' : 'block';
+  for (const e of entries) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td class="muted">' + fmtDate(e.at) + '</td><td><b>' + esc(e.actor) + '</b></td><td><code>' + esc(e.action) + '</code></td><td class="muted">' + esc(e.detail ?? '') + '</td><td class="muted">' + esc(e.ip ?? '') + '</td>';
+    tb.appendChild(tr);
+  }
+}
 
 function render(state) {
   // info server
@@ -385,10 +409,12 @@ function connect() {
     setStatus('connesso', true);
     ws.send(JSON.stringify({ t: 'adminAuth', token }));
     ws.send(JSON.stringify({ t: 'adminList' }));
+    ws.send(JSON.stringify({ t: 'adminAudit', limit: 100 }));
   };
   ws.onmessage = (e) => {
     const m = JSON.parse(e.data);
     if (m.t === 'adminState') render(m);
+    else if (m.t === 'auditLog') renderAudit(m.entries || []);
     else if (m.t === 'adminAccount') renderAccountDetail(m);
     else if (m.t === 'adminCampaign') renderCampaignDetail(m);
     else if (m.t === 'inviteCreated') {
@@ -455,7 +481,13 @@ document.getElementById('update-app-btn').onclick = async () => {
 };
 
 document.getElementById('connect').onclick = connect;
-document.getElementById('refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminList' })); else connect(); };
+document.getElementById('refresh').onclick = () => {
+  if (ws && ws.readyState === 1) {
+    ws.send(JSON.stringify({ t: 'adminList' }));
+    ws.send(JSON.stringify({ t: 'adminAudit', limit: 100 }));
+  } else connect();
+};
+document.getElementById('audit-refresh').onclick = () => { if (ws && ws.readyState === 1) ws.send(JSON.stringify({ t: 'adminAudit', limit: 100 })); };
 document.getElementById('ad-close').onclick = () => { document.getElementById('account-detail-card').style.display = 'none'; };
 document.getElementById('cd-close').onclick = () => { document.getElementById('campaign-detail-card').style.display = 'none'; };
 document.getElementById('newcamp').onclick = () => {

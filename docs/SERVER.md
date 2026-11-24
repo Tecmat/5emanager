@@ -216,6 +216,16 @@ senza build della web app): elenca campagne (con stato combattimento) e account,
 eliminazione. I comandi admin viaggiano sullo stesso WebSocket (`adminAuth`/`adminList`/
 `adminDeleteCampaign`/`adminDeleteAccount`).
 
+### Audit log
+
+Ogni evento di sicurezza/amministrazione è appenduto come riga JSON su **`audit.log`** in
+`DND5E_DATA_DIR` (ruotato su `audit.log.1` oltre `DND5E_AUDIT_MAX_BYTES`, default 5 MB; mai password/token
+nei dettagli): `first-admin`, `login` / `login-failed` / `login-token-failed` / `login-passkey` (HTTP e WS,
+con IP), `register` / `register-request`, `invite-create` / `invite-used` / `invite-failed`, `logout`,
+`adminauth-failed`, tutte le azioni `admin*` réusscite (con actor e dettaglio), `update-apply`.
+L'admin legge gli ultimi eventi via WS `adminAudit { limit? }` → `auditLog { entries }` (pannello `/admin` →
+card "Audit log"); `adminAudit` è come le altre azioni admin: solo sessione admin o token valido.
+
 **Gate della pagina `/admin`** (la pagina non è mai pubblica):
 - con `DND5E_REQUIRE_AUTH=true`: senza sessione → 302 a `/login`; sessione di account **non admin** → 403;
   sessione di account **admin** → 200;

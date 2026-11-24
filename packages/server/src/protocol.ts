@@ -44,6 +44,8 @@ export type ClientMessage =
   /** crea un link di invito monouso a scadenza (registrazione "solo su invito"): /invite?token=… */
   | { t: 'adminCreateInvite'; ttlHours?: number }
   | { t: 'adminRevokeInvite'; inviteId: string }
+  /** ultimi eventi dell'audit log del server (solo admin) */
+  | { t: 'adminAudit'; limit?: number }
   | { t: 'adminResetPassword'; username: string; password: string }
   | { t: 'adminDisableTotp'; username: string }
   | { t: 'adminClearPasskeys'; username: string }
@@ -83,6 +85,7 @@ export type ServerMessage =
       server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[]; requireAuth: boolean; registration: 'open' | 'approval' | 'invite' };
     }
   | { t: 'inviteCreated'; token: string; id: string; expiresAt: string; url: string }
+  | { t: 'auditLog'; entries: { at: string; actor: string; action: string; detail?: string; ip?: string }[] }
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
   | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }
   | { t: 'kicked' }
