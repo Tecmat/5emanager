@@ -13,8 +13,8 @@ license=('custom') # contenuti SRD bundled: OGL 1.0a / CC-BY 4.0 (Wizards of the
 depends=('fuse2' 'glib2' 'gtk3' 'webkit2gtk-4.1' 'librsvg' 'libayatana-appindicator' 'hicolor-icon-theme' 'desktop-file-utils')
 optdepends=('libappindicator-gtk3: tray icon')
 source=("${pkgname}-${pkgver}.AppImage::https://github.com/Tecmat/5emanager/releases/download/v${pkgver}/5emanager-${pkgver}-x86_64.AppImage")
-# aggiorna dopo ogni release: sha256sum dell'asset 5emanager-<pkgver>-x86_64.AppImage
-sha256sums=('SKIP')
+# sha256 dell'asset 5emanager-0.1.72-x86_64.AppImage (release v0.1.72)
+sha256sums=('ecadfcd0643b25bda4ae80f06f6ebc2910aad0b1f952a4ff90b555dcc930cc6b')
 options=(!strip)
 
 package() {

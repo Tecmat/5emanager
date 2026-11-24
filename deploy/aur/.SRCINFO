@@ -15,6 +15,6 @@ pkgbase = 5emanager-bin
 	depends = desktop-file-utils
 	optdepends = libappindicator-gtk3: tray icon
 	source = 5emanager-bin-0.1.72.AppImage::https://github.com/Tecmat/5emanager/releases/download/v0.1.72/5emanager-0.1.72-x86_64.AppImage
-	sha256sums = SKIP
+	sha256sums = ecadfcd0643b25bda4ae80f06f6ebc2910aad0b1f952a4ff90b555dcc930cc6b
 
 pkgname = 5emanager-bin
