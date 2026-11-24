@@ -32,11 +32,16 @@ import {
   ADMIN_USER,
   USERNAME_RE,
   checkInvite,
+  countActiveSessions,
   createAccountFromInvite,
   createInvite,
   createRememberToken,
+  listDevices,
   listInvites,
+  revokeAllSessions,
   revokeInvite,
+  revokeRememberToken,
+  revokeRememberTokens,
   deleteSession,
   loginByRememberToken,
   registrationMode,
@@ -561,7 +566,7 @@ function connActor(conn: Conn): string {
 /** dettaglio compatto per l'audit log delle azioni admin (mai password/token) */
 function adminDetail(msg: Record<string, unknown>): string | undefined {
   const parts: string[] = [];
-  for (const k of ['username', 'id', 'name', 'role', 'mode', 'inviteId', 'campaignId', 'playerId', 'message', 'ttlHours']) {
+  for (const k of ['username', 'id', 'name', 'role', 'mode', 'inviteId', 'campaignId', 'playerId', 'message', 'ttlHours', 'tokenId']) {
     const v = msg[k];
     if (v !== undefined && v !== '') parts.push(`${k}=${String(v).slice(0, 120)}`);
   }
@@ -1211,7 +1216,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite' || msg.t === 'adminAudit') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite' || msg.t === 'adminAudit' || msg.t === 'adminRevokeDevice' || msg.t === 'adminRevokeAllDevices' || msg.t === 'adminRevokeSessions') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -1245,6 +1250,11 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       if (msg.t === 'adminRevokeInvite') {
         if (!revokeInvite(msg.inviteId)) throw new Error('Invito non trovato: ' + msg.inviteId);
       }
+      if (msg.t === 'adminRevokeDevice') {
+        if (!revokeRememberToken(msg.username, msg.tokenId)) throw new Error('Dispositivo non trovato: ' + msg.tokenId);
+      }
+      if (msg.t === 'adminRevokeAllDevices') revokeRememberTokens(msg.username);
+      if (msg.t === 'adminRevokeSessions') revokeAllSessions(msg.username);
       if (msg.t === 'adminResetPassword') resetAccountPassword(msg.username, msg.password);
       if (msg.t === 'adminDisableTotp') adminDisableTotp(msg.username);
       if (msg.t === 'adminClearPasskeys') adminClearPasskeys(msg.username);
@@ -1313,7 +1323,15 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       level: ch.classLevels.reduce((s, c) => s + c.level, 0),
       updatedAt: ch.updatedAt,
     }));
-    send(conn.ws, { t: 'adminAccount', username: msg.username, characters: chars });
+    const acc = getAccount(msg.username);
+    send(conn.ws, {
+      t: 'adminAccount',
+      username: msg.username,
+      characters: chars,
+      devices: listDevices(msg.username),
+      activeSessions: countActiveSessions(msg.username),
+      sessionsRevokedAt: acc?.sessionsRevokedAt,
+    });
     return;
   }
 

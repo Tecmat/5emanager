@@ -47,9 +47,16 @@ export type AccountRole = 'admin' | 'user';
 /** se impostata (DND5E_ADMIN_USER), quell'account è admin a prescindere dal file (bootstrap del primo admin) */
 export const ADMIN_USER = (process.env.DND5E_ADMIN_USER ?? '').toLowerCase();
 
+/** token "mantieni l'accesso" (dispositivo): solo l'hash sha256 è salvato, con метadati per il pannello admin */
+export interface RememberToken {
+  hash: string;
+  createdAt: string;
+  lastUsedAt?: string;
+}
+
 export interface Account {
   username: string;
-  /** hash sha256 della password (mai la password in chiaro); null = account legacy: la prima login la imposta */
+  /** hash scrypt della password (mai la password in chiaro); null = account legacy: la prima login la imposta */
   passwordHash: string | null;
   /** libreria schede dell'account (salvate con l'azione saveCharacter) */
   characters: Record<string, Character>;
@@ -64,8 +71,10 @@ export interface Account {
   /** statistiche per il pannello admin */
   lastLoginAt?: string;
   loginCount?: number;
-  /** hash sha256 dei token "mantieni l'accesso" (max 10): permiten il login automatico senza password */
-  rememberTokens?: string[];
+  /** token "mantieni l'accesso" (max 10) come record con hash+metadati: login automatico senza password */
+  rememberTokens?: RememberToken[];
+  /** se impostato, le sessioni create prima di questa data sono invalide (adminRevokeSessions) */
+  sessionsRevokedAt?: string;
 }
 
 export interface PendingRequest {
@@ -86,7 +95,7 @@ export interface InviteRecord {
 }
 
 interface AccountsFile {
-  v: 8;
+  v: 9;
   accounts: Record<string, Account>;
   pending: Record<string, PendingRequest>;
   invites: Record<string, InviteRecord>;
@@ -109,7 +118,16 @@ export function setRegistrationMode(mode: RegistrationMode): void {
   saveAccountsFile(f);
 }
 
-/** migrazione v1..v7 -> v8: aggiunge role, savedP2PCampaigns, totp, passkeys e invites */
+/** normalizza rememberTokens (v8: string[] di hash -> v9: record con metadati) */
+function normalizeRememberTokens(acc: Partial<Account>): void {
+  const rt = acc.rememberTokens as unknown;
+  if (!Array.isArray(rt)) { acc.rememberTokens = []; return; }
+  if (rt.length > 0 && typeof rt[0] === 'string') {
+    acc.rememberTokens = (rt as string[]).map((hash) => ({ hash, createdAt: acc.createdAt ?? new Date().toISOString() }));
+  }
+}
+
+/** migrazione v1..v8 -> v9: aggiunge role, savedP2PCampaigns, totp, passkeys, invites e rememberTokens come record */
 function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
   let accounts: Record<string, Account>;
   let pending: Record<string, PendingRequest> = {};
@@ -130,13 +148,14 @@ function migrateAccounts(raw: Record<string, unknown>): AccountsFile {
     a.savedP2PCampaigns = a.savedP2PCampaigns ?? {};
     a.totp = a.totp ?? null;
     a.passkeys = a.passkeys ?? [];
+    normalizeRememberTokens(a);
     accounts[k] = a as Account;
   }
-  return { v: 8, accounts, pending, invites: (raw.invites ?? {}) as Record<string, InviteRecord>, settings: (raw.settings ?? {}) as AccountsFile['settings'] };
+  return { v: 9, accounts, pending, invites: (raw.invites ?? {}) as Record<string, InviteRecord>, settings: (raw.settings ?? {}) as AccountsFile['settings'] };
 }
 
-/** sessioni attive in memoria: token -> username (si perdono al riavvio del server) */
-export const sessions = new Map<string, string>();
+/** sessioni attive in memoria: token -> { username, createdAt } (si perdono al riavvio del server) */
+export const sessions = new Map<string, { username: string; createdAt: number }>();
 
 export const USERNAME_RE = /^[a-zA-Z0-9_-]{3,24}$/;
 
@@ -144,10 +163,8 @@ export function loadAccountsFile(): AccountsFile {
   try {
     if (existsSync(ACCOUNTS_FILE)) {
       const raw = JSON.parse(readFileSync(ACCOUNTS_FILE, 'utf8'));
-      if (raw && raw.v === 8 && raw.accounts) {
-        const f = raw as AccountsFile;
-        f.invites = f.invites ?? {};
-        f.settings = f.settings ?? {};
+      if (raw && (raw.v === 8 || raw.v === 9) && raw.accounts) {
+        const f = migrateAccounts(raw); // normalizza anche v8 (rememberTokens record) e porta a v9
         return f;
       }
       if (raw && typeof raw === 'object' && (raw.v === 2 || raw.v === 3 || raw.v === 4 || raw.v === 5 || raw.v === 6 || raw.v === 7 || !raw.v)) return migrateAccounts(raw);
@@ -155,7 +172,7 @@ export function loadAccountsFile(): AccountsFile {
   } catch {
     /* file corroto: si riparte da un registro vuoto */
   }
-  return { v: 8, accounts: {}, pending: {}, invites: {}, settings: {} };
+  return { v: 9, accounts: {}, pending: {}, invites: {}, settings: {} };
 }
 
 export function saveAccountsFile(f: AccountsFile): void {
@@ -472,7 +489,7 @@ export function deleteAccount(username: string): void {
 
 export function createSession(username: string): string {
   const token = randomUUID();
-  sessions.set(token, username);
+  sessions.set(token, { username, createdAt: Date.now() });
   return token;
 }
 
@@ -547,8 +564,28 @@ export function adminClearPasskeys(username: string): number {
   return n;
 }
 
+/** risolve la sessione; se l'admin ha revocato le sessioni dell'account (sessionsRevokedAt) quelle vecchie muoiono */
 export function sessionUsername(token: string): string | undefined {
-  return sessions.get(token);
+  const s = sessions.get(token);
+  if (!s) return undefined;
+  const acc = getAccount(s.username);
+  if (acc?.sessionsRevokedAt && s.createdAt < Date.parse(acc.sessionsRevokedAt)) {
+    sessions.delete(token);
+    return undefined;
+  }
+  return s.username;
+}
+
+/** numero di sessioni attive in memoria per un account (statistica pannello admin) */
+export function countActiveSessions(username: string): number {
+  const key = username.toLowerCase();
+  let n = 0;
+  for (const s of sessions.values()) if (s.username.toLowerCase() === key && sessionUsernameSafe(s)) n++;
+  return n;
+}
+function sessionUsernameSafe(s: { username: string; createdAt: number }): boolean {
+  const acc = getAccount(s.username);
+  return !acc?.sessionsRevokedAt || s.createdAt >= Date.parse(acc.sessionsRevokedAt);
 }
 
 export function deleteSession(token: string): void {
@@ -559,29 +596,36 @@ function hashToken(t: string): string {
   return createHash('sha256').update('5e-remember-' + t).digest('hex');
 }
 
-/** crea un token "mantieni l'accesso" persistente per l'account (hash salvato, max 10) */
+/** crea un token "mantieni l'accesso" persistente per l'account (solo hash salvato, max 10) */
 export function createRememberToken(username: string): string {
   const token = randomUUID() + randomUUID();
   const f = loadAccountsFile();
   const acc = f.accounts[username.toLowerCase()];
   if (!acc) throw new Error('Account non trovato: ' + username);
-  const list = [...(acc.rememberTokens ?? []), hashToken(token)].slice(-10);
+  const list = [...(acc.rememberTokens ?? []), { hash: hashToken(token), createdAt: new Date().toISOString() }].slice(-10);
   acc.rememberTokens = list;
   f.accounts[username.toLowerCase()] = acc;
   saveAccountsFile(f);
   return token;
 }
 
-/** login automatico con token "mantieni l'accesso": ritorna l'account se il token e' valido */
+/** login automatico con token "mantieni l'accesso": ritorna l'account se il token e' valido (aggiorna lastUsedAt) */
 export function loginByRememberToken(token: string): Account | undefined {
   const h = hashToken(token);
-  for (const acc of Object.values(loadAccountsFile().accounts)) {
-    if (acc.rememberTokens?.includes(h)) return acc;
+  const f = loadAccountsFile();
+  for (const acc of Object.values(f.accounts)) {
+    const rt = (acc.rememberTokens ?? []).find((t) => t.hash === h);
+    if (rt) {
+      rt.lastUsedAt = new Date().toISOString();
+      f.accounts[acc.username.toLowerCase()] = acc;
+      saveAccountsFile(f);
+      return acc;
+    }
   }
   return undefined;
 }
 
-/** revoca tutti i token "mantieni l'accesso" dell'account (es. al cambio password) */
+/** revoca tutti i token "mantieni l'accesso" dell'account (es. al cambio password o adminRevokeAllDevices) */
 export function revokeRememberTokens(username: string): void {
   const f = loadAccountsFile();
   const acc = f.accounts[username.toLowerCase()];
@@ -589,6 +633,39 @@ export function revokeRememberTokens(username: string): void {
   acc.rememberTokens = [];
   f.accounts[username.toLowerCase()] = acc;
   saveAccountsFile(f);
+}
+
+/** revoca un singolo dispositivo (tokenId = prime 10 cifre dell'hash) */
+export function revokeRememberToken(username: string, tokenId: string): boolean {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc?.rememberTokens) return false;
+  const n = acc.rememberTokens.length;
+  acc.rememberTokens = acc.rememberTokens.filter((t) => t.hash.slice(0, 10) !== tokenId);
+  const removed = acc.rememberTokens.length !== n;
+  if (removed) {
+    f.accounts[username.toLowerCase()] = acc;
+    saveAccountsFile(f);
+  }
+  return removed;
+}
+
+/** invalida TUTTE le sessioni in-memory dell'account (da adminRevokeSessions): le sessioni create prima di ora muoiono */
+export function revokeAllSessions(username: string): void {
+  const f = loadAccountsFile();
+  const acc = f.accounts[username.toLowerCase()];
+  if (!acc) throw new Error('Account non trovato: ' + username);
+  acc.sessionsRevokedAt = new Date().toISOString();
+  f.accounts[username.toLowerCase()] = acc;
+  saveAccountsFile(f);
+}
+
+/** dispositivi "mantieni l'accesso" dell'account per il pannello admin (id = prime 10 cifre dell'hash, mai il token) */
+export function listDevices(username: string): { id: string; createdAt: string; lastUsedAt?: string }[] {
+  const acc = getAccount(username);
+  return (acc?.rememberTokens ?? [])
+    .map((t) => ({ id: t.hash.slice(0, 10), createdAt: t.createdAt, lastUsedAt: t.lastUsedAt }))
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 }
 
 // --- inviti di registrazione (modalita' "solo su invito": link /invite?token=… monouso e a scadenza) ---

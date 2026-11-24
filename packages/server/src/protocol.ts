@@ -46,6 +46,10 @@ export type ClientMessage =
   | { t: 'adminRevokeInvite'; inviteId: string }
   /** ultimi eventi dell'audit log del server (solo admin) */
   | { t: 'adminAudit'; limit?: number }
+  /** gestione sessioni/dispositivi di un account (solo admin) */
+  | { t: 'adminRevokeDevice'; username: string; tokenId: string }
+  | { t: 'adminRevokeAllDevices'; username: string }
+  | { t: 'adminRevokeSessions'; username: string }
   | { t: 'adminResetPassword'; username: string; password: string }
   | { t: 'adminDisableTotp'; username: string }
   | { t: 'adminClearPasskeys'; username: string }
@@ -86,7 +90,7 @@ export type ServerMessage =
     }
   | { t: 'inviteCreated'; token: string; id: string; expiresAt: string; url: string }
   | { t: 'auditLog'; entries: { at: string; actor: string; action: string; detail?: string; ip?: string }[] }
-  | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[] }
+  | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[]; devices: { id: string; createdAt: string; lastUsedAt?: string }[]; activeSessions: number; sessionsRevokedAt?: string }
   | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }
   | { t: 'kicked' }
   | { t: 'joinPending' }

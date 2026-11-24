@@ -86,7 +86,9 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
-          {!connected && <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
+          {connected
+            ? <button className="primary big-btn" onClick={onOnline} title={t('home.goCampaignTitle', 'Sei già dentro una campagna: apri la tab Campagna')}><Icon name="map" size={16} /> {t('home.goCampaignShort', 'Vai a Campagna')}</button>
+            : <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
           <button className="big-btn" onClick={() => ddbFileRef.current?.click()} title={t('home.ddbTitle', 'Importa un export JSON di D&D Beyond (solo i tuoi dati) come nuova scheda')}>
             <Icon name="save" size={16} /> {t('home.ddb', 'Importa da D&D Beyond')}
           </button>
@@ -116,7 +118,9 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           </div>
           <div className="row" style={{ marginTop: 12, justifyContent: 'center' }}>
             <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
-            {!connected && <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
+            {connected
+              ? <button className="primary big-btn" onClick={onOnline}><Icon name="map" size={16} /> {t('home.goCampaignShort', 'Vai a Campagna')}</button>
+              : <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
           </div>
         </div>
       )}

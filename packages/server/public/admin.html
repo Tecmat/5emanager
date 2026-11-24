@@ -172,7 +172,18 @@
       <thead><tr><th>Nome</th><th>Livello</th><th>Aggiornata</th><th></th></tr></thead>
       <tbody id="ad-chars"></tbody>
     </table>
-    <div class="row" style="margin-top:8px"><button id="ad-close">Chiudi</button></div>
+    <h2 style="margin-top:14px">🔑 Dispositivi e sessioni <span id="ad-user2"></span></h2>
+    <div class="muted" id="ad-sessions"></div>
+    <table style="margin-top:6px">
+      <thead><tr><th>Dispositivo (id)</th><th>Creato</th><th>Ultimo uso</th><th></th></tr></thead>
+      <tbody id="ad-devices"></tbody>
+    </table>
+    <div id="ad-devices-empty" class="muted">Nessun dispositivo con "mantieni l'accesso".</div>
+    <div class="row" style="margin-top:8px">
+      <button id="ad-revoke-devices" class="danger">Revoca tutti i dispositivi</button>
+      <button id="ad-revoke-sessions" class="danger">Revoca tutte le sessioni attive</button>
+      <button id="ad-close">Chiudi</button>
+    </div>
   </div>
 </main>
 <script>
@@ -382,6 +393,27 @@ function renderCampaignDetail(m) {
 function renderAccountDetail(m) {
   document.getElementById('account-detail-card').style.display = 'block';
   document.getElementById('ad-user').textContent = m.username;
+  document.getElementById('ad-user2').textContent = m.username;
+  document.getElementById('ad-sessions').textContent =
+    'Sessioni attive ora: ' + (m.activeSessions ?? 0) + (m.sessionsRevokedAt ? ' · revocate il ' + fmtDate(m.sessionsRevokedAt) : '');
+  const dtb = document.getElementById('ad-devices');
+  dtb.innerHTML = '';
+  const devs = m.devices || [];
+  document.getElementById('ad-devices-empty').style.display = devs.length ? 'none' : 'block';
+  for (const d of devs) {
+    const tr = document.createElement('tr');
+    tr.innerHTML = '<td><code>' + esc(d.id) + '</code></td><td class="muted">' + fmtDate(d.createdAt) + '</td><td class="muted">' + (d.lastUsedAt ? fmtDate(d.lastUsedAt) : '—') + '</td>';
+    const td = document.createElement('td');
+    const btn = document.createElement('button');
+    btn.className = 'danger';
+    btn.textContent = 'Revoca';
+    btn.onclick = () => { if (confirm('Revocare il dispositivo ' + d.id + ' di ' + m.username + '?')) ws.send(JSON.stringify({ t: 'adminRevokeDevice', username: m.username, tokenId: d.id })); };
+    td.appendChild(btn);
+    tr.appendChild(td);
+    dtb.appendChild(tr);
+  }
+  document.getElementById('ad-revoke-devices').onclick = () => { if (confirm('Revocare TUTTI i dispositivi di ' + m.username + '?')) ws.send(JSON.stringify({ t: 'adminRevokeAllDevices', username: m.username })); };
+  document.getElementById('ad-revoke-sessions').onclick = () => { if (confirm('Invalidare TUTTE le sessioni attive di ' + m.username + '?')) ws.send(JSON.stringify({ t: 'adminRevokeSessions', username: m.username })); };
   const tb = document.getElementById('ad-chars');
   tb.innerHTML = '';
   for (const c of m.characters) {
