@@ -103,6 +103,8 @@ $('f').onsubmit = async (e) => {
 };
 
 info();
+// primo avvio senza account: vai subito al setup (creazione primo admin)
+fetch('/api/setup').then((r) => r.json()).then((j) => { if (j.setupRequired) location.replace('/setup'); }).catch(() => {});
 // se esiste già una sessione valida, ricarica subito
 fetch('/api/me').then((r) => { if (r.ok) location.reload(); }).catch(() => {});
 </script>

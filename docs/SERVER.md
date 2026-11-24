@@ -97,7 +97,7 @@ dispositivo, chiavetta di sicurezza o password manager) con `@simplewebauthn/ser
 
 Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando
 nessun master è collegato), `list`, `ping` (check connessione, con `id` ecoato),
-`register` / `login` (account con **password verificata lato server**, hash sha256),
+`register` / `login` (account con **password verificata lato server**, hash scrypt con sale),
 `adminAuth` / `adminList` / `adminCreateCampaign` / `adminUpdateCampaign` /
 `adminDeleteCampaign` / `adminDeleteAccount` (pannello admin), `action` (setCharacter,
 startCombat, addEnemy, rollInitiative, attack, move, useBonus, useReaction, setCondition,
@@ -116,9 +116,24 @@ Con `DND5E_REQUIRE_AUTH=true` (default nei compose Docker) la webapp servita dal
 senza cookie di sessione valido (`dnd5e_session`, impostato da `POST /api/login` o `/api/login-token`) ogni GET
 serve una pagina di login standalone (`public/login.html`) al posto dell'app; `/api/info`, `/api/setup`, `/setup`,
 `/api/login`, `/api/register`, `/api/logout`, `/api/me`, `/version.json`, `/api/update*` e `/admin` restano pubblici.
-Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messaggi P2P richiedono la sessione
-(il browser la passa via cookie sull'upgrade; le app native fanno `login`/`loginToken` a mano). Le app native
-(AppImage/APK/desktop) non passano dal sito servito: restano fully standalone, il login sul server è facoltativo.
+**Primo avvio con zero account**: `/` e `/login` redirectano (302) a `/setup`, che mostra il processo di
+creazione del primo admin (la pagina di login fa lo stesso controllo via `GET /api/setup`).
+Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messaggi P2P richiedono la sessione:
+il browser la passa via cookie sull'upgrade e in quel caso il server manda subito `auth` (la webapp risulta
+già loggata: niente form user/password nelle tab home/campagna); le app native fanno `login`/`loginToken` a mano.
+Le app native (AppImage/APK/desktop) non passano dal sito servito: restano fully standalone, il login sul server è facoltativo.
+
+Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse proxy):
+- cookie di sessione `HttpOnly; SameSite=Lax` e **`Secure`** quando la richiesta è HTTPS
+  (TLS diretto o header `X-Forwarded-Proto: https` passato dal proxy); **HSTS** solo in quel caso;
+- header di sicurezza su tutte le risposte (`X-Content-Type-Options`, `Referrer-Policy`,
+  `X-Frame-Options`/CSP `frame-ancestors 'none'`, CSP restrittiva, `Permissions-Policy`);
+- controllo **Origin** sull'upgrade WebSocket (anti cross-site WebSocket hijacking): respinto (403) se
+  l'origin non combacia con `Host`/`X-Forwarded-Host`/`DND5E_RP_ORIGIN` (i client non-browser senza Origin passano);
+- **rate limit** sui login falliti: max `DND5E_LOGIN_MAX_ATTEMPTS` (default 10) al minuto per username+IP
+  (HTTP `/api/login`, WS `login`) e per IP su `/api/register` e `/api/login-token` -> 429;
+- password salvate con **scrypt + sale** (`scrypt$N$r$p$sale$hash`); i vecchi hash sha256 restano
+  verificabili e vengono aggiornati a scrypt al primo login riuscito.
 
 ## Registrazione: aperta o con approvazione
 
@@ -135,12 +150,14 @@ Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messag
 ## Account, richieste e libreria schede
 
 - `register { username, password }` **in modalità approval** non crea subito l'account: registra una *richiesta*
-  (in `accounts.data`, con hash sha256 della password) e risponde `notice`; l'admin la vede
+  (in `accounts.data`, con hash scrypt della password) e risponde `notice`; l'admin la vede
   in `/admin` → "Richieste di registrazione" e la **approva** (`adminApproveAccount`) o
   **rifiuta** (`adminRejectAccount`). Solo dopo l'approvazione il login funziona.
 - `login { username, password }` → `auth { token, username, characters }`; la password è
-  **verificata lato server** (hash sha256 su disco, mai in chiaro; account legacy senza
+  **verificata lato server** (scrypt con sale su disco, mai in chiaro; account legacy senza
   hash impostano la password alla prima login). Sessioni in memoria (token → username).
+  Con `password` vuota/assente e sessione cookie valida, `login { username }` rienvia solo `auth`
+  (resume sessione, es. riconnessione automatica della webapp servita dal server).
 - `saveCharacter` / `deleteCharacter` salvano la scheda nella libreria dell'account
   (persistente in `accounts.data`); `useCharacter` la carica in campagna
 - il master può eliminare la campagna con l'azione `deleteCampaign` (tutti ricevono
@@ -165,9 +182,11 @@ Sui WebSocket, con require-auth attivo, `create`/`join`/`action`/`list`/i messag
   docker compose logs 5emanager | grep -A3 'Token admin'
   # oppure: docker exec 5emanager-server cat /data/admin-token.txt
   ```
-- Con **zero account**, `/setup` (pagina) + `POST /api/setup` creano il primo account (sempre
-  **admin**). `/api/setup` è abilitato solo finché non esistono account; se `DND5E_ADMIN_TOKEN`
-  è impostato richiede l'header `x-admin-token` (niente race su server pubblici appena esposti).
+- Con **zero account**, `/` e `/login` redirectano a `/setup` (pagina) e `POST /api/setup` crea il primo
+  account (sempre **admin**). `/api/setup` è abilitato solo finché non esistono account (le richieste di
+  registrazione *pending* non contano: non devono poter occupare il setup su un server pubblico fresco);
+  se `DND5E_ADMIN_TOKEN` è impostato richiede l'header `x-admin-token` (niente race su server pubblici appena
+  esposti). Dopo la creazione la pagina fa login automatico e porta nell'app.
   Il pannello `/admin` mostra un banner verso `/setup` finché non c'è nessun account.
 - Il token admin protegge anche `POST /api/update/apply` (self-update web) e i messaggi `adminAuth`.
 

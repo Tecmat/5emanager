@@ -6,9 +6,10 @@ export type ClientMessage =
   | { t: 'create'; name: string; password: string; campaignName: string; playerToken?: string }
   | { t: 'join'; campaignId: string; password: string; name: string; role?: 'master' | 'player'; playerToken?: string }
   | { t: 'list' }
-  // account: register crea una RICHIESTA che l'admin approva; login verifica la password lato server (hash sha256)
+  // account: register crea una RICHIESTA che l'admin approva; login verifica la password lato server (scrypt con sale)
   | { t: 'register'; username: string; password: string }
-  | { t: 'login'; username: string; password: string; remember?: boolean }
+  // password facoltativa: se assente e c'e' gia' una sessione valida (cookie) il server rienvia solo 'auth'
+  | { t: 'login'; username: string; password?: string; remember?: boolean }
   /** login automatico con token "mantieni l'accesso" (persistito dal client) */
   | { t: 'loginToken'; token: string; remember?: boolean }
   // 2FA TOTP: login in due passi (password -> totpRequired -> loginTotp/loginTotpBackup)

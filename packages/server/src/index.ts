@@ -66,6 +66,7 @@ import {
   sessionUsername,
   setAccountRole,
   setupAccountTotp,
+  setupRequired,
   updatePasskeyCounter,
   verifyAccountTotp,
   type StoredPasskey,
@@ -105,6 +106,82 @@ function cookieOf(req: IncomingMessage, name: string): string | undefined {
   return undefined;
 }
 
+/** true se la richiesta arriva su HTTPS (TLS diretto o reverse proxy che passa X-Forwarded-Proto: https) */
+function isSecureReq(req: IncomingMessage): boolean {
+  if ((req.socket as unknown as { encrypted?: boolean }).encrypted) return true;
+  const proto = String(req.headers['x-forwarded-proto'] ?? '').split(',')[0].trim().toLowerCase();
+  return proto === 'https';
+}
+
+/** IP del client (per il rate limit dei login) */
+function clientIpOf(req: IncomingMessage): string {
+  return String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
+}
+
+/**
+ * Header di sicurezza su TUTTE le risposte HTTP (utile quando il server e' esposto su HTTPS
+ * dietro reverse proxy): nosniff, no-referrer, anti-clickjacking, CSP restrittiva ma
+ * compatibile con le pagine standalone (script inline) e con la webapp (ws/wss verso LAN,
+ * immagini data:/blob: per i ritratti). HSTS solo se la richiesta e' HTTPS.
+ */
+function applySecurityHeaders(req: IncomingMessage, res: ServerResponse): void {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Referrer-Policy', 'no-referrer');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader(
+    'Content-Security-Policy',
+    [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline'",
+      "style-src 'self' 'unsafe-inline'",
+      "img-src 'self' data: blob:",
+      "font-src 'self' data:",
+      "connect-src 'self' ws: wss: http: https:",
+      "media-src 'self' blob:",
+      "object-src 'none'",
+      "base-uri 'none'",
+      "form-action 'self'",
+      "frame-ancestors 'none'",
+      "worker-src 'self'",
+    ].join('; '),
+  );
+  res.setHeader('Permissions-Policy', 'camera=(self), microphone=(), geolocation=()');
+  if (isSecureReq(req)) res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+}
+
+/** normalizza un host per il confronto degli origin ( toglie le porte di default 80/443 ) */
+function normHost(h: string): string {
+  return h.trim().toLowerCase().replace(/:443$/, '').replace(/:80$/, '');
+}
+
+function isLocalHostName(h: string): boolean {
+  return /^(localhost|127\.|0\.0\.0\.0|\[?::1\]?)/.test(h);
+}
+
+/**
+ * Controllo Origin sull'upgrade WebSocket (anti cross-site WebSocket hijacking, primo avvio
+ * su server pubblico): un client non-browser (app native, test, curl) non manda Origin -> ok;
+ * le app native Capacitor girano su https://localhost -> ok; il browser deve avere un origin
+ * che combacia con Host (o X-Forwarded-Host, o DND5E_RP_ORIGIN dietro proxy che non passa Host).
+ */
+function wsOriginAllowed(req: IncomingMessage): boolean {
+  const origin = String(req.headers.origin ?? '').trim();
+  if (!origin) return true;
+  if (origin === 'null') return false;
+  let originHost = '';
+  try {
+    originHost = normHost(new URL(origin).host);
+  } catch {
+    return false;
+  }
+  if (isLocalHostName(originHost)) return true;
+  if (originHost && originHost === normHost(String(req.headers.host ?? ''))) return true;
+  const xfh = String(req.headers['x-forwarded-host'] ?? '').split(',')[0].trim();
+  if (xfh && originHost === normHost(xfh)) return true;
+  const rpOrigin = (process.env.DND5E_RP_ORIGIN ?? '').trim();
+  return !!rpOrigin && origin === rpOrigin;
+}
+
 /** token di sessione valido dalla richiesta (cookie di sessione in memoria o token "mantieni l'accesso") */
 function sessionTokenOf(req: IncomingMessage): string | undefined {
   const tok = cookieOf(req, SESSION_COOKIE);
@@ -118,10 +195,11 @@ function sessionTokenOf(req: IncomingMessage): string | undefined {
   return undefined;
 }
 
-/** setta il cookie di sessione (remember -> 30 giorni, altrimenti cookie di sessione) */
-function setSessionCookie(res: ServerResponse, token: string, remember: boolean): void {
+/** setta il cookie di sessione (remember -> 30 giorni, altrimenti cookie di sessione); Secure se la richiesta e' HTTPS */
+function setSessionCookie(res: ServerResponse, token: string, remember: boolean, secure: boolean): void {
   const parts = [`${SESSION_COOKIE}=${encodeURIComponent(token)}`, 'Path=/', 'HttpOnly', 'SameSite=Lax'];
   if (remember) parts.push(`Max-Age=${30 * 24 * 3600}`);
+  if (secure) parts.push('Secure');
   res.setHeader('Set-Cookie', parts.join('; '));
 }
 
@@ -159,6 +237,12 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
 
 function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
   const rawPath = decodeURIComponent((req.url ?? '/').split('?')[0]);
+  // PRIMO AVVIO senza account: mostra subito il setup admin (creazione primo admin) invece dell'app/login
+  if (REQUIRE_AUTH && req.method === 'GET' && setupRequired() && (rawPath === '/' || rawPath === '/login' || rawPath === '/login.html')) {
+    res.writeHead(302, { location: '/setup' });
+    res.end();
+    return;
+  }
   // DND5E_REQUIRE_AUTH: senza sessione valida si serve SOLO la pagina di login (niente app)
   if (REQUIRE_AUTH && req.method === 'GET' && !isPublicPath(rawPath) && !sessionTokenOf(req)) {
     serveLoginPage(res);
@@ -366,6 +450,26 @@ function totpNoteAttempt(username: string): void {
   totpAttempts.set(username, arr);
 }
 
+// throttle tentativi di login con password: max N falliti/minuto per chiave (DND5E_LOGIN_MAX_ATTEMPTS, default 10).
+// Si contano solo i fallimenti: un login riuscito azzera il contatore.
+const loginAttempts = new Map<string, number[]>();
+function loginMaxAttempts(): number {
+  const n = Number(process.env.DND5E_LOGIN_MAX_ATTEMPTS ?? 10);
+  return Number.isFinite(n) && n > 0 ? n : 10;
+}
+function loginThrottled(key: string): boolean {
+  const now = Date.now();
+  const arr = (loginAttempts.get(key) ?? []).filter((t) => now - t < 60_000);
+  loginAttempts.set(key, arr);
+  return arr.length >= loginMaxAttempts();
+}
+function loginNoteAttempt(key: string): void {
+  const now = Date.now();
+  const arr = (loginAttempts.get(key) ?? []).filter((t) => now - t < 60_000);
+  arr.push(now);
+  loginAttempts.set(key, arr);
+}
+
 /** manda il messaggio auth completo (con ruolo) dopo un login riuscito */
 function sendAuth(ws: WebSocket, token: string, username: string, totpEnabled: boolean, rememberToken?: string): void {
   send(ws, {
@@ -417,8 +521,9 @@ function readJsonBody(req: IncomingMessage, limit = 64 * 1024): Promise<Record<s
 async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
   if (!['/api/login', '/api/login-token', '/api/register', '/api/logout', '/api/me'].includes(path)) return false;
+  const secure = isSecureReq(req);
   const json = (code: number, obj: unknown, token?: string, remember = false) => {
-    if (token) setSessionCookie(res, token, remember);
+    if (token) setSessionCookie(res, token, remember, secure);
     res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' });
     res.end(JSON.stringify(obj));
   };
@@ -426,14 +531,16 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
   if (path === '/api/me') {
     const tok = sessionTokenOf(req) ?? cookieOf(req, SESSION_COOKIE);
     const username = tok ? (sessionUsername(tok) ?? loginByRememberToken(tok)?.username) : undefined;
-    if (!username) return void json(401, { error: 'non autenticato' }), true;
+    if (!username) return void json(401, { error: 'non autenticato', requireAuth: REQUIRE_AUTH }), true;
     return void json(200, { username, role: accountRole(username) ?? 'user', totpEnabled: accountTotpEnabled(username), requireAuth: REQUIRE_AUTH, registration: registrationMode() }), true;
   }
 
   if (path === '/api/logout') {
     const tok = cookieOf(req, SESSION_COOKIE);
     if (tok) deleteSession(tok);
-    res.setHeader('Set-Cookie', `${SESSION_COOKIE}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`);
+    const parts = [`${SESSION_COOKIE}=`, 'Path=/', 'HttpOnly', 'SameSite=Lax', 'Max-Age=0'];
+    if (secure) parts.push('Secure');
+    res.setHeader('Set-Cookie', parts.join('; '));
     return void json(200, { ok: true }), true;
   }
 
@@ -442,14 +549,19 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
   try {
     const body = await readJsonBody(req);
     if (path === '/api/login-token') {
+      const key = 'tok|' + clientIpOf(req);
+      if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
       const acc = loginByRememberToken(String(body.token ?? ''));
-      if (!acc) return void json(401, { error: 'Token non valido o revocato' }), true;
+      if (!acc) { loginNoteAttempt(key); return void json(401, { error: 'Token non valido o revocato' }), true; }
       const remember = body.remember === true;
       const token = createSession(acc.username);
       noteLogin(acc.username);
       return void json(200, authJson(token, acc.username, remember ? createRememberToken(acc.username) : undefined), remember ? String(body.token) : token, remember), true;
     }
     if (path === '/api/register') {
+      const key = 'reg|' + clientIpOf(req);
+      if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+      loginNoteAttempt(key);
       const username = String(body.username ?? '').trim();
       const password = String(body.password ?? '');
       if (registrationMode() === 'open') {
@@ -479,17 +591,26 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
     if (path === '/api/login') {
       const username = String(body.username ?? '').trim();
       const password = String(body.password ?? '');
-      const acc = loginAccount(username, password);
-      if (accountTotpEnabled(acc.username)) {
-        const code = String(body.code ?? '').trim();
-        if (!code) return void json(401, { totpRequired: true, username: acc.username }), true;
-        if (!verifyAccountTotp(acc.username, code)) return void json(401, { error: 'Codice 2FA non valido' }), true;
+      // anti-bruteforce: max N tentativi falliti/minuto per username+IP (DND5E_LOGIN_MAX_ATTEMPTS, default 10)
+      const key = 'http|' + username.toLowerCase() + '|' + clientIpOf(req);
+      if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi di login: riprova tra 60 secondi' }), true;
+      try {
+        const acc = loginAccount(username, password);
+        loginAttempts.delete(key);
+        if (accountTotpEnabled(acc.username)) {
+          const code = String(body.code ?? '').trim();
+          if (!code) return void json(401, { totpRequired: true, username: acc.username }), true;
+          if (!verifyAccountTotp(acc.username, code)) { loginNoteAttempt(key); return void json(401, { error: 'Codice 2FA non valido' }), true; }
+        }
+        const remember = body.remember === true;
+        const token = createSession(acc.username);
+        noteLogin(acc.username);
+        const remTok = remember ? createRememberToken(acc.username) : undefined;
+        return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
+      } catch (e) {
+        loginNoteAttempt(key);
+        return void json(400, { error: (e as Error).message }), true;
       }
-      const remember = body.remember === true;
-      const token = createSession(acc.username);
-      noteLogin(acc.username);
-      const remTok = remember ? createRememberToken(acc.username) : undefined;
-      return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
     }
     return false;
   } catch (e) {
@@ -694,8 +815,23 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   }
 
   if (msg.t === 'login') {
+    // rienvio sessione: login con solo username e sessione (cookie) gia' valida -> auth di nuovo, niente password.
+    // Usato dalla webapp servita dal server e dalla riconnessione automatica dopo un drop.
+    if ((msg.password === undefined || msg.password === '') && conn.token) {
+      const un = sessionUsername(conn.token);
+      if (un && un.toLowerCase() === msg.username.trim().toLowerCase()) {
+        sendAuth(conn.ws, conn.token, un, accountTotpEnabled(un));
+        return;
+      }
+    }
+    const key = 'ws|' + msg.username.trim().toLowerCase() + '|' + (connIp(conn) ?? '');
+    if (loginThrottled(key)) {
+      send(conn.ws, { t: 'error', message: 'Troppi tentativi di login: riprova tra 60 secondi' });
+      return;
+    }
     try {
-      const acc = loginAccount(msg.username.trim(), msg.password);
+      const acc = loginAccount(msg.username.trim(), msg.password ?? '');
+      loginAttempts.delete(key);
       // 2FA attiva: la password è ok ma serve anche il codice TOTP (nessuna sessione ancora)
       if (accountTotpEnabled(acc.username)) {
         send(conn.ws, { t: 'totpRequired', username: acc.username });
@@ -707,6 +843,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       noteLogin(acc.username);
       sendAuth(conn.ws, conn.token, acc.username, false, msg.remember ? createRememberToken(acc.username) : undefined);
     } catch (e) {
+      loginNoteAttempt(key);
       send(conn.ws, { t: 'error', message: (e as Error).message });
     }
     return;
@@ -1137,10 +1274,19 @@ export function createDndServer(port = PORT, host = HOST) {
   // /api/info serve alla scansione LAN automatica (le app sondano la rete e trovano i server 5emanager)
   let infoHandler: (req: IncomingMessage, res: ServerResponse) => boolean = () => false;
   const http = createServer((req, res) => {
+    applySecurityHeaders(req, res);
     if (infoHandler(req, res)) return;
     void handleAuthApi(req, res).then((handled) => { if (!handled) serveStatic(req, res); });
   });
-  const wss = new WebSocketServer({ server: http, maxPayload: 4 * 1024 * 1024 });
+  const wss = new WebSocketServer({
+    server: http,
+    maxPayload: 4 * 1024 * 1024,
+    // anti cross-site WebSocket hijacking: se c'e' un header Origin deve combaciare con l'host (vedi wsOriginAllowed)
+    verifyClient: (info, cb) => {
+      if (wsOriginAllowed(info.req)) return cb(true);
+      cb(false, 403, 'Origin non ammesso');
+    },
+  });
 
   wss.on('connection', (ws, req) => {
     const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10), rpHost: String(req.headers.host ?? '') };
@@ -1149,7 +1295,11 @@ export function createDndServer(port = PORT, host = HOST) {
     if (tok) {
       conn.token = tok;
       const uname = sessionUsername(tok);
-      if (uname && accountRole(uname) === 'admin') conn.admin = true;
+      if (uname) {
+        if (accountRole(uname) === 'admin') conn.admin = true;
+        // la webapp servita da questo server e' gia' loggata (cookie): le si manda subito 'auth' (libreria inclusa)
+        sendAuth(ws, tok, uname, accountTotpEnabled(uname));
+      }
     }
     conns.add(conn);
     ws.on('message', (data) => {

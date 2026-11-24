@@ -9,10 +9,10 @@ if [ -z "$BASE" ]; then
 fi
 BASE="${BASE%/}"
 fail=0
-check() { # nome, url, pattern atteso
+check() { # nome, url, pattern atteso (-L segue i redirect: primo avvio -> /setup, non loggato -> /login)
   local name="$1" url="$2" pattern="$3"
   local body code
-  body=$(curl -fsS --max-time 10 "$url" 2>/dev/null); code=$?
+  body=$(curl -fsSL --max-time 10 "$url" 2>/dev/null); code=$?
   if [ $code -ne 0 ]; then
     echo "FAIL $name: $url non risponde (curl exit $code)"; fail=1; return
   fi

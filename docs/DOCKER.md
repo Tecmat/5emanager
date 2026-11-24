@@ -56,6 +56,18 @@ Cloudflare Tunnel, ecc.). Requisiti minimi del proxy:
 - passare `Host` e `X-Forwarded-Proto: https`
 - timeout di lettura alto (le sessioni WS del multiplayer restano aperte a lungo)
 
+Sicurezza già attiva lato server (non serve configurare nulla, ma il proxy deve passare gli header sopra):
+- cookie di sessione `HttpOnly; SameSite=Lax` + **`Secure`** e header **HSTS** automatici quando il server
+  vede `X-Forwarded-Proto: https`; header di sicurezza (`nosniff`, anti-clickjacking, CSP, `Referrer-Policy`)
+  su tutte le risposte;
+- controllo **Origin** sugli upgrade WebSocket: se il proxy non passa `Host` intatto, imposta anche
+  `DND5E_RP_ORIGIN` (vedi sotto) altrimenti il browser viene rifiutato con 403;
+- primo avvio con zero account: `/` redirecta a `/setup` (creazione primo admin, protetta dal token admin
+  generato da Docker); login pagina `/login` per gli altri; una volta loggati la webapp non chiede più
+  user/password (sessione cookie) e su Home non mostra "Connetti online" se sei già dentro una campagna;
+- password degli account con **scrypt + sale** (i vecchi hash sha256 vengono aggiornati al login);
+  rate limit sui tentativi di login (default 10 falliti/minuto per username+IP, `DND5E_LOGIN_MAX_ATTEMPTS`).
+
 Esempio con **Caddy** (HTTPS automatico con Let's Encrypt, Caddyfile di 3 righe), server su `127.0.0.1:3001`:
 
 ```bash
@@ -65,7 +77,8 @@ sudo systemctl enable --now caddy
 ```
 
 Per le **passkey WebAuthn** (login senza password) servono HTTPS + queste env sul container
-(se il proxy non passa `Host` intatto; altrimenti il server le deriva da solo):
+(se il proxy non passa `Host` intatto; altrimenti il server le deriva da solo). `DND5E_RP_ORIGIN`
+serve anche al controllo Origin dei WebSocket:
 
 ```bash
 # in docker/.env (o .env della root del clone)

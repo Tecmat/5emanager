@@ -24,6 +24,13 @@ beforeAll(async () => {
   server = await mod.createDndServer(0, '127.0.0.1');
   port = server.port;
   base = `http://127.0.0.1:${port}`;
+  // primo admin via /api/setup (come al primo avvio di Docker): senza account '/' redirected a /setup
+  const r = await fetch(base + '/api/setup', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-admin-token': 'test-admin-token' },
+    body: JSON.stringify({ username: 'owner', password: 'owner-pw-123' }),
+  });
+  expect(r.status).toBe(200);
 });
 
 afterAll(async () => {
@@ -63,6 +70,10 @@ describe('DND5E_REQUIRE_AUTH: gate del sito + API login + registrazione + loginT
     expect(body).toContain('5e Manager');
     expect(body).toContain('Login');
     expect(body).not.toContain('APP-5EMANAGER');
+    // header di sicurezza presenti; HSTS solo su HTTPS (qui plain http -> assente)
+    expect(r.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(r.headers.get('x-frame-options')).toBe('DENY');
+    expect(r.headers.get('strict-transport-security')).toBeNull();
     // /api/info resta pubblico (scansione LAN) e dice requireAuth
     const info = await (await fetch(base + '/api/info')).json();
     expect(info.requireAuth).toBe(true);

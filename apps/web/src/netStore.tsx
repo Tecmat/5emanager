@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from 'react';
 import type { Campaign, Character, PlayerInfo, SavedCampaignSnapshot } from '@dnd5e/core';
-import { NetClient, defaultWsUrl, toWsUrl } from './net.js';
+import { NetClient, defaultWsUrl, isServerWebapp, toWsUrl } from './net.js';
+import { checkServerSession } from './serverSession.js';
 
 // i tipi campagna/giocatore vivono nel core (condivisi con server e host P2P)
 export type { PlayerInfo };
@@ -250,6 +251,32 @@ export function NetProvider({ children }: { children: ReactNode }) {
         const net = await ensureNet();
         net.send({ t: 'loginToken', token: sess.token });
       } catch { /* server non raggiungibile: si resta offline */ }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // webapp servita DAL server: la sessione e' nel cookie HttpOnly (pagina /login del server).
+  // /api/me ok -> utente gia' loggato (niente user/password in home/campagna) e apro il WS verso
+  // l'origin (il cookie viaggia nell'upgrade: il server risponde con 'auth' completo, libreria inclusa).
+  // 401 + requireAuth -> redirect a /login. Offline (PWA dalla cache) -> niente redirect.
+  useEffect(() => {
+    if (!isServerWebapp()) return;
+    void (async () => {
+      const s = await checkServerSession();
+      if (s.kind === 'login') {
+        window.location.replace('/login');
+        return;
+      }
+      if (s.kind === 'server') {
+        const server = defaultWsUrl();
+        setAuth({ token: '', username: s.me.username, server, role: s.me.role ?? 'user', characters: [], savedCampaigns: [], totpEnabled: !!s.me.totpEnabled });
+        setLastUsername(s.me.username);
+        try { localStorage.setItem(AUTH_SERVER_KEY, server); } catch { /* quota */ }
+        if (!urlRef.current) setUrl(server);
+        try {
+          await ensureNet();
+        } catch { /* server non raggiungibile: resta lo stato preso da /api/me */ }
+      }
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -510,6 +537,17 @@ export function NetProvider({ children }: { children: ReactNode }) {
     setTotpPending(null);
     setTotpSetup(null);
     setPasskeys([]);
+    // su webapp servita dal server la sessione e' anche nel cookie: la revoco via /api/logout,
+    // poi se il server impone il login torno alla pagina /login
+    if (isServerWebapp()) {
+      void (async () => {
+        try {
+          await fetch('/api/logout', { method: 'POST', credentials: 'same-origin' });
+        } catch { /* offline: resta solo lo stato locale */ }
+        const s = await checkServerSession();
+        if (s.kind === 'login') window.location.replace('/login');
+      })();
+    }
   };
 
   // --- 2FA TOTP ---

@@ -1,11 +1,41 @@
-import { createHash, randomUUID } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { DEFAULT_HOUSE_RULES, DEFAULT_STATS, migrateCampaign, type Character, type SrdData } from '@dnd5e/core';
 import type { Campaign, PlayerInfo } from './protocol.js';
 
+/**
+ * Hash password: scrypt con sale casuale per utente (formato `scrypt$N$r$p$sale$hash`),
+ * resistente al brute-force offline sul file dei dati. Vecchi hash sha256 (senza sale)
+ * restano verificabili via verifyPassword e vengono aggiornati al primo login riuscito.
+ */
 export function hashPassword(pw: string): string {
-  return createHash('sha256').update('5e-' + pw).digest('hex');
+  const salt = randomBytes(16);
+  const hash = scryptSync('5e-' + pw, salt, 32, { N: 16384, r: 8, p: 1 });
+  return `scrypt$16384$8$1$${salt.toString('base64')}$${hash.toString('base64')}`;
+}
+
+/** true se l'hash salvato e' nel vecchio formato sha256 (da aggiornare al login) */
+export function isLegacyHash(stored: string): boolean {
+  return !stored.startsWith('scrypt$');
+}
+
+/** verifica una password contro l'hash salvato (scrypt nuovo o sha256 legacy), confronto in tempo costante */
+export function verifyPassword(pw: string, stored: string): boolean {
+  if (stored.startsWith('scrypt$')) {
+    try {
+      const [, n, r, p, saltB64, hashB64] = stored.split('$');
+      const salt = Buffer.from(saltB64, 'base64');
+      const expected = Buffer.from(hashB64, 'base64');
+      const hash = scryptSync('5e-' + pw, salt, expected.length, { N: Number(n), r: Number(r), p: Number(p) });
+      return hash.length === expected.length && timingSafeEqual(hash, expected);
+    } catch {
+      return false;
+    }
+  }
+  const legacy = createHash('sha256').update('5e-' + pw).digest();
+  const exp = Buffer.from(stored, 'hex');
+  return legacy.length === exp.length && timingSafeEqual(legacy, exp);
 }
 
 export const DATA_DIR = process.env.DND5E_DATA_DIR ?? join(process.cwd(), 'data', 'campaigns');
@@ -136,7 +166,7 @@ export function updateCampaign(id: string, patch: { name?: string; password?: st
 }
 
 export function checkPassword(c: Campaign, password: string): boolean {
-  return c.passwordHash === hashPassword(password);
+  return verifyPassword(password, c.passwordHash);
 }
 
 export function addPlayer(c: Campaign, p: PlayerInfo): Campaign {

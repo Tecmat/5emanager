@@ -55,10 +55,19 @@ $('go').onclick = async () => {
     const r = await fetch('/api/setup', { method: 'POST', headers, body: JSON.stringify(body) });
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
-    $('msg').innerHTML = '<div class="ok">✅ Account admin <b>' + j.username + '</b> creato. Vai al <a href="/admin">pannello admin</a> o all\'<a href="/">app</a> (login con queste credenziali).</div>';
     $('go').disabled = true;
     $('username').disabled = true;
     $('password').disabled = true;
+    // login automatico con le credenziali appena create (cookie di sessione) -> entra direto nell'app
+    try {
+      const lr = await fetch('/api/login', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: body.username, password: body.password }) });
+      if (lr.ok) {
+        $('msg').innerHTML = '<div class="ok">✅ Account admin <b>' + j.username + '</b> creato: entro nell\'app…</div>';
+        setTimeout(() => { location.href = '/'; }, 700);
+        return;
+      }
+    } catch { /* fallback: login manuale */ }
+    $('msg').innerHTML = '<div class="ok">✅ Account admin <b>' + j.username + '</b> creato. Vai al <a href="/admin">pannello admin</a> o all\'<a href="/">app</a> (login con queste credenziali).</div>';
   } catch (e) {
     $('msg').innerHTML = '<div class="error">❌ ' + String(e.message).replace(/[&<>]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])) + '</div>';
   }

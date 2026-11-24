@@ -2,7 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { Character, SavedCampaignSnapshot } from '@dnd5e/core';
-import { DATA_DIR, ensureDataDir, hashPassword } from './campaign.js';
+import { DATA_DIR, ensureDataDir, hashPassword, isLegacyHash, verifyPassword } from './campaign.js';
 import { generateBackupCodes, generateTotpSecret, hashBackupCode, otpauthUrl, verifyTotp } from './totp.js';
 
 /** 2FA TOTP (app authenticator): il secret è salvato lato server (proteggi DND5E_DATA_DIR), i backup solo come hash */
@@ -227,7 +227,13 @@ export function loginAccount(username: string, password: string): Account {
     saveAccountsFile(f);
     return acc;
   }
-  if (acc.passwordHash !== hashPassword(password)) throw new Error('Password errata');
+  if (!verifyPassword(password, acc.passwordHash)) throw new Error('Password errata');
+  // upgrade trasparente: vecchio hash sha256 (senza sale) -> scrypt con sale
+  if (isLegacyHash(acc.passwordHash)) {
+    acc.passwordHash = hashPassword(password);
+    f.accounts[key] = acc;
+    saveAccountsFile(f);
+  }
   return acc;
 }
 
@@ -471,16 +477,19 @@ export function noteLogin(username: string): void {
 
 // --- setup iniziale (primo admin) ---
 
-/** true se non esiste ancora nessun account: il server mostra /setup per crearne uno */
+/** true se non esiste ancora nessun account: il server mostra /setup per crearne uno.
+ *  NB: le richieste di registrazione in attesa (pending) NON bloccano il setup: sono solo
+ *  richieste, non account — bloccare su pending permetterebbe a chiunque (su server pubblico
+ *  prima del primo avvio) di occupare il setup con una finta registrazione e impedire al owner
+ *  di creare l'admin. */
 export function setupRequired(): boolean {
-  const f = loadAccountsFile();
-  return Object.keys(f.accounts).length === 0 && Object.keys(f.pending).length === 0;
+  return Object.keys(loadAccountsFile().accounts).length === 0;
 }
 
 /** crea il primo account (sempre admin): consentito SOLO mentre non esistono account */
 export function createFirstAdmin(username: string, password: string): Account {
   const f = loadAccountsFile();
-  if (Object.keys(f.accounts).length > 0 || Object.keys(f.pending).length > 0) {
+  if (Object.keys(f.accounts).length > 0) {
     throw new Error('Setup gia completato: esistono gia account (usa /admin per gestirli)');
   }
   const uname = username.trim();

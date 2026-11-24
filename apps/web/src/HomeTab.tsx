@@ -16,10 +16,12 @@ import Icon from './icons.js';
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
   const { sheets, char, campaignMeta, reg, t, tf, importSheets, createSheet } = useStore();
   const ddbFileRef = useRef<HTMLInputElement>(null);
-  const { auth, act, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
+  const { auth, act, conn, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
   const campaigns = sheets.filter((s) => isCampaignSheetId(s.id));
+  // già dentro una campagna: il pulsante "Connetti online" non serve
+  const connected = conn.phase === 'online' || conn.phase === 'reconnecting';
 
   const labelOf = (c: Character) => {
     const cid = c.id.slice('campagna:'.length);
@@ -84,7 +86,7 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
         </div>
         <div className="row" style={{ marginTop: 12 }}>
           <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
-          <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>
+          {!connected && <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
           <button className="big-btn" onClick={() => ddbFileRef.current?.click()} title={t('home.ddbTitle', 'Importa un export JSON di D&D Beyond (solo i tuoi dati) come nuova scheda')}>
             <Icon name="save" size={16} /> {t('home.ddb', 'Importa da D&D Beyond')}
           </button>
@@ -114,7 +116,7 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           </div>
           <div className="row" style={{ marginTop: 12, justifyContent: 'center' }}>
             <button className="primary big-btn" onClick={onCreate}><Icon name="plus" size={16} /> {t('home.newSheet', 'Nuova scheda')}</button>
-            <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>
+            {!connected && <button className="big-btn" onClick={onOnline}><Icon name="globe" size={16} /> {t('home.connectOnline', 'Connetti online')}</button>}
           </div>
         </div>
       )}
