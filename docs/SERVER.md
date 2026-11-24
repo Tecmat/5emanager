@@ -216,6 +216,18 @@ senza build della web app): elenca campagne (con stato combattimento) e account,
 eliminazione. I comandi admin viaggiano sullo stesso WebSocket (`adminAuth`/`adminList`/
 `adminDeleteCampaign`/`adminDeleteAccount`).
 
+### Sessioni e dispositivi (gestione da `/admin`)
+
+Le sessioni sono in memoria (token → username, perse al riavvio); i **dispositivi** sono i token
+"mantieni l'accesso" persistenti (`accounts.data` v9: record `{ hash, createdAt, lastUsedAt }`, solo hash,
+max 10 per account). Dal pannello `/admin` → dettaglio account ("🔑 Dispositivi e sessioni"):
+- `adminAccountDetail { username }` → `adminAccount` con `devices`, `activeSessions`, `sessionsRevokedAt`;
+- `adminRevokeDevice { username, tokenId }` revoca un singolo dispositivo (il suo login-token smette di funzionare);
+- `adminRevokeAllDevices { username }` revoca tutti i "mantieni l'accesso" dell'account;
+- `adminRevokeSessions { username }` imposta `sessionsRevokedAt`: tutte le sessioni in-memory create prima di quell'istante
+  vengono invalidate (`sessionUsername` le rifiuta — il cookie smette di valere subito, anche su WS).
+Tutte le revoche finiscono nell'audit log.
+
 ### Audit log
 
 Ogni evento di sicurezza/amministrazione è appenduto come riga JSON su **`audit.log`** in
