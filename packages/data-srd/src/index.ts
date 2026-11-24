@@ -25,7 +25,11 @@ import feats from '../data/feats.json';
 import fightingStyles from '../data/fighting-styles.json';
 import enemies from '../data/enemies.json';
 import random from '../data/random.json';
-import type { RandomData } from '@dnd5e/core';
+import dungeon from '../data/dungeon.json';
+import pregen from '../data/pregen.json';
+import shop from '../data/shop.json';
+import crafting from '../data/crafting.json';
+import type { Character, DungeonData, RandomData, ShopItem, CraftingRecipe } from '@dnd5e/core';
 
 const classList = [fighter, wizard, rogue, cleric, paladin, barbarian, bard, druid, monk, ranger, sorcerer, warlock] as unknown as ClassDef[];
 
@@ -58,3 +62,15 @@ export function createSrdRegistry(): Registry {
 
 /** tabelle del generatore casuale (nomi, incontri, tesori) per il master */
 export const RANDOM_DATA = random as unknown as RandomData;
+
+/** tabelle del generatore di dungeon (stanze, trappole, tesori) */
+export const DUNGEON_DATA = dungeon as unknown as DungeonData;
+
+/** schede pregen pronte da clonare */
+export const PREGEN_DATA = pregen as unknown as Character[];
+
+/** negozio: oggetti acquistabili con le monete del PG */
+export const SHOP_DATA = shop as unknown as ShopItem[];
+
+/** ricette di crafting */
+export const CRAFTING_DATA = crafting as unknown as CraftingRecipe[];

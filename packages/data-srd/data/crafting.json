@@ -1,0 +1,30 @@
+[
+  {
+    "id": "craft-potion",
+    "name": "Pozione di guarigione",
+    "result": { "name": "Pozione di guarigione", "kind": "consumable", "valueGp": 50, "weight": 0.5, "magic": true },
+    "ingredients": [{ "name": "Erba curativa", "quantity": 2 }, { "name": "Acqua santa", "quantity": 1 }],
+    "costGp": 25
+  },
+  {
+    "id": "craft-antitoxin",
+    "name": "Antidoto",
+    "result": { "name": "Antidoto", "kind": "consumable", "valueGp": 50, "weight": 0, "magic": true },
+    "ingredients": [{ "name": "Erba curativa", "quantity": 1 }, { "name": "Veleno di ragno", "quantity": 1 }],
+    "costGp": 20
+  },
+  {
+    "id": "craft-torch-oil",
+    "name": "Torcia + olio (8 ore extra)",
+    "result": { "name": "Torcia oliata", "kind": "gear", "valueGp": 2, "weight": 1 },
+    "ingredients": [{ "name": "Torcia", "quantity": 1 }, { "name": "Olio (1 flacone)", "quantity": 1 }],
+    "costGp": 1
+  },
+  {
+    "id": "craft-arrows",
+    "name": "Frecce (10, da legna e penne)",
+    "result": { "name": "Frecce (10)", "kind": "ammo", "valueGp": 5, "weight": 0.5 },
+    "ingredients": [{ "name": "Legna da ardere", "quantity": 1 }, { "name": "Penne", "quantity": 2 }],
+    "costGp": 2
+  }
+]

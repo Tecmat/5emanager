@@ -15,14 +15,16 @@ import {
   rollEncounter,
   rollTreasure,
   randomName,
+  randomDungeon,
   type Character,
   type Currency,
   type ItemRarity,
   type Campaign,
   type Registry,
   type TemplateShape,
+  type Dungeon,
 } from '@dnd5e/core';
-import { RANDOM_DATA } from '@dnd5e/data-srd';
+import { RANDOM_DATA, DUNGEON_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 import { useNet, passkeySupported } from './netStore.js';
 import { P2PClient, P2PDiscovery, P2PHost, P2PLanClient, P2PLanHost, P2PRelayClient, P2PRelayHost, webrtcSupported, newInviteCode, getP2PRejoinToken, CODE_PREFIX, type P2PHostInfo } from './p2p.js';
@@ -891,7 +893,7 @@ export default function CampaignTab() {
   const [gMagic, setGMagic] = useState(false);
   const [giveTarget, setGiveTarget] = useState('');
   const [gGp, setGGp] = useState(0);
-  const [genResult, setGenResult] = useState<{ kind: 'name' | 'enc' | 'tre'; text: string; enemies?: { enemyId: string; count: number }[]; xp?: number; currency?: Partial<Currency>; items?: { name: string; quantity?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean }[] } | null>(null);
+  const [genResult, setGenResult] = useState<{ kind: 'name' | 'enc' | 'tre' | 'dungeon'; text: string; enemies?: { enemyId: string; count: number }[]; xp?: number; currency?: Partial<Currency>; items?: { name: string; quantity?: number; valueGp?: number; rarity?: ItemRarity; magic?: boolean }[]; dungeon?: Dungeon } | null>(null);
   const [noteText, setNoteText] = useState('');
   const [timerSec, setTimerSec] = useState(60);
   const [timerLeft, setTimerLeft] = useState(60);
@@ -1829,6 +1831,7 @@ export default function CampaignTab() {
             <button onClick={() => setGenResult({ kind: 'name', text: randomName(RANDOM_DATA) })}>{t('cg.genName', 'Nome')}</button>
             <button onClick={() => { const e = rollEncounter(RANDOM_DATA, partyLevel); setGenResult({ kind: 'enc', text: `${e.name} — XP ${e.xp}`, enemies: e.enemies, xp: e.xp }); }}>{t('cg.genEnc', 'Incontro casuale')}</button>
             <button onClick={() => { const tr = rollTreasure(RANDOM_DATA, partyLevel); setGenResult({ kind: 'tre', text: tr.text, currency: tr.currency, items: tr.items }); }}>{t('cg.genTre', 'Tesoro casuale')}</button>
+            <button onClick={() => { const d = randomDungeon(DUNGEON_DATA, 6 + Math.floor(Math.random() * 4)); setGenResult({ kind: 'dungeon', text: `🏰️ ${d.name}`, dungeon: d }); }}>{t('cg.genDungeon', 'Dungeon casuale')}</button>
           </div>
           {genResult && (
             <div style={{ marginTop: 8, padding: 8, background: 'var(--panel2)', borderRadius: 8 }}>
@@ -1855,6 +1858,18 @@ export default function CampaignTab() {
                   }}>
                     {t('cg.genToGroup', '🎒 Metti nel gruppo / tesoreria')}
                   </button>
+                </div>
+              )}
+              {genResult.dungeon && (
+                <div style={{ marginTop: 6 }}>
+                  {genResult.dungeon.rooms.map((r) => (
+                    <div key={r.n} style={{ fontSize: 13, padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+                      <b>{r.n}.</b> {r.type} — <span className="muted">{r.desc}</span>
+                      {r.trap && <span className="tag custom"> ⚠️ {r.trap}</span>}
+                      {r.monster && <span className="tag custom"> ⚔️ {r.monster}</span>}
+                      {r.treasure && <span className="tag custom"> 💰 {r.treasure.text}</span>}
+                    </div>
+                  ))}
                 </div>
               )}
             </div>
@@ -2154,6 +2169,33 @@ export default function CampaignTab() {
             onClick={() => { const txt = chatText.trim(); if (txt) { act({ kind: 'chat', text: txt }); setChatText(''); } }}
           >
             {t('cg.chatSend', 'Invia')}
+          </button>
+        </div>
+      </div>
+
+      <div className="card">
+        <h3>📊 {t('cg.stats', 'Statistiche di campagna')}</h3>
+        <div className="grid cols3" style={{ fontSize: 13 }}>
+          <div>⚔️ {tf('cg.stAttacks', 'Attacchi: {n}', { n: campaign.stats.attacks })}</div>
+          <div>⚔️ {tf('cg.stDmgDealt', 'Danni inflitti: {n}', { n: campaign.stats.damageDealt })}</div>
+          <div>🩸 {tf('cg.stDmgTaken', 'Danni subiti: {n}', { n: campaign.stats.damageTaken })}</div>
+          <div>💚 {tf('cg.stHealed', 'PF curati: {n}', { n: campaign.stats.healed })}</div>
+          <div>💀 {tf('cg.stKills', 'Uccisioni: {n}', { n: campaign.stats.kills })}</div>
+          <div>🔁 {tf('cg.stRounds', 'Round di combattimento: {n}', { n: campaign.stats.rounds })}</div>
+        </div>
+        <div className="row" style={{ marginTop: 8 }}>
+          <button
+            title={t('cg.exportCampaignTitle', 'Scarica lo stato completo della campagna (JSON, senza password)')}
+            onClick={() => {
+              const snap = { app: '5e-manager', exportedAt: new Date().toISOString(), ...campaign, passwordHash: '' };
+              const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+              const a = document.createElement('a');
+              a.href = URL.createObjectURL(blob);
+              a.download = `${campaign.name.replace(/\s+/g, '-')}-campagna.json`;
+              a.click();
+            }}
+          >
+            <Icon name="save" size={13} /> {t('cg.exportCampaign', 'Esporta campagna (JSON)')}
           </button>
         </div>
       </div>

@@ -1,6 +1,7 @@
 import {
   applyCampaignAction,
   DEFAULT_HOUSE_RULES,
+  DEFAULT_STATS,
   resumeCampaign,
   setPlayerOnline,
   type Campaign,
@@ -72,6 +73,7 @@ function buildCampaign(opts: { campaignName: string; password: string; masterNam
       groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
       notes: '',
       chat: [],
+      stats: { ...DEFAULT_STATS },
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     },

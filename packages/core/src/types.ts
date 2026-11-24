@@ -211,9 +211,37 @@ export interface FeatDef {
 
 export type Currency = { cp: number; sp: number; ep: number; gp: number; pp: number };
 
-export type ItemKind = 'weapon' | 'armor' | 'shield' | 'gear' | 'treasure' | 'custom';
+export type ItemKind = 'weapon' | 'armor' | 'shield' | 'gear' | 'consumable' | 'ammo' | 'scroll' | 'treasure' | 'custom';
 
 export type ItemRarity = 'common' | 'uncommon' | 'rare' | 'veryRare' | 'legendary';
+
+/** oggetto acquistabile in un negozio (tabelle shop di data-srd) */
+export interface ShopItem {
+  id: string;
+  name: string;
+  kind: ItemKind;
+  /** prezzo di 1 unità in monete d'oro */
+  valueGp: number;
+  weight: number;
+  magic?: boolean;
+  rarity?: ItemRarity;
+}
+
+/** ingrediente di una ricetta di crafting (contato per nome sull'inventario) */
+export interface CraftingIngredient {
+  name: string;
+  quantity: number;
+}
+
+/** ricetta di crafting: consuma ingredienti + oro e produce un oggetto */
+export interface CraftingRecipe {
+  id: string;
+  name: string;
+  result: Omit<InventoryItem, 'id' | 'quantity' | 'equipped' | 'attuned' | 'magic'> & { quantity?: number; magic?: boolean };
+  ingredients: CraftingIngredient[];
+  /** costo aggiuntivo in monete d'oro (artigianato) */
+  costGp: number;
+}
 
 /** slot di equipaggiamento standard: un solo oggetto equipaggiato per slot (le mani possono avere arma/scudo) */
 export type EquipSlot = 'head' | 'amulet' | 'cloak' | 'armor' | 'gloves' | 'belt' | 'boots' | 'ring1' | 'ring2' | 'shield' | 'hand1' | 'hand2';

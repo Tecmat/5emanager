@@ -1,0 +1,12 @@
+[
+  { "id": "ration", "name": "Razione di viaggio", "kind": "consumable", "valueGp": 5, "weight": 2 },
+  { "id": "rope", "name": "Corda di canapa (15 m)", "kind": "gear", "valueGp": 10, "weight": 5 },
+  { "id": "torch", "name": "Torcia", "kind": "gear", "valueGp": 1, "weight": 1 },
+  { "id": "potion-heal", "name": "Pozione di guarigione", "kind": "consumable", "valueGp": 50, "weight": 0.5, "magic": true, "rarity": "common" },
+  { "id": "potion-greater", "name": "Pozione di guarigione superiore", "kind": "consumable", "valueGp": 150, "weight": 0.5, "magic": true, "rarity": "uncommon" },
+  { "id": "antitoxin", "name": "Antidoto", "kind": "consumable", "valueGp": 50, "weight": 0, "magic": true },
+  { "id": "arrows", "name": "Frecce (20)", "kind": "ammo", "valueGp": 10, "weight": 1 },
+  { "id": "waterskin", "name": "Otre d'acqua", "kind": "gear", "valueGp": 2, "weight": 5 },
+  { "id": "spell-scroll", "name": "Pergamena ( trucchetto a scelta )", "kind": "scroll", "valueGp": 30, "weight": 0, "magic": true },
+  { "id": "heal-kit", "name": "Kit del guaritore", "kind": "gear", "valueGp": 50, "weight": 3 }
+]

@@ -65,3 +65,52 @@ export function rollTreasure(data: RandomData, partyLevel: number, rng: Rng = de
   const tier = tierForLevel(data, partyLevel);
   return { ...pick(tier.treasure, rng), tier: tier.tier };
 }
+
+// ---------------------------------------------------------------------------
+// Generatore di dungeon (tabelle in data-srd/data/dungeon.json)
+// ---------------------------------------------------------------------------
+
+export interface DungeonRoomDef {
+  type: string;
+  desc: string;
+  trapChance: number;
+  monsterChance: number;
+  treasure?: boolean;
+}
+
+export interface DungeonData {
+  nameParts: { prefix: string[]; core: string[] };
+  rooms: DungeonRoomDef[];
+  traps: string[];
+  monsters: string[];
+  treasures: RandomTreasureEntry[];
+}
+
+export interface DungeonRoom {
+  n: number;
+  type: string;
+  desc: string;
+  trap?: string;
+  monster?: string;
+  treasure?: RandomTreasureEntry;
+}
+
+export interface Dungeon {
+  name: string;
+  rooms: DungeonRoom[];
+}
+
+/** genera un dungeon casuale con `count` stanze (default 6) */
+export function randomDungeon(data: DungeonData, count = 6, rng: Rng = defaultRng): Dungeon {
+  const name = `${pick(data.nameParts.prefix, rng)} ${pick(data.nameParts.core, rng)}`;
+  const rooms: DungeonRoom[] = [];
+  for (let i = 0; i < count; i++) {
+    const def = pick(data.rooms, rng);
+    const room: DungeonRoom = { n: i + 1, type: def.type, desc: def.desc };
+    if (rng() < def.trapChance) room.trap = pick(data.traps, rng);
+    if (rng() < def.monsterChance) room.monster = pick(data.monsters, rng);
+    if (def.treasure && rng() < 0.8) room.treasure = pick(data.treasures, rng);
+    rooms.push(room);
+  }
+  return { name, rooms };
+}

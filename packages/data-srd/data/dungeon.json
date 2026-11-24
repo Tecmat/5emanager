@@ -1,0 +1,32 @@
+{
+  "nameParts": {
+    "prefix": ["Tomba", "Fortezza", "Tana", "Rovine", "Cripta", "Tempio", "Miniera", "Covo", "Palazzo", "Torre", "Grotta", "Santuario"],
+    "core": ["dell'Ombra", "del Drago Antico", "delle Lacrime", "del Sole Morente", "del Corvo Nero", "della Luna Piena", "dei Sussurri", "del Gelo Eterno", "della Furia", "dell'Ultimo Re", "delle Rune", "del Sangue"]
+  },
+  "rooms": [
+    { "type": "ingresso", "desc": "Un androne umido con porte socchiuse e graffiti sulle pareti.", "trapChance": 0.2, "monsterChance": 0.3 },
+    { "type": "sala da guardia", "desc": "Barricate di fortuna e un braciere spento al centro.", "trapChance": 0.3, "monsterChance": 0.6 },
+    { "type": "corridoio", "desc": "Un lungo corridoio con nicchie e una portiera cigolante.", "trapChance": 0.4, "monsterChance": 0.2 },
+    { "type": "sala del tesoro", "desc": "Una camera con un baule al centro, protetta da un vecchio meccanismo.", "trapChance": 0.5, "monsterChance": 0.4, "treasure": true },
+    { "type": "santuario", "desc": "Un altare rovinato con simboli sbiaditi e candele nere.", "trapChance": 0.3, "monsterChance": 0.4 },
+    { "type": "prigione", "desc": "Celle arrugginite; qualcuna ancora sprangata dall'interno.", "trapChance": 0.2, "monsterChance": 0.5 },
+    { "type": "magazzino", "desc": "Scaffali con botti, casse e razioni ammuffite.", "trapChance": 0.1, "monsterChance": 0.3, "treasure": true },
+    { "type": "cucina", "desc": "Un locale con un tavolo lungo e odore di cibo bruciato.", "trapChance": 0.2, "monsterChance": 0.3 },
+    { "type": "biblioteca", "desc": "Polverosi tomi e pergamene; qualcuno sussurra tra le pagine.", "trapChance": 0.3, "monsterChance": 0.3 },
+    { "type": "pozzo", "desc": "Un pozzo centrale con una catena che scende nel buio.", "trapChance": 0.5, "monsterChance": 0.4 }
+  ],
+  "traps": [
+    "Frecce dalle pareti (TS Des CD 12, 2d6 perforanti)",
+    "Piastra a pressione: dardo avvelenato (TS Cos CD 13, 1d6 danni + avvelenato)",
+    "Crollo del soffitto (TS Des CD 13, 3d6 danni contundenti)",
+    "Gas soporifero (TS Cos CD 12, addormentato 1 minuto)",
+    "Trappola a fossa (caduta 3 m, 1d6 danni)"
+  ],
+  "monsters": ["goblin", "skeleton", "bandit", "wolf", "orc"],
+  "treasures": [
+    { "text": "Baule con monete e una gemma", "currency": { "gp": 80, "sp": 150, "cp": 300 }, "items": [{ "name": "Gemma dell'alba", "valueGp": 120, "rarity": "uncommon", "magic": true }] },
+    { "text": "Armatura di cuoio lavorata", "items": [{ "name": "Armatura di cuoio +1", "valueGp": 400, "rarity": "rare", "magic": true }] },
+    { "text": "Pozioni e pergamene", "currency": { "gp": 25 }, "items": [{ "name": "Pozione di guarigione", "quantity": 3, "valueGp": 50 }] },
+    { "text": "Un pugnale ornato", "items": [{ "name": "Pugnale del traditore", "valueGp": 250, "rarity": "uncommon", "magic": true }] }
+  ]
+}

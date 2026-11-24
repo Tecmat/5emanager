@@ -1,4 +1,4 @@
-import type { Character, Currency, EquipSlot, InventoryItem } from '../types.js';
+import type { Character, CraftingIngredient, CraftingRecipe, Currency, EquipSlot, InventoryItem, ShopItem } from '../types.js';
 import type { Registry } from '../registry.js';
 
 export const COPPER_VALUE: Record<keyof Currency, number> = { cp: 1, sp: 10, ep: 50, gp: 100, pp: 1000 };
@@ -221,4 +221,119 @@ export function addCurrencyRaw(c: Currency, amount: Partial<Currency>): Currency
     next[k] = Math.max(0, next[k] + v);
   }
   return next;
+}
+
+// ---------------------------------------------------------------------------
+// Negozio e crafting (tabelle shop/crafting di data-srd)
+// ---------------------------------------------------------------------------
+
+/** denominazioni in rame, dalla più grande alla più piccola (canoniche: 1|10|50|100|1000) */
+const DENOMS: [keyof Currency, number][] = [['pp', 1000], ['gp', 100], ['ep', 50], ['sp', 10], ['cp', 1]];
+
+/** converte una somma in rame nella combinazione di monete (ae, mo, me, ma, mr) */
+export function copperToCurrency(copper: number): Currency {
+  const out: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+  let rest = Math.max(0, Math.round(copper));
+  for (const [k, v] of DENOMS) {
+    out[k] = Math.floor(rest / v);
+    rest %= v;
+  }
+  return out;
+}
+
+/** paga esattamente `costCopper` usando le monete del PG e rompendo la moneta più piccola che copre il resto; `change` = monete restituite */
+export function payCopper(char: Character, costCopper: number): { character: Character; change: Currency; error?: string } {
+  const cost = Math.round(costCopper);
+  const zero: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+  if (!Number.isFinite(cost) || cost < 0) return { character: char, change: zero, error: 'Costo non valido' };
+  const have = currencyToCopper(char.currency);
+  if (have < cost) {
+    const fmt = (c: number) => (c / 100).toLocaleString('it-IT');
+    return { character: char, change: zero, error: `Fondi insufficienti: servono ${fmt(cost)} MO, hai ${fmt(have)} MO` };
+  }
+  let remaining = cost;
+  const purse: Currency = { ...char.currency };
+  for (const [k, v] of DENOMS) {
+    const use = Math.min(purse[k], Math.floor(remaining / v));
+    purse[k] -= use;
+    remaining -= use * v;
+  }
+  let change: Currency = { ...zero };
+  while (remaining > 0) {
+    const coin = [...DENOMS].reverse().find(([k, v]) => purse[k] > 0 && v >= remaining);
+    if (!coin) break;
+    const [k, v] = coin;
+    purse[k] -= 1;
+    const back = copperToCurrency(v - remaining);
+    for (const [ck] of DENOMS) change[ck] += back[ck];
+    remaining = 0;
+  }
+  const next: Character = { ...char, currency: purse, updatedAt: new Date().toISOString() };
+  return { character: next, change };
+}
+
+/** acquista `qty` unità di un oggetto dello shop: scala il costo (con resto) e accoda/aggiunge l'oggetto */
+export function buyItem(char: Character, item: ShopItem, qty = 1): { character: Character; change: Currency; spentGp: number; error?: string } {
+  const zero: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+  if (!Number.isFinite(qty) || qty <= 0) return { character: char, change: zero, spentGp: 0, error: 'Quantità non valida' };
+  const q = Math.floor(qty);
+  const costCopper = Math.round(item.valueGp * 100) * q;
+  const paid = payCopper(char, costCopper);
+  if (paid.error) return { character: char, change: zero, spentGp: 0, error: paid.error };
+  const norm = item.name.trim().toLowerCase();
+  const existing = paid.character.inventory.find((i) => !i.containerId && i.kind === item.kind && i.name.trim().toLowerCase() === norm);
+  let next = paid.character;
+  if (existing) {
+    next = updateItem(next, existing.id, { quantity: existing.quantity + q });
+  } else {
+    const r = addItem(next, {
+      name: item.name, kind: item.kind, quantity: q, weight: item.weight, equipped: false,
+      magic: item.magic ?? false, attuned: false, valueGp: item.valueGp, rarity: item.rarity,
+    });
+    if (r.error) return { character: char, change: zero, spentGp: 0, error: r.error };
+    next = r.character;
+  }
+  return { character: next, change: paid.change, spentGp: item.valueGp * q };
+}
+
+/** ingredienti mancanti per una ricetta (contati per nome sull'inventario) */
+export function missingIngredients(char: Character, recipe: CraftingRecipe): CraftingIngredient[] {
+  const missing: CraftingIngredient[] = [];
+  for (const ing of recipe.ingredients) {
+    const have = char.inventory
+      .filter((i) => i.name.trim().toLowerCase() === ing.name.trim().toLowerCase())
+      .reduce((sum, i) => sum + i.quantity, 0);
+    if (have < ing.quantity) missing.push({ name: ing.name, quantity: ing.quantity - have });
+  }
+  return missing;
+}
+
+/** crea l'oggetto della ricetta: consuma gli ingredienti, scala il costo in oro (con resto) e aggiunge il risultato */
+export function craftItem(char: Character, recipe: CraftingRecipe): { character: Character; change: Currency; error?: string } {
+  const zero: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
+  const missing = missingIngredients(char, recipe);
+  if (missing.length) {
+    const list = missing.map((m) => `${m.name} (mancano ${m.quantity})`).join(', ');
+    return { character: char, change: zero, error: `Ingredienti mancanti: ${list}` };
+  }
+  const paid = payCopper(char, Math.round(recipe.costGp * 100));
+  if (paid.error) return { character: char, change: zero, error: paid.error };
+  let next = paid.character;
+  const need = new Map(recipe.ingredients.map((i) => [i.name.trim().toLowerCase(), i.quantity]));
+  for (const item of [...next.inventory]) {
+    const n = need.get(item.name.trim().toLowerCase());
+    if (n === undefined) continue;
+    const take = Math.min(n, item.quantity);
+    need.set(item.name.trim().toLowerCase(), n - take);
+    next = take >= item.quantity ? removeItem(next, item.id) : updateItem(next, item.id, { quantity: item.quantity - take });
+  }
+  const res = addItem(next, {
+    ...recipe.result,
+    quantity: recipe.result.quantity ?? 1,
+    equipped: false,
+    attuned: false,
+    magic: recipe.result.magic ?? false,
+  });
+  if (res.error) return { character: char, change: zero, error: res.error };
+  return { character: res.character, change: paid.change };
 }

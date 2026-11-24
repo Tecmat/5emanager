@@ -71,9 +71,23 @@ export interface Campaign {
   notes: string;
   /** chat di campagna (ultimi messaggi, cap 200) */
   chat: ChatMessage[];
+  /** statistiche di campagna (aggiornate dalle azioni di combattimento) */
+  stats: CampaignStats;
   createdAt: string;
   updatedAt: string;
 }
+
+/** statistiche di campagna: contatori cumulativi delle sessioni di gioco */
+export interface CampaignStats {
+  attacks: number;
+  damageDealt: number;
+  damageTaken: number;
+  healed: number;
+  kills: number;
+  rounds: number;
+}
+
+export const DEFAULT_STATS: CampaignStats = { attacks: 0, damageDealt: 0, damageTaken: 0, healed: 0, kills: 0, rounds: 0 };
 
 const ZERO_CURRENCY: Currency = { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 };
 
@@ -94,6 +108,7 @@ export function migrateCampaign(c: Campaign): Campaign {
     groupCurrency: c.groupCurrency ?? { ...ZERO_CURRENCY },
     notes: c.notes ?? '',
     chat: c.chat ?? [],
+    stats: { ...DEFAULT_STATS, ...(c.stats ?? {}) },
   };
 }
 
@@ -256,7 +271,13 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
         const dice = damageBonusDice(atkChar, reg).map((d) => d.dice);
         if (dice.length > 0) mods.extraDamageDice = dice;
       }
+      const beforeHp = c.combat.combatants.find((x) => x.id === action.targetId)?.hp ?? 0;
       c.combat = attack(c.combat, attackerId, action.targetId, action.attackIndex ?? 0, mods);
+      const afterHp = c.combat.combatants.find((x) => x.id === action.targetId)?.hp ?? 0;
+      const dmg = Math.max(0, beforeHp - afterHp);
+      c.stats.attacks += 1;
+      c.stats.damageDealt += dmg;
+      if (beforeHp > 0 && afterHp <= 0) c.stats.kills += 1;
       return [c];
     }
 
@@ -290,7 +311,15 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
     case 'heal': {
       if (!isMaster) return [c, 'Solo il master può modificare i PF direttamente'];
       if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      const before = c.combat.combatants.find((x) => x.id === action.targetId)?.hp ?? 0;
       c.combat = action.kind === 'damage' ? damageCombatant(c.combat, action.targetId, action.amount) : healCombatant(c.combat, action.targetId, action.amount);
+      const after = c.combat.combatants.find((x) => x.id === action.targetId)?.hp ?? 0;
+      if (action.kind === 'damage') {
+        c.stats.damageTaken += Math.max(0, before - after);
+        if (before > 0 && after <= 0) c.stats.kills += 1;
+      } else {
+        c.stats.healed += Math.max(0, after - before);
+      }
       return [c];
     }
 
@@ -298,6 +327,7 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
       if (!c.combat) return [c, 'Nessun combattimento in corso'];
       if (!isMaster && !isTurn) return [c, 'Non è il tuo turno'];
       c.combat = nextTurn(c.combat);
+      c.stats.rounds = Math.max(c.stats.rounds, c.combat.round);
       return [c];
     }
 
@@ -309,11 +339,16 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
       const ch = c.characters[action.playerId];
       if (!ch) return [c, 'Quel giocatore non ha caricato la scheda'];
       if (action.kind === 'masterDamage') {
+        const before = ch.hp.current;
         c.characters[action.playerId] = damage(ch, action.amount);
         if (c.combat) c.combat = damageCombatant(c.combat, ch.id, action.amount);
+        c.stats.damageTaken += Math.max(0, before - c.characters[action.playerId].hp.current);
+        if (before > 0 && c.characters[action.playerId].hp.current <= 0) c.stats.kills += 1;
       } else if (action.kind === 'masterHeal') {
+        const before = ch.hp.current;
         c.characters[action.playerId] = heal(ch, action.amount, maxHp(ch, reg));
         if (c.combat) c.combat = healCombatant(c.combat, ch.id, action.amount);
+        c.stats.healed += Math.max(0, c.characters[action.playerId].hp.current - before);
       } else if (action.kind === 'masterAddXp') {
         c.characters[action.playerId] = addXp(ch, action.amount);
       } else {

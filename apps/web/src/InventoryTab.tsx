@@ -3,8 +3,11 @@ import {
   addCurrency,
   addItem,
   attunedCount,
+  buyItem,
   carryingCapacity,
+  craftItem,
   currencyToCopper,
+  missingIngredients,
   moveItemToContainer,
   rechargeItem,
   removeItem,
@@ -20,16 +23,29 @@ import {
   equipConflicts,
   MAX_ATTUNEMENT,
   setItemSlot,
+  type Currency,
   type EquipSlot,
   type ItemKind,
   type ItemRarity,
 } from '@dnd5e/core';
+import { SHOP_DATA, CRAFTING_DATA } from '@dnd5e/data-srd';
 import { useStore } from './store.js';
 
-const KINDS: ItemKind[] = ['weapon', 'armor', 'shield', 'gear', 'treasure', 'custom'];
-const KIND_IT: Record<ItemKind, string> = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', gear: 'Attrezzatura', treasure: 'Tesoro', custom: 'Custom' };
+const KINDS: ItemKind[] = ['weapon', 'armor', 'shield', 'gear', 'consumable', 'ammo', 'scroll', 'treasure', 'custom'];
+const KIND_IT: Record<ItemKind, string> = { weapon: 'Arma', armor: 'Armatura', shield: 'Scudo', gear: 'Attrezzatura', consumable: 'Consumabile', ammo: 'Munizioni', scroll: 'Pergamena', treasure: 'Tesoro', custom: 'Custom' };
 const RARITIES: ItemRarity[] = ['common', 'uncommon', 'rare', 'veryRare', 'legendary'];
 const RARITY_KEY: Record<ItemRarity, string> = { common: 'inv.r.common', uncommon: 'inv.r.uncommon', rare: 'inv.r.rare', veryRare: 'inv.r.veryRare', legendary: 'inv.r.legendary' };
+
+/** formatta una valuta come "3 mo 2 ma 5 mr" (solo le monete presenti) */
+function fmtCur(c: Currency): string {
+  const parts: string[] = [];
+  if (c.pp) parts.push(`${c.pp} mp`);
+  if (c.gp) parts.push(`${c.gp} mo`);
+  if (c.ep) parts.push(`${c.ep} me`);
+  if (c.sp) parts.push(`${c.sp} ma`);
+  if (c.cp) parts.push(`${c.cp} mr`);
+  return parts.length ? parts.join(' ') : '0 mr';
+}
 
 type SortKey = 'name' | 'kind' | 'weight' | 'qty';
 
@@ -53,6 +69,8 @@ export default function InventoryTab() {
   const [fMagic, setFMagic] = useState('');
   const [fEq, setFEq] = useState('');
   const [sortKey, setSortKey] = useState<SortKey>('name');
+  const [shopQty, setShopQty] = useState<Record<string, number>>({});
+  const [shopMsg, setShopMsg] = useState('');
 
   if (!char) return null;
   const curWeight = totalWeight(char);
@@ -172,6 +190,74 @@ export default function InventoryTab() {
           <div style={{ marginTop: 10 }}><button className="primary" onClick={add}>{t('inv.add', 'Aggiungi')}</button></div>
         </div>
       </div>
+
+      <div className="grid cols2">
+        <div className="card">
+          <h3>🛒 {t('inv.shop', 'Negozio')}</h3>
+          <div className="muted" style={{ marginBottom: 6 }}>{t('inv.shopHint', 'Acquista con le monete del PG: il costo viene scalato e il resto calcolato automaticamente.')}</div>
+          {SHOP_DATA.map((it) => {
+            const q = shopQty[it.id] ?? 1;
+            return (
+              <div key={it.id} className="row" style={{ justifyContent: 'space-between', gap: 6, padding: '4px 0', borderBottom: '1px solid var(--border)', flexWrap: 'wrap' }}>
+                <span>
+                  <b>{it.name}</b>
+                  <span className="muted"> · {KIND_IT[it.kind]} · {it.valueGp} mo{it.magic ? ' · ✨' : ''}</span>
+                </span>
+                <span className="row">
+                  <input type="number" min={1} value={q} onChange={(e) => setShopQty({ ...shopQty, [it.id]: Number(e.target.value) })} style={{ width: 56 }} title={t('inv.qty', 'Quantità')} />
+                  <button
+                    className="primary"
+                    disabled={q < 1 || currencyToCopper(char.currency) < it.valueGp * 100 * q}
+                    title={tf('inv.buyTitle', 'Compra {q}× {name} per {gp} mo', { q, name: it.name, gp: it.valueGp * q })}
+                    onClick={() => {
+                      const r = buyItem(char, it, q);
+                      if (r.error) { setShopMsg(r.error); return; }
+                      setChar(r.character);
+                      setShopMsg(tf('inv.bought', 'Acquistato {q}× {name} per {gp} mo — resto: {ch}', { q, name: it.name, gp: r.spentGp, ch: fmtCur(r.change) }));
+                    }}
+                  >
+                    {t('inv.buy', 'Compra')}
+                  </button>
+                </span>
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="card">
+          <h3>⚒️ {t('inv.craft', 'Crafting')}</h3>
+          <div className="muted" style={{ marginBottom: 6 }}>{t('inv.craftHint', "Crea oggetti consumando gli ingredienti dall'inventario più un costo in MO.")}</div>
+          {CRAFTING_DATA.map((rc) => {
+            const missing = missingIngredients(char, rc);
+            const afford = currencyToCopper(char.currency) >= rc.costGp * 100;
+            return (
+              <div key={rc.id} style={{ padding: '4px 0', borderBottom: '1px solid var(--border)' }}>
+                <div className="row" style={{ justifyContent: 'space-between', gap: 6, flexWrap: 'wrap' }}>
+                  <b>{rc.name}</b>
+                  <button
+                    className="primary"
+                    disabled={missing.length > 0 || !afford}
+                    title={missing.length ? tf('inv.missingTitle', 'Mancano: {list}', { list: missing.map((m) => `${m.name} x${m.quantity}`).join(', ') }) : tf('inv.craftTitle', 'Crea {name} per {gp} mo', { name: rc.result.name, gp: rc.costGp })}
+                    onClick={() => {
+                      const r = craftItem(char, rc);
+                      if (r.error) { setShopMsg(r.error); return; }
+                      setChar(r.character);
+                      setShopMsg(tf('inv.crafted', 'Creato {name} (costo {gp} mo) — resto: {ch}', { name: rc.result.name, gp: rc.costGp, ch: fmtCur(r.change) }));
+                    }}
+                  >
+                    {t('inv.craftBtn', 'Crea')} ({rc.costGp} mo)
+                  </button>
+                </div>
+                <div className="muted" style={{ fontSize: 12 }}>
+                  {rc.ingredients.map((i) => `${i.name} x${i.quantity}`).join(', ')}
+                  {missing.length > 0 && <span className="error"> — {tf('inv.missing', 'mancano {list}', { list: missing.map((m) => `${m.name} x${m.quantity}`).join(', ') })}</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+      {shopMsg && <div className="ok">{shopMsg}</div>}
 
       <div className="card">
         <h3>{tf('inv.inventory', 'Inventario ({a}/{b})', { a: items.length, b: char.inventory.length })}</h3>

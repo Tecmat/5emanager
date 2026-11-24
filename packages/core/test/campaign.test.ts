@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { applyCampaignAction, createRegistry, DEFAULT_HOUSE_RULES, migrateCampaign, resumeCampaign, setPlayerOnline, type Campaign } from '../src/index.js';
+import { applyCampaignAction, createRegistry, DEFAULT_HOUSE_RULES, DEFAULT_STATS, migrateCampaign, resumeCampaign, setPlayerOnline, type Campaign } from '../src/index.js';
 
 function savedCampaign(): Campaign {
   return {
@@ -18,6 +18,7 @@ function savedCampaign(): Campaign {
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 10, pp: 0 },
     notes: 'note di sessione',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-02T00:00:00.000Z',
   };
@@ -74,6 +75,7 @@ describe('kickPlayer', () => {
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
@@ -124,6 +126,7 @@ describe('chat di campagna', () => {
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });
@@ -202,6 +205,7 @@ describe('mappa tattica (moveToken / setMapSize)', () => {
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: '2026-01-01T00:00:00.000Z',
     updatedAt: '2026-01-01T00:00:00.000Z',
   });

@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { DEFAULT_HOUSE_RULES, migrateCampaign, type Character, type SrdData } from '@dnd5e/core';
+import { DEFAULT_HOUSE_RULES, DEFAULT_STATS, migrateCampaign, type Character, type SrdData } from '@dnd5e/core';
 import type { Campaign, PlayerInfo } from './protocol.js';
 
 export function hashPassword(pw: string): string {
@@ -94,6 +94,7 @@ export function createCampaign(name: string, password: string, master: PlayerInf
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -116,6 +117,7 @@ export function createCampaignAdmin(name: string, password: string): Campaign {
     groupCurrency: { cp: 0, sp: 0, ep: 0, gp: 0, pp: 0 },
     notes: '',
     chat: [],
+    stats: { ...DEFAULT_STATS },
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };

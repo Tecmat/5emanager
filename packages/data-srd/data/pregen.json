@@ -1,0 +1,436 @@
+[
+ {
+  "id": "pregen-1",
+  "name": "Brynn Fierobianco",
+  "houseRules": {
+   "bypassSpellLimit": false,
+   "bypassAsiCap": false,
+   "bypassAttunementLimit": false,
+   "bypassXpCheck": true,
+   "bypassLevelCap": false,
+   "bypassPrereq": false
+  },
+  "raceId": "human",
+  "subraceId": "human-standard",
+  "xp": 900,
+  "inspiration": false,
+  "abilityScores": {
+   "str": 17,
+   "dex": 13,
+   "con": 16,
+   "int": 11,
+   "wis": 13,
+   "cha": 11
+  },
+  "classLevels": [
+   {
+    "classId": "fighter",
+    "level": 3,
+    "hitDiceRolled": [
+     10,
+     6,
+     6
+    ],
+    "subclassId": "battle-master"
+   }
+  ],
+  "proficiency": {
+   "skills": [],
+   "expertise": [],
+   "weapons": [
+    "simple",
+    "martial"
+   ],
+   "armors": [
+    "light",
+    "medium",
+    "heavy",
+    "shield"
+   ],
+   "tools": [],
+   "languages": []
+  },
+  "fightingStyles": [
+   "archery"
+  ],
+  "feats": [],
+  "features": [
+   "fighting-style",
+   "second-wind",
+   "action-surge",
+   "martial-archetype",
+   "combat-superiority",
+   "maneuvers"
+  ],
+  "spellsKnown": [],
+  "spellsPrepared": [],
+  "spellSlots": {},
+  "inventory": [],
+  "currency": {
+   "cp": 0,
+   "sp": 0,
+   "ep": 0,
+   "gp": 0,
+   "pp": 0
+  },
+  "hp": {
+   "current": 31,
+   "temp": 0
+  },
+  "deathSaves": {
+   "successes": 0,
+   "failures": 0
+  },
+  "conditions": [],
+  "journal": [
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 2 (Guerriero 2)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 3 (Guerriero 3)"
+   }
+  ],
+  "favoriteSpells": [],
+  "exhaustion": 0,
+  "spellsPreparedByClass": {},
+  "notes": "",
+  "createdAt": "2026-11-24T15:40:43.245Z",
+  "updatedAt": "2026-11-24T15:40:43.256Z"
+ },
+ {
+  "id": "pregen-2",
+  "name": "Osric del Corvo",
+  "houseRules": {
+   "bypassSpellLimit": false,
+   "bypassAsiCap": false,
+   "bypassAttunementLimit": false,
+   "bypassXpCheck": true,
+   "bypassLevelCap": false,
+   "bypassPrereq": false
+  },
+  "raceId": "elf",
+  "subraceId": "high-elf",
+  "xp": 900,
+  "inspiration": false,
+  "abilityScores": {
+   "str": 8,
+   "dex": 16,
+   "con": 12,
+   "int": 17,
+   "wis": 13,
+   "cha": 10
+  },
+  "classLevels": [
+   {
+    "classId": "wizard",
+    "level": 3,
+    "hitDiceRolled": [
+     6,
+     4,
+     4
+    ],
+    "subclassId": "abjuration"
+   }
+  ],
+  "proficiency": {
+   "skills": [],
+   "expertise": [],
+   "weapons": [
+    "dagger",
+    "dart",
+    "sling",
+    "quarterstaff",
+    "light-crossbow"
+   ],
+   "armors": [],
+   "tools": [],
+   "languages": []
+  },
+  "fightingStyles": [],
+  "feats": [],
+  "features": [
+   "spellcasting",
+   "arcane-recovery",
+   "arcane-tradition",
+   "abjuration-2"
+  ],
+  "spellsKnown": [],
+  "spellsPrepared": [],
+  "spellSlots": {
+   "1": {
+    "total": 4,
+    "used": 0
+   },
+   "2": {
+    "total": 2,
+    "used": 0
+   }
+  },
+  "inventory": [],
+  "currency": {
+   "cp": 0,
+   "sp": 0,
+   "ep": 0,
+   "gp": 0,
+   "pp": 0
+  },
+  "hp": {
+   "current": 17,
+   "temp": 0
+  },
+  "deathSaves": {
+   "successes": 0,
+   "failures": 0
+  },
+  "conditions": [],
+  "journal": [
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 2 (Mago 2)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 3 (Mago 3)"
+   }
+  ],
+  "favoriteSpells": [],
+  "exhaustion": 0,
+  "spellsPreparedByClass": {},
+  "notes": "",
+  "createdAt": "2026-11-24T15:40:43.256Z",
+  "updatedAt": "2026-11-24T15:40:43.256Z"
+ },
+ {
+  "id": "pregen-3",
+  "name": "Hilda Manvale",
+  "houseRules": {
+   "bypassSpellLimit": false,
+   "bypassAsiCap": false,
+   "bypassAttunementLimit": false,
+   "bypassXpCheck": true,
+   "bypassLevelCap": false,
+   "bypassPrereq": false
+  },
+  "raceId": "halfling",
+  "subraceId": "lightfoot",
+  "xp": 6500,
+  "inspiration": false,
+  "abilityScores": {
+   "str": 8,
+   "dex": 20,
+   "con": 12,
+   "int": 13,
+   "wis": 12,
+   "cha": 15
+  },
+  "classLevels": [
+   {
+    "classId": "rogue",
+    "level": 5,
+    "hitDiceRolled": [
+     8,
+     5,
+     5,
+     5,
+     5
+    ],
+    "subclassId": "arcane-trickster"
+   }
+  ],
+  "proficiency": {
+   "skills": [],
+   "expertise": [],
+   "weapons": [
+    "simple",
+    "hand-crossbow",
+    "longsword",
+    "rapier",
+    "shortsword"
+   ],
+   "armors": [
+    "light"
+   ],
+   "tools": [
+    "thieves-tools"
+   ],
+   "languages": []
+  },
+  "fightingStyles": [],
+  "feats": [],
+  "features": [
+   "expertise",
+   "sneak-attack",
+   "thieves-cant",
+   "cunning-action",
+   "roguish-archetype",
+   "arcane-trickster-3",
+   "asi-4",
+   "uncanny-dodge"
+  ],
+  "spellsKnown": [],
+  "spellsPrepared": [],
+  "spellSlots": {},
+  "inventory": [],
+  "currency": {
+   "cp": 0,
+   "sp": 0,
+   "ep": 0,
+   "gp": 0,
+   "pp": 0
+  },
+  "hp": {
+   "current": 33,
+   "temp": 0
+  },
+  "deathSaves": {
+   "successes": 0,
+   "failures": 0
+  },
+  "conditions": [],
+  "journal": [
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 2 (Ladro 2)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.256Z",
+    "text": "Sale al livello 3 (Ladro 3)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 4 (Ladro 4)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 5 (Ladro 5)"
+   }
+  ],
+  "favoriteSpells": [],
+  "exhaustion": 0,
+  "spellsPreparedByClass": {},
+  "notes": "",
+  "createdAt": "2026-11-24T15:40:43.256Z",
+  "updatedAt": "2026-11-24T15:40:43.257Z"
+ },
+ {
+  "id": "pregen-4",
+  "name": "Emeric Solelesto",
+  "houseRules": {
+   "bypassSpellLimit": false,
+   "bypassAsiCap": false,
+   "bypassAttunementLimit": false,
+   "bypassXpCheck": true,
+   "bypassLevelCap": false,
+   "bypassPrereq": false
+  },
+  "raceId": "dwarf",
+  "subraceId": "hill-dwarf",
+  "xp": 6500,
+  "inspiration": false,
+  "abilityScores": {
+   "str": 14,
+   "dex": 8,
+   "con": 17,
+   "int": 10,
+   "wis": 19,
+   "cha": 12
+  },
+  "classLevels": [
+   {
+    "classId": "cleric",
+    "level": 5,
+    "hitDiceRolled": [
+     8,
+     5,
+     5,
+     5,
+     5
+    ],
+    "subclassId": "life-domain"
+   }
+  ],
+  "proficiency": {
+   "skills": [],
+   "expertise": [],
+   "weapons": [
+    "simple"
+   ],
+   "armors": [
+    "light",
+    "medium",
+    "shield"
+   ],
+   "tools": [],
+   "languages": []
+  },
+  "fightingStyles": [],
+  "feats": [],
+  "features": [
+   "spellcasting",
+   "channel-divinity",
+   "channel-divinity-2",
+   "divine-domain",
+   "asi-4",
+   "destroy-undead-cr1-2"
+  ],
+  "spellsKnown": [],
+  "spellsPrepared": [],
+  "spellSlots": {
+   "1": {
+    "total": 4,
+    "used": 0
+   },
+   "2": {
+    "total": 3,
+    "used": 0
+   },
+   "3": {
+    "total": 2,
+    "used": 0
+   }
+  },
+  "inventory": [],
+  "currency": {
+   "cp": 0,
+   "sp": 0,
+   "ep": 0,
+   "gp": 0,
+   "pp": 0
+  },
+  "hp": {
+   "current": 43,
+   "temp": 0
+  },
+  "deathSaves": {
+   "successes": 0,
+   "failures": 0
+  },
+  "conditions": [],
+  "journal": [
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 2 (Chierico 2)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 3 (Chierico 3)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 4 (Chierico 4)"
+   },
+   {
+    "at": "2026-11-24T15:40:43.257Z",
+    "text": "Sale al livello 5 (Chierico 5)"
+   }
+  ],
+  "favoriteSpells": [],
+  "exhaustion": 0,
+  "spellsPreparedByClass": {},
+  "notes": "",
+  "createdAt": "2026-11-24T15:40:43.257Z",
+  "updatedAt": "2026-11-24T15:40:43.257Z"
+ }
+]

@@ -111,9 +111,10 @@ Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
    "mantieni l'accesso", server del login come default per campagne/sync, link account + pannello admin (solo admin).
    Sui server Docker (`DND5E_REQUIRE_AUTH=true`, default nei compose) **senza login non si accede al sito**; registrazione
    `open`/`approval` (`DND5E_REGISTRATION`); su webapp servita dal server niente P2P. `https`→`wss://` automatico
-2. **Espansione gameplay** — mappa tattica con token trascinabili sincronizzata via P2P, party
-   tracker del master, log/statistiche di campagna ed export della campagna intera, schede pregen,
-   generatore di dungeon, crafting
+2. **Espansione gameplay** ✅ (v0.1.69–0.1.70) — mappa tattica con token trascinabili sincronizzata via P2P,
+   party tracker del master sempre visibile, statistiche di campagna (danni/PF/round/uccisioni) + export
+   campagna JSON + log per round, schede pregen clonabili da Home, generatore di dungeon casuale (master),
+   negozio e crafting con calcolo automatico del resto; rework UI in tema D&D (placche dorate, serif, grigliettina)
 3. **Piattaforme e dati** — PWA offline completa, notifiche push, import da D&D Beyond,
    sync cloud opzionale, iOS, test e2e Playwright
 
@@ -124,4 +125,4 @@ vanno inseriti solo come custom dall'utente.
 
 ## Nota sicurezza
 
-`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 167/167 verdi (root) + 9/9 UI jsdom.
+`npm audit` può segnalare avvisi high su tooling solo di sviluppo (vite/vitest/picomatch): i pacchetti sono tutti all'ultima versione; il runtime (bundle browser + server `ws`) non è coinvolto. Test: 184/184 verdi (root) + 9/9 UI jsdom.

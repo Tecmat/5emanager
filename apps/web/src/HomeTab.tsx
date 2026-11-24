@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { totalLevel, type Character } from '@dnd5e/core';
+import { totalLevel, uid, type Character } from '@dnd5e/core';
+import { PREGEN_DATA } from '@dnd5e/data-srd';
 import { useStore, isCampaignSheetId, campaignSheetId } from './store.js';
 import { useNet, loadAuthServer, passkeySupported } from './netStore.js';
 import { defaultWsUrl, toWsUrl, httpUrlFromWs } from './net.js';
@@ -10,7 +11,7 @@ import Icon from './icons.js';
  * nuova scheda e accesso rapido al multiplayer ("Connetti online").
  */
 export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
-  const { sheets, char, campaignMeta, reg, t, tf, importSheets } = useStore();
+  const { sheets, char, campaignMeta, reg, t, tf, importSheets, createSheet } = useStore();
   const { auth, act, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
 
   const local = sheets.filter((s) => !isCampaignSheetId(s.id));
@@ -24,6 +25,13 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
 
   const clsOf = (c: Character) =>
     c.classLevels.map((cl) => `${reg.classes.get(cl.classId)?.name ?? cl.classId} ${cl.level}`).join(' / ');
+
+  const clonePregen = (p: Character) => {
+    const now = new Date().toISOString();
+    const clone: Character = { ...structuredClone(p), id: uid('scheda'), createdAt: now, updatedAt: now };
+    createSheet(clone);
+    onOpenSheet(clone.id);
+  };
 
   const Card = ({ c, campaign }: { c: Character; campaign?: boolean }) => (
     <button
@@ -100,6 +108,22 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
           </div>
         </>
       )}
+
+      <div className="card">
+        <h3 className="home-h"><Icon name="dice" size={15} /> {t('home.pregenTitle', 'Schede pronte (pregen)')}</h3>
+        <div className="muted" style={{ marginBottom: 8 }}>{t('home.pregenHint', 'Personaggi già pronti da clonare come nuove schede locali.')}</div>
+        {PREGEN_DATA.map((p) => (
+          <div key={p.id} className="row" style={{ justifyContent: 'space-between', gap: 8, padding: '6px 0', borderBottom: '1px solid var(--border)' }}>
+            <span>
+              <b>{p.name}</b>
+              <span className="muted"> — {reg.races.get(p.raceId)?.name ?? p.raceId} · {clsOf(p)} · {t('home.liv', 'liv')} {totalLevel(p)}</span>
+            </span>
+            <button className="primary" onClick={() => clonePregen(p)} title={tf('home.pregenCloneTitle', 'Clona "{name}" come nuova scheda locale e aprila', { name: p.name })}>
+              <Icon name="plus" size={13} /> {t('home.pregenClone', 'Clona')}
+            </button>
+          </div>
+        ))}
+      </div>
 
       <div className="card">
         <h3 className="home-h"><Icon name="globe" candy size={15} /> {auth ? tf('home.remoteTitle', '☁️ Libreria remoto — account {u} ({n} schede)', { u: auth.username, n: auth.characters.length }) : t('home.remoteTitleNoAuth', '☁️ Libreria schede sul server')}</h3>
