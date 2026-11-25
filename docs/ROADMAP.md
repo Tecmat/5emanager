@@ -40,6 +40,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 - ✅ **Fix P2P sparito sulle app desktop (Tauri)** (v0.1.83): `isServerWebapp()` legge prima il marker esplicito `<meta name="dnd5e-server">` che il server inietta nell'HTML della webapp servita (CSP-safe, robusto su `tauri://`/`tauri.localhost`), poi un'euristica origin corretta (mai Tauri, mai vite 5173) — test `setup-gate.test.ts` + `login-page.test.ts`
 
+- ✅ **Immagine server su GHCR** (v0.1.84): ogni release pusha `ghcr.io/tecmat/5emanager-server:<versione>` + `:latest` (job `docker-server` in release.yml); compose root e `docker/` usano quell'immagine di default → update = `docker compose pull && docker compose up -d`, niente build locale (`--build` resta per modifiche locali); hint aggiornati in `/admin` e nel messaggio 409 di `what=server`
+
 ### Fase 2 — espansione gameplay (medio termine)
 - ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
 - ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento

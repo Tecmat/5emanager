@@ -548,7 +548,7 @@ async function loadDeployment() {
       btn.style.display = '';
       hint.textContent = 'server da checkout git: porta server + webapp all\'ultima release senza terminale (dopo il riavvio sei sulla nuova versione)';
     } else if (j.deployment === 'docker') {
-      hint.textContent = 'sei in Docker: il server si aggiorna ricreando il container — sull\'host: git pull && docker compose up -d --build (da qui aggiorni solo la webapp)';
+      hint.textContent = 'sei in Docker: aggiorna l\'immagine sull\'host — docker compose pull && docker compose up -d (ghcr.io/tecmat/5emanager-server, build locale: git pull && docker compose up -d --build); da qui aggiorni solo la webapp';
     } else {
       hint.textContent = 'self-update del server non disponibile qui (nessun .git): da qui aggiorni solo la webapp';
     }

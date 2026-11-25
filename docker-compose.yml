@@ -1,10 +1,8 @@
 # 5e Manager — server in Docker, direttamente dalla ROOT del repo clonato (es. /opt/5emanager):
 #
-#   docker compose up -d
-#
-# L'immagine 5emanager-server:latest viene SEMPRE buildata dal sorgente locale
-# (pull_policy: build): niente pull da registry, niente "docker login", niente
-# "repository does not exist". L'equivalente in docker/ resta: cd docker && docker compose up -d --build
+#   docker compose up -d          # PULLA l'immagine ufficiale ghcr.io/tecmat/5emanager-server:latest
+#   docker compose pull && docker compose up -d   # update alla nuova release
+#   docker compose up -d --build  # build dal sorgente locale (tue modifiche): sovrascrive l'immagine
 #
 # Web app: http://<ip-server>:3001 · multiplayer: ws://<ip-server>:3001 · admin: http://<ip-server>:3001/admin
 # Dati persistenti: docker/data/ (volume ./docker/data). Variabili: cp docker/.env.example docker/.env e usa --env-file docker/.env (oppure un .env nella root)
@@ -15,8 +13,8 @@ services:
     build:
       context: .
       dockerfile: docker/Dockerfile
-    image: 5emanager-server:latest
-    pull_policy: build # mai pull: se manca l'immagine locale si builda dal sorgente
+    image: ghcr.io/tecmat/5emanager-server:latest
+    # default: pull da GHCR; con --build si ricostruisce dal sorgente locale
     container_name: 5emanager-server
     restart: unless-stopped
     ports:

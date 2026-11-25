@@ -199,7 +199,7 @@ export async function applyServerUpdate(tag: string, opts: { force?: boolean; ro
   if (mode !== 'git') {
     const e = new Error(
       mode === 'docker'
-        ? "self-update del server non disponibile dentro il container Docker: aggiorna ricreando l'immagine sull'host ('git pull && docker compose up -d --build'); da qui puoi aggiornare solo la webapp (what=web)"
+        ? "self-update del server non disponibile dentro il container Docker: aggiorna l'immagine sull'host ('docker compose pull && docker compose up -d' con ghcr.io/tecmat/5emanager-server, oppure build locale 'git pull && docker compose up -d --build'); da qui puoi aggiornare solo la webapp (what=web)"
         : "self-update del server non disponibile (nessun .git qui): da qui puoi aggiornare solo la webapp (what=web)",
     ) as Error & { statusCode?: number };
     e.statusCode = 409;

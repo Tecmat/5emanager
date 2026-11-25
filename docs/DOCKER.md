@@ -13,19 +13,30 @@ volume `docker/data` (campagne, account, schede degli utenti).
 
 ## 1) LAN / HTTP (rete locale, test, VPS senza dominio)
 
-### Dalla root del repo clonato (es. `/opt/5emanager`) — il modo più comodo
+### Immagine ufficiale su GHCR (consigliato) — update senza build
 
-C'è un **`docker-compose.yml` anche alla root del repo** (`context: .`, `pull_policy: build`):
+A ogni release viene publicada **`ghcr.io/tecmat/5emanager-server:<versione>`** (e il tag `latest`):
 
 ```bash
-cd /opt/5emanager        # root del clone
-docker compose up -d     # builda 5emanager-server:latest dal sorgente locale: niente pull da
-                         # registry, niente "docker login", niente --build obbligatorio
+docker compose pull && docker compose up -d      # dalla root del clone (docker-compose.yml)
+# oppure: cd docker && docker compose pull && docker compose up -d
 ```
 
-> Se vedi `pull access denied ... repository does not exist` oppure `lstat .../docker: no such file`,
-> stai lanciando compose dalla directory sbagliata o senza build: usa il compose alla **root del clone**
-> (`docker compose up -d`) oppure `cd docker && docker compose up -d --build`.
+L'immagine è pubblica: niente `docker login`, niente build locale. Però: `docker compose up -d --build`
+ricompila dal sorgente locale (utile se modifichi il codice).
+
+### Dalla root del repo clonato (es. `/opt/5emanager`) — build locale
+
+Se non vuoi usare GHCR, c'è un **`docker-compose.yml` anche alla root del repo** (`context: .`):
+
+```bash
+cd /opt/5emanager
+docker compose up -d --build     # builda l'immagine dal sorgente locale
+```
+
+> Se vedi `pull access denied ... repository does not exist`, stai usando `up -d` senza `--build`
+> con un'immagine GHCR non scaricata: usa `docker compose pull && docker compose up -d` (GHCR)
+> oppure `docker compose up -d --build` (build locale).
 
 ### Dalla cartella `docker/`
 
@@ -35,7 +46,8 @@ secret restano solo sul server, nessun conflitto ai `git pull`):
 ```bash
 cd docker
 cp .env.example .env        # in LAN puoi anche saltarlo: i default vanno bene
-docker compose up -d --build
+docker compose pull && docker compose up -d    # immagine ufficiale GHCR (default)
+docker compose up -d --build                    # oppure build dal sorgente locale
 ```
 
 (se vuoi modificarlo: `PORT`, `DND5E_ADMIN_TOKEN`)
