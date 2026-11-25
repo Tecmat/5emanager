@@ -88,6 +88,16 @@ describe('POST /api/passkey/verify', () => {
     expect((await r.json()).error).toMatch(/non riconosciuta/);
   });
 
+  it('challenge dentro clientDataJSON (come fa davvero il browser) -> lookup ok, arriva a "non riconosciuta"', async () => {
+    const o = await (await post('/api/passkey/options', {})).json();
+    const ch = o.options.challenge;
+    // clientDataJSON = base64url(JSON {type:'webauthn.get', challenge, origin})
+    const cdj = Buffer.from(JSON.stringify({ type: 'webauthn.get', challenge: ch, origin: 'http://127.0.0.1' })).toString('base64url');
+    const r = await post('/api/passkey/verify', { response: { id: 'pk-sconosciuta', response: { clientDataJSON: cdj } } });
+    expect(r.status).toBe(400);
+    expect((await r.json()).error).toMatch(/non riconosciuta/); // non "challenge scaduto": il challenge è stato trovato
+  });
+
   it('il challenge è monouso: riuso -> 400', async () => {
     const o = await (await post('/api/passkey/options', {})).json();
     const ch = o.options.challenge;

@@ -800,8 +800,15 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
     if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
     try {
       const body = await readJsonBody(req);
-      const resp = body.response as { id: string; response?: { challenge?: string } };
-      const challenge = String(resp?.response?.challenge ?? '');
+      const resp = body.response as { id: string; response?: { challenge?: string; clientDataJSON?: string } };
+      // il challenge NON è un campo della risposta WebAuthn: è dentro clientDataJSON (base64url di un JSON)
+      let challenge = String(resp?.response?.challenge ?? '');
+      if (!challenge && resp?.response?.clientDataJSON) {
+        try {
+          const cdj = JSON.parse(Buffer.from(String(resp.response.clientDataJSON).replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString('utf8'));
+          challenge = String(cdj.challenge ?? '');
+        } catch { /* clientDataJSON malformato: resta '' */ }
+      }
       const ch = pkChallenges.get(challenge);
       if (!ch) return void json(400, { error: 'Challenge scaduto o sconosciuto: ricomincia il login con passkey' }), true;
       pkChallenges.delete(challenge);
