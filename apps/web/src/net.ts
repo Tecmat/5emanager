@@ -92,14 +92,25 @@ export function httpUrlFromWs(u: string): string {
 }
 
 /**
- * true quando l'app gira come webapp servita DAL server (non vite dev 5173, non app nativa):
+ * true quando l'app gira come webapp servita DAL server (non vite dev 5173, non app nativa/desktop):
  * in quel caso il multiplayer e' il server stesso e la sezione P2P non ha senso.
+ * Attenzione: su desktop Tauri la pagina carica da tauri://localhost (macOS/Linux) oppure
+ * http://tauri.localhost (Windows) — NON è la webapp del server, anche se la porta è vuota.
  */
 export function isServerWebapp(): boolean {
+  // 1) marker esplicito iniettato dal server nell'HTML servito (CSP-safe, robusto su Tauri/Capacitor/web)
+  try {
+    if (typeof document !== 'undefined' && document.querySelector('meta[name="dnd5e-server"]')?.getAttribute('content') === '1') return true;
+  } catch { /* noop */ }
+  // 2) fallback euristico (dev/test senza marker): solo http/https, mai Tauri, mai vite dev 5173
   try {
     if (Capacitor.isNativePlatform()) return false;
   } catch { /* non nativo */ }
   if (typeof location === 'undefined' || !location.host) return false;
+  // desktop Tauri: mai la webapp del server
+  if (location.protocol === 'tauri:' || location.hostname === 'tauri.localhost') return false;
+  // contano solo origini http/https (web/PWA servita dal server)
+  if (location.protocol !== 'http:' && location.protocol !== 'https:') return false;
   return location.port !== '5173';
 }
 

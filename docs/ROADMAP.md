@@ -38,6 +38,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Timer di turno sincronizzato** (v0.1.82): `turnTimerSec`/`turnStartedAt` in `CombatState` (impostato da `nextTurn`), azione master `setTurnTimer`, countdown identico per tutti in Campagna online (🌐) e timer in CombatTab locale — test `turn-timer.test.ts`
 - ✅ **Gesture touch sulla mappa tattica** (v0.1.82): pinch-zoom + pan con due dita, pan con un dito, zoom rotella, reset vista in `TacticalMap.tsx` (viewBox dinamico)
 
+- ✅ **Fix P2P sparito sulle app desktop (Tauri)** (v0.1.83): `isServerWebapp()` legge prima il marker esplicito `<meta name="dnd5e-server">` che il server inietta nell'HTML della webapp servita (CSP-safe, robusto su `tauri://`/`tauri.localhost`), poi un'euristica origin corretta (mai Tauri, mai vite 5173) — test `setup-gate.test.ts` + `login-page.test.ts`
+
 ### Fase 2 — espansione gameplay (medio termine)
 - ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
 - ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento

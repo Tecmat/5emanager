@@ -34,4 +34,32 @@ describe('shouldShowClientSetup', () => {
     expect(isSetupDone()).toBe(true);
     expect(shouldShowClientSetup(true)).toBe(false);
   });
+
+  it('desktop Tauri: MAI webapp del server (P2P visibile, setup client ok) — regressione v0.1.83', () => {
+    // macOS/Linux: tauri://localhost/ (porta vuota)
+    vi.stubGlobal('location', { ...window.location, host: 'localhost', port: '', protocol: 'tauri:', hostname: 'localhost' });
+    expect(isServerWebapp()).toBe(false);
+    expect(shouldShowClientSetup(false)).toBe(true);
+    // Windows: http://tauri.localhost/ (porta 80 implicita -> vuota)
+    vi.stubGlobal('location', { ...window.location, host: 'tauri.localhost', port: '', protocol: 'http:', hostname: 'tauri.localhost' });
+    expect(isServerWebapp()).toBe(false);
+    expect(shouldShowClientSetup(false)).toBe(true);
+    // ma una vera pagina http del server (porta 3001) resta webapp del server
+    vi.stubGlobal('location', { ...window.location, host: '192.168.1.36:3001', port: '3001', protocol: 'http:', hostname: '192.168.1.36' });
+    expect(isServerWebapp()).toBe(true);
+    expect(shouldShowClientSetup(false)).toBe(false);
+  });
+
+  it('marker esplicito <meta name="dnd5e-server">: vince sull\'origin (anche su tauri://)', () => {
+    // desktop Tauri + pagina servita dal server con marker -> webapp del server
+    vi.stubGlobal('location', { ...window.location, host: 'localhost', port: '', protocol: 'tauri:', hostname: 'localhost' });
+    const meta = document.createElement('meta');
+    meta.setAttribute('name', 'dnd5e-server');
+    meta.setAttribute('content', '1');
+    document.head.appendChild(meta);
+    expect(isServerWebapp()).toBe(true);
+    meta.remove();
+    // senza marker torna l\'euristica: su tauri:// NON è webapp del server
+    expect(isServerWebapp()).toBe(false);
+  });
 });

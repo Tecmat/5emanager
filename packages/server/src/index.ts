@@ -466,15 +466,35 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
     const index = join(STATIC_DIR, 'index.html');
     if (existsSync(index)) {
       res.writeHead(200, { 'content-type': MIME['.html'] });
-      res.end(readFileSync(index));
+      res.end(injectServerMarker(readFileSync(index, 'utf8')));
     } else {
       res.writeHead(404);
       res.end('not found');
     }
     return;
   }
-  res.writeHead(200, { 'content-type': MIME[extname(file)] ?? 'application/octet-stream' });
+  const ext = extname(file);
+  if (ext === '.html') {
+    res.writeHead(200, { 'content-type': MIME['.html'] });
+    res.end(injectServerMarker(readFileSync(file, 'utf8')));
+    return;
+  }
+  res.writeHead(200, { 'content-type': MIME[ext] ?? 'application/octet-stream' });
   res.end(readFileSync(file));
+}
+
+/**
+ * Inietta nella pagina HTML della webapp un meta marker "servita dal server":
+ * la SPA lo legge per comportarsi da webapp del server (niente P2P, sessione cookie)
+ * in modo robusto e CSP-safe, senza euristiche sull'origin (che sbagliano su Tauri:
+ * tauri://localhost / http://tauri.localhost). Le pagine standalone in public/ non lo ricevono.
+ */
+function injectServerMarker(html: string): string {
+  if (html.includes('name="dnd5e-server"')) return html;
+  const meta = '<meta name="dnd5e-server" content="1">';
+  const m = /<head[^>]*>/i.exec(html);
+  if (m && m.index !== undefined) return html.slice(0, m.index + m[0].length) + meta + html.slice(m.index + m[0].length);
+  return meta + html;
 }
 
 /** registry della campagna: SRD + custom del campaign */

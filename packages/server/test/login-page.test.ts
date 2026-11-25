@@ -85,4 +85,22 @@ describe('pagina /login con REQUIRE_AUTH', () => {
     expect(r.status).toBe(200);
     expect(await r.text()).toContain('APP-5EMANAGER');
   });
+
+  it('l\'HTML della webapp servita contiene il marker <meta name="dnd5e-server"> (niente euristiche sull\'origin)', async () => {
+    const login = await fetch(base + '/api/login', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ username: 'root', password: 'root-pw-1' }),
+    });
+    const cookie = (login.headers.get('set-cookie') ?? '').split(';')[0];
+    // sia la root sia il fallback SPA ricevono il marker
+    for (const p of ['/', '/qualunque-cosa']) {
+      const r = await fetch(base + p, { redirect: 'manual', headers: { cookie } });
+      expect(r.status).toBe(200);
+      expect(await r.text()).toContain('name="dnd5e-server"');
+    }
+    // le pagine standalone (login) NON lo hanno
+    const rl = await fetch(base + '/login', { redirect: 'manual' });
+    expect(await rl.text()).not.toContain('name="dnd5e-server"');
+  });
 });
