@@ -23,6 +23,7 @@ const InventoryTab = lazy(() => import('./InventoryTab.js'));
 const CustomTab = lazy(() => import('./CustomTab.js'));
 const CombatTab = lazy(() => import('./CombatTab.js'));
 const CampaignTab = lazy(() => import('./CampaignTab.js'));
+const AccountTab = lazy(() => import('./AccountTab.js'));
 
 
 const LOCK_KEY = 'dnd5e.lock.v1';
@@ -337,6 +338,7 @@ export default function App() {
             <Suspense fallback={<div className="muted" style={{ padding: 20 }}>…</div>}>
               {ready && effPage === 'home' && (
                 <HomeTab
+                  onAccount={() => setPage('account')}
                   onCreate={() => setCreating(true)}
                   onOnline={() => {
                     // senza schede non ha senso connettersi: proponi di crearne una
@@ -347,7 +349,7 @@ export default function App() {
                   onOpenSheet={(id) => { selectSheet(id); setPage('scheda'); }}
                 />
               )}
-              {effPage === 'campagna' && <CampaignTab />}
+              {effPage === 'campagna' && <CampaignTab onGoAccount={() => setPage('account')} />}
               {effPage === 'p2p' && (
                 <P2PCampaignsTab
                   onPlay={(id) => {
@@ -358,6 +360,7 @@ export default function App() {
                 />
               )}
               {effPage === 'custom' && <CustomTab />}
+              {effPage === 'account' && <AccountTab />}
             </Suspense>
           </>
         )}

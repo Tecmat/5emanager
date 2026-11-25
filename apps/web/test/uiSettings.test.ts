@@ -89,10 +89,10 @@ describe('uiSettings', () => {
   });
 
   it('orderTabs: ordina secondo l\'ordine salvato, mette i nuovi in coda, filtra le nascoste', () => {
-    const items = MAIN_PAGES; // home, campagna, p2p, custom
-    expect(orderTabs(items, [], []).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom']);
-    expect(orderTabs(items, ['custom', 'home'], []).map((t) => t.id)).toEqual(['custom', 'home', 'campagna', 'p2p']);
-    expect(orderTabs(items, ['p2p', 'campagna'], ['p2p']).map((t) => t.id)).toEqual(['campagna', 'home', 'custom']);
+    const items = MAIN_PAGES; // home, campagna, p2p, custom, account
+    expect(orderTabs(items, [], []).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom', 'account']);
+    expect(orderTabs(items, ['custom', 'home'], []).map((t) => t.id)).toEqual(['custom', 'home', 'campagna', 'p2p', 'account']);
+    expect(orderTabs(items, ['p2p', 'campagna'], ['p2p']).map((t) => t.id)).toEqual(['campagna', 'home', 'custom', 'account']);
   });
 
   it('moveId: sposta su/gi\u00f9 con clamp ai bordi', () => {
@@ -145,7 +145,8 @@ describe('robustezza impostazioni UI (fix v0.1.73: tab scomparse dopo update su 
   });
 
   it('orderTabs/moveId non si rompono con input non-array', () => {
-    expect(orderTabs(MAIN_PAGES, 'garbage' as never, 42 as never).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom']);
+    expect(orderTabs(MAIN_PAGES, 'garbage' as never, 42 as never).map((t) => t.id)).toEqual(['home', 'campagna', 'p2p', 'custom', 'account']);
+    expect(MAIN_PAGES.some((p) => p.id === 'account')).toBe(true);
     expect(moveId(null as never, 'home', -1)).toEqual(['home']);
   });
 

@@ -92,7 +92,7 @@ export default function P2PCampaignsTab({ onPlay }: { onPlay: (id: string) => vo
       <div className="card">
         <h3><Icon name="globe" candy size={16} /> {auth ? tf('p2p.serverTitle', '☁️ Campagne sull\'account {u} ({n})', { u: auth.username, n: auth.savedCampaigns.length }) : t('p2p.serverTitleNoAuth', '☁️ Sync con server remoto')}</h3>
         {!auth ? (
-          <div className="muted">{t('p2p.noAuth', 'Fai login dall\'account (tab 🗺️ Campagna → Server → Account) per sincronizzare le campagne P2P con il server remoto: sopravvivono al cambio dispositivo.')}</div>
+          <div className="muted">{t('p2p.noAuth', 'Fai login dall\'account (tab 👤 Account) per sincronizzare le campagne P2P con il server remoto: sopravvivono al cambio dispositivo.')}</div>
         ) : (
           <>
             <div className="muted" style={{ marginBottom: 8 }}>{t('p2p.serverHint', 'Le campagne salvate sull\'account remoto. "Salva in locale" le riporta su questo dispositivo (senza password).')}</div>

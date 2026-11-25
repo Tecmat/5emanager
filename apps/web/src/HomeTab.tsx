@@ -13,7 +13,7 @@ import Icon from './icons.js';
  * Menù principale: le schede possedute (locali e di campagna), creazione di una
  * nuova scheda e accesso rapido al multiplayer ("Connetti online").
  */
-export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void }) {
+export default function HomeTab({ onCreate, onOnline, onOpenSheet, onAccount }: { onCreate: () => void; onOnline: () => void; onOpenSheet: (id: string) => void; onAccount: () => void }) {
   const { sheets, char, campaignMeta, reg, t, tf, importSheets, createSheet } = useStore();
   const ddbFileRef = useRef<HTMLInputElement>(null);
   const { auth, registration, act, conn, url, setUrl, servers, doLogin, doRegister, doLoginToken, savedSession, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, error, setError } = useNet();
@@ -107,7 +107,7 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
         doLogin={doLogin} doRegister={doRegister} doLoginToken={doLoginToken} logout={logout}
         totpPending={totpPending} doLoginTotp={doLoginTotp} doLoginTotpBackup={doLoginTotpBackup}
         passkeyLogin={passkeyLogin} passkeySupported={passkeySupported} error={error} setError={setError}
-        onOnline={onOnline} t={t} tf={tf}
+        onOnline={onOnline} onAccount={onAccount} t={t} tf={tf}
       />
 
       {local.length === 0 && campaigns.length === 0 && (
@@ -165,7 +165,7 @@ export default function HomeTab({ onCreate, onOnline, onOpenSheet }: { onCreate:
       <div className="card">
         <h3 className="home-h"><Icon name="globe" candy size={15} /> {auth ? tf('home.remoteTitle', '☁️ Libreria remoto — account {u} ({n} schede)', { u: auth.username, n: auth.characters.length }) : t('home.remoteTitleNoAuth', '☁️ Libreria schede sul server')}</h3>
         {!auth ? (
-          <div className="muted">{t('home.remoteHint', 'Login dall\'account (tab 🗺️ Campagna → Server → Account) per sincronizzare le schede sul server e ritrovarle su altri dispositivi.')}</div>
+          <div className="muted">{t('home.remoteHint', 'Login dall\'account (tab 👤 Account) per sincronizzare le schede sul server e ritrovarle su altri dispositivi.')}</div>
         ) : (
           <>
             <div className="row" style={{ marginBottom: 8 }}>
@@ -222,9 +222,10 @@ function ServerAccountCard(props: {
   passkeySupported: boolean;
   error: string; setError: (e: string) => void;
   onOnline: () => void;
+  onAccount: () => void;
   t: (k: string, f?: string) => string; tf: (k: string, f: string, v: Record<string, string | number>) => string;
 }) {
-  const { url, setUrl, servers, auth, registration, savedSession, doLogin, doRegister, doLoginToken, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, passkeySupported, error, setError, onOnline, t, tf } = props;
+  const { url, setUrl, servers, auth, registration, savedSession, doLogin, doRegister, doLoginToken, logout, totpPending, doLoginTotp, doLoginTotpBackup, passkeyLogin, passkeySupported, error, setError, onOnline, onAccount, t, tf } = props;
   const [u, setU] = useState('');
   const [p, setP] = useState('');
   const [remember, setRemember] = useState(true);
@@ -286,7 +287,7 @@ function ServerAccountCard(props: {
           </div>
           <div className="row" style={{ marginTop: 8, flexWrap: 'wrap', gap: 8 }}>
             <button className="primary" onClick={onOnline}><Icon name="map" size={13} /> {t('home.goCampaign', 'Vai a Campagna (usa questo server)')}</button>
-            <button onClick={() => { onOnline(); }} title={t('home.myAccountTitle', 'La tua pagina account (libreria, 2FA, passkey) è nella tab Campagna → Account')}>
+            <button onClick={onAccount} title={t('home.myAccountTitle', 'La tua pagina account (libreria, 2FA, passkey) è nella tab Account')}>
               <Icon name="user" size={13} /> {t('home.myAccount', 'Il mio account')}
             </button>
             {auth.role === 'admin' && (

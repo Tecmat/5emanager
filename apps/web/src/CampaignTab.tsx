@@ -154,7 +154,7 @@ function SheetFull({ ch, reg }: { ch: Character; reg: Registry }) {
   );
 }
 
-export default function CampaignTab() {
+export default function CampaignTab({ onGoAccount = () => {} }: { onGoAccount?: () => void }) {
   const { reg, char, sheets, viewChar, viewLabel, setViewChar, t, tf, getCampaignSheet, setCampaignSheet, setCampaignMeta, selectSheet, campaignMeta } = useStore();
   const {
     conn, auth, registration, error, setError, notice, pingState, campaignList,
@@ -1261,163 +1261,14 @@ export default function CampaignTab() {
 
         <div className="card">
           <h3><Icon name="user" candy size={16} /> {t('cg.account', 'Account')}</h3>
-          {auth ? (
-            <>
-              <div className="ok">{t('cg.loggedAsA', '✅ Loggato come')} <b>{auth.username}</b>{tf('cg.loggedAsB', ' — {n} scheda/e in libreria', { n: auth.characters.length })}</div>
-              {registration && (
-                <div style={{ marginTop: 4 }}>
-                  <span className="tag" title={t('home.regTitle', 'Modalità di registrazione del server')}>
-                    {registration === 'invite' ? `📨 ${t('home.regInvite', 'solo su invito')}` : registration === 'open' ? `✅ ${t('home.regOpen', 'registrazione aperta')}` : `⏳ ${t('home.regApproval', 'con approvazione')}`}
-                  </span>
-                </div>
-              )}
-              <div className="row" style={{ marginTop: 6 }}>
-                <button onClick={logout}>{t('cg.logout', 'Esci dall\'account')}</button>
-                {auth.role === 'admin' && (
-                  <a
-                    className="tag"
-                    href="/admin"
-                    target="_blank"
-                    rel="noreferrer"
-                    style={{ textDecoration: 'none', padding: '4px 10px', cursor: 'pointer', borderColor: 'var(--accent)', color: 'var(--accent)' }}
-                    title={t('cg.adminPanelTitle', 'Apri il pannello admin del server in una nuova scheda (da lì torna qui con il link “App”)')}
-                  >
-                    🛡️ {t('cg.adminPanel', 'Pannello admin')}
-                  </a>
-                )}
-                {auth.totpEnabled ? (
-                  <>
-                    <span className="ok">🔐 {t('cg.2faOn', '2FA attiva')}</span>
-                    <button
-                      onClick={() => {
-                        const pw = window.prompt(t('cg.2faDisablePw', 'Password dell\'account per disattivare la 2FA:'));
-                        if (pw) void disableTotp(pw);
-                      }}
-                    >
-                      {t('cg.2faOff', 'Disattiva 2FA')}
-                    </button>
-                  </>
-                ) : (
-                  <button onClick={() => void setupTotp()} title={t('cg.2faEnableTitle', 'Attiva la verifica in due passaggi con un\'app authenticator (Google Authenticator, Aegis…)')}>
-                    🔐 {t('cg.2faEnable', 'Attiva 2FA')}
-                  </button>
-                )}
-              </div>
-              {passkeySupported && (
-                <div style={{ marginTop: 8 }}>
-                  <div className="row">
-                    <b>🔑 {t('cg.pkTitle', 'Passkey')}</b>
-                    <button onClick={() => void passkeyRegister()} title={t('cg.pkAddTitle', 'Registra una nuova passkey (impronta/PIN del dispositivo o password manager)')}>
-                      ➕ {t('cg.pkAdd', 'Aggiungi passkey')}
-                    </button>
-                    <button onClick={() => void refreshPasskeys()} title={t('cg.refresh', 'Aggiorna')}>
-                      <Icon name="refresh" size={13} />
-                    </button>
-                  </div>
-                  {passkeys.length === 0 ? (
-                    <div className="muted" style={{ fontSize: 11, marginTop: 4 }}>{t('cg.pkEmpty', 'Nessuna passkey registrata su questo account')}</div>
-                  ) : (
-                    passkeys.map((p) => (
-                      <div className="row" key={p.id} style={{ marginTop: 4 }}>
-                        <span style={{ fontSize: 12 }}>
-                          🔑 {p.name}{' '}
-                          <span className="muted">
-                            ({p.deviceType ?? '?'}{p.backedUp ? ', sync' : ''} · {p.createdAt.slice(0, 10)})
-                          </span>
-                        </span>
-                        <button className="danger" onClick={() => void removePasskey(p.id)}>{t('cg.pkRemove', 'Rimuovi')}</button>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-              {totpSetup && !auth.totpEnabled && (
-                <div style={{ marginTop: 8, padding: 10, background: 'var(--panel2)', borderRadius: 8 }}>
-                  <b>{t('cg.2faScan', 'Scansiona il QR con l\'app authenticator, poi inserisci il codice a 6 cifre per confermare')}</b>
-                  <div className="row" style={{ marginTop: 6, alignItems: 'flex-start', gap: 12 }}>
-                    <QrBox text={totpSetup.otpauthUrl} />
-                    <div>
-                      <div className="muted" style={{ fontSize: 11 }}>{t('cg.2faSecret', 'secret (inserimento manuale):')} <code>{totpSetup.secret}</code></div>
-                      <div className="muted" style={{ fontSize: 11, marginTop: 6 }}>{t('cg.2faBackup', 'Codici di backup (salvali: valgono una volta sola):')}</div>
-                      <div style={{ columns: 2 }}>
-                        {totpSetup.backupCodes.map((b) => <div key={b} style={{ fontSize: 12 }}><code>{b}</code></div>)}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="row" style={{ marginTop: 8 }}>
-                    <input
-                      value={totpCode}
-                      onChange={(e) => setTotpCode(e.target.value)}
-                      onKeyDown={onEnter(() => void enableTotp(totpCode))}
-                      placeholder={t('cg.2faCodePh', 'Codice 6 cifre')}
-                      inputMode="numeric"
-                      maxLength={6}
-                      style={{ width: 130 }}
-                    />
-                    <button className="primary" disabled={totpCode.trim().length !== 6} onClick={() => void enableTotp(totpCode)}>
-                      {t('cg.2faConfirm', 'Conferma e attiva')}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </>
-          ) : (
-            <>
-              <div className="row">
-                <input value={accountName} onChange={(e) => setAccountName(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder="Username" style={{ flex: 1 }} />
-                <input type="password" value={accountPw} onChange={(e) => setAccountPw(e.target.value)} onKeyDown={onEnter(() => doLogin(accountName, accountPw))} placeholder={t('cg.pwServer', 'Password (verificata dal server)')} style={{ flex: 1 }} />
-              </div>
-              <div className="row" style={{ marginTop: 6 }}>
-                {registration !== 'invite' && (
-                  <button onClick={() => doRegister(accountName, accountPw)}>{t('cg.register', 'Registrati')}</button>
-                )}
-                <button className="primary" onClick={() => doLogin(accountName, accountPw)}>{t('cg.login', 'Login')}</button>
-              </div>
-              {passkeySupported ? (
-                <div className="row" style={{ marginTop: 6 }}>
-                  <button onClick={() => void passkeyLogin(accountName)} title={t('cg.pkLoginTitle', 'Accedi con una passkey (impronta/PIN del dispositivo o password manager): niente password')}>
-                    🔑 {t('cg.pkLogin', 'Accedi con passkey')}
-                  </button>
-                  {accountName.trim() !== '' && (
-                    <span className="muted" style={{ fontSize: 11 }}>{t('cg.pkLoginAs', 'come')} <b>{accountName.trim()}</b></span>
-                  )}
-                </div>
-              ) : (
-                <div className="muted" style={{ marginTop: 6, fontSize: 11 }}>
-                  🔑 {t('cg.pkNeedHttps', 'Le passkey funzionano solo su HTTPS (o localhost): configura https sul server per usarle')}
-                </div>
-              )}
-              {totpPending && (
-                <div className="row" style={{ marginTop: 6 }}>
-                  <span className="muted">🔐 {t('cg.2faNeed', '2FA attiva su questo account: inserisci il codice dell\'app authenticator')}</span>
-                  <input
-                    value={totpCode}
-                    onChange={(e) => setTotpCode(e.target.value)}
-                    onKeyDown={onEnter(() => doLoginTotp(totpPending, accountPw, totpCode))}
-                    placeholder={t('cg.2faCodePh', 'Codice 6 cifre')}
-                    inputMode="numeric"
-                    maxLength={6}
-                    style={{ width: 130 }}
-                    autoFocus
-                  />
-                  <button className="primary" disabled={totpCode.trim().length !== 6} onClick={() => doLoginTotp(totpPending, accountPw, totpCode)}>{t('cg.login', 'Login')}</button>
-                  <button
-                    disabled={totpCode.trim().length < 6}
-                    onClick={() => doLoginTotpBackup(totpPending, accountPw, totpCode)}
-                    title={t('cg.2faBackupLoginTitle', 'Usa un codice di backup (vale una volta sola)')}
-                  >
-                    {t('cg.2faBackupLogin', 'Usa codice di backup')}
-                  </button>
-                </div>
-              )}
-              {notice && <div className="ok" style={{ marginTop: 6 }}>ℹ️ {notice}</div>}
-              <div className="muted" style={{ marginTop: 6 }}>
-                {registration === 'invite'
-                  ? `📨 ${t('home.regInviteHint', 'Su questo server la registrazione è solo su invito: chiedi all\'admin un link /invite?token=… (univoco, a scadenza, vale una sola volta)')}`
-                  : t('cg.regNote', 'La registrazione crea una richiesta che l\'admin approva dal pannello /admin; la password è salvata lato server solo come hash (scrypt), mai in chiaro.')}
-              </div>
-            </>
-          )}
+          <div className="muted">
+            {auth
+              ? tf('cg.accountMovedLogged', 'Loggato come {u}: login/logout, 2FA, passkey e libreria schede sono ora nella tab Account.', { u: auth.username })
+              : t('cg.accountMoved', 'Login, registrazione, 2FA, passkey e libreria schede sono ora nella tab Account.')}
+          </div>
+          <div className="row" style={{ marginTop: 8 }}>
+            <button className="primary" onClick={onGoAccount}><Icon name="user" size={13} /> {t('tab.account', 'Account')}</button>
+          </div>
         </div>
 
         <div className="card">

@@ -8,6 +8,7 @@ import {
   type SrdData,
 } from '@dnd5e/core';
 import { SRD_DATA, createSrdRegistry } from '@dnd5e/data-srd';
+import { applyOverridesToRegistry, countOverrides, loadOverrides } from './srdOverrides.js';
 import { loadJSON, saveJSON } from './storage.js';
 import { getLang, storeLang, t as translate, tf as translateF, type Lang } from './i18n.js';
 
@@ -84,6 +85,9 @@ interface Store {
   setCampaignMeta: (campaignId: string, meta: { name: string; server?: string }) => void;
   reloadCustom: () => void;
   customCount: number;
+  /** numero di override delle regole base (SRD) attivi e ricaricamento a caldo */
+  srdOverrideCount: number;
+  reloadSrdOverrides: () => void;
   /** annulla l'ultima modifica alla scheda attiva (snapshot in memoria, max 30) */
   undo: () => void;
   canUndo: boolean;
@@ -103,6 +107,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<SheetStoreData>({ activeId: null, sheets: {}, campaignMeta: {} });
   const [ready, setReady] = useState(false);
   const [customCount, setCustomCount] = useState(0);
+  const [srdOverrideCount, setSrdOverrideCount] = useState(0);
+  const reloadSrdOverrides = () => {
+    loadOverrides().then((o) => {
+      setSrdOverrideCount(countOverrides(o));
+      applyOverridesToRegistry(reg, o);
+      setCustomCount((c) => c + 1); // forza rerender dei componenti che leggono reg
+    }).catch(() => {});
+  };
   const [lang, setLangState] = useState<Lang>(getLang);
 
   useEffect(() => {
@@ -144,6 +156,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     loadCustom();
+    reloadSrdOverrides();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -244,6 +257,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setCampaignMeta,
     reloadCustom: loadCustom,
     customCount,
+    srdOverrideCount,
+    reloadSrdOverrides,
     undo,
     canUndo,
     lang,

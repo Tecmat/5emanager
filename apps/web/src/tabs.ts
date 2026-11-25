@@ -1,7 +1,7 @@
 import type { IconName } from './icons.js';
 
 /** pagine principali del menu (la pagina "scheda" esiste solo con una scheda attiva) */
-export type MainPageId = 'home' | 'campagna' | 'p2p' | 'custom';
+export type MainPageId = 'home' | 'campagna' | 'p2p' | 'custom' | 'account';
 export type Page = MainPageId | 'scheda';
 
 /** tab interne alla pagina scheda */
@@ -12,6 +12,7 @@ export const MAIN_PAGES: { id: MainPageId; icon: IconName; key: string; fb: stri
   { id: 'campagna', icon: 'map', key: 'tab.campagna', fb: 'Campagna' },
   { id: 'p2p', icon: 'save', key: 'tab.p2p', fb: 'Campagne P2P' },
   { id: 'custom', icon: 'flask', key: 'tab.custom', fb: 'Contenuti custom' },
+  { id: 'account', icon: 'user', key: 'tab.account', fb: 'Account' },
 ];
 
 export const SHEET_TABS: { id: SheetTabId; icon: IconName; key: string; fb: string }[] = [

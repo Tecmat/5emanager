@@ -43,6 +43,8 @@ src-tauri/          # wrapper desktop Tauri v2
 - **Combattimento**: initiative, turni/round, PF e condizioni dei nemici, **mappa tattica con token trascinabili** (griglia 5 ft, sincronizzata in multiplayer) e **party tracker del master** sempre visibile
 - **Inventario**: peso, equipaggiamento, sintonizzazione, valuta
 - **Contenuti custom** validati, salvati in localStorage e separati dai dati SRD; scheda esportabile/importabile in JSON
+- **Editor regole base (SRD)**: in *Contenuti custom* modifichi nomi/descrizioni/traduzioni delle regole base come override locali (esporta/importa JSON), senza toccare il pacchetto
+- **Tab Account** dedicata: login/logout, 2FA TOTP, passkey e libreria schede sul server in una pagina a sé
 - **Personalizzazione interfaccia**: tema scuro/chiaro/auto, palette colori (predefinite o custom), stile bordi e raggio angoli, set icone (interne o Lucide open source) e riordino/nascosdi delle tab principali e della scheda
 - **PWA offline**: app installabile che funziona senza rete (shell + dati in cache), indicatore offline e promemoria di sessione con notifica
 - **Import da D&D Beyond**: export JSON proprio importato come nuova scheda (best-effort)

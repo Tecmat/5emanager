@@ -27,6 +27,8 @@ type Kind = 'spell' | 'weapon' | 'armor' | 'enemy' | 'feat' | 'race' | 'subclass
 
 const splitList = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
+import SrdEditorCard from './SrdEditorCard.js';
+
 export default function CustomTab() {
   const { reg, reloadCustom, t, tf } = useStore();
   const [kind, setKind] = useState<Kind>('spell');
@@ -216,6 +218,7 @@ export default function CustomTab() {
 
   return (
     <div className="grid cols2">
+      <SrdEditorCard />
       <div className="card">
         <h3>{t('cu.add', 'Aggiungi contenuto custom')}</h3>
         <label>{t('cu.type', 'Tipo')}</label>
