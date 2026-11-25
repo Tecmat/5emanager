@@ -102,13 +102,16 @@ interface AccountsFile {
   settings?: { registration?: RegistrationMode };
 }
 
-/** modalita' di registrazione del server: env DND5E_REGISTRATION > impostazione salvata > 'approval' (default).
+/** modalita' di registrazione del server: impostazione salvata dal pannello /admin (persistente) >
+ *  env DND5E_REGISTRATION (solo valore iniziale/default) > 'approval'.
+ *  Cosi' il cambio fatto da /admin resta valido ai riavvii anche se la env e' impostata (es. compose).
  *  'invite' = solo su invito: /api/register e' chiuso, si registra solo da un link /invite?token=… creato dall'admin */
 export function registrationMode(): RegistrationMode {
+  const saved = loadAccountsFile().settings?.registration;
+  if (saved === 'open' || saved === 'approval' || saved === 'invite') return saved;
   const env = (process.env.DND5E_REGISTRATION ?? '').trim().toLowerCase();
   if (env === 'open' || env === 'approval' || env === 'invite') return env;
-  const saved = loadAccountsFile().settings?.registration;
-  return saved === 'open' || saved === 'invite' ? saved : 'approval';
+  return 'approval';
 }
 
 /** l'admin cambia la modalita' di registrazione (persistente su disco) */

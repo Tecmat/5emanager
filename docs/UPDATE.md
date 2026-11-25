@@ -19,6 +19,27 @@ all'avvio; il pallino arancione segnala che c'è una nuova versione).
 - Se l'endpoint non risponde (server vecchio), resta il fallback: confronto `/version.json` +
   reload del service worker dopo il redeploy manuale.
 
+## Server (Node) self-hosted — self-update completo da `/admin`, senza terminale
+
+Dal pannello **/admin → Strumenti admin** ci sono due pulsanti distinti:
+
+- **⬇️ Aggiorna la webapp** → `POST /api/update/apply` (default `what=web`): solo la build web
+  (`web-dist.zip` → `DND5E_STATIC_DIR`, con backup). In Docker la cartella è dentro l'immagine:
+  l'effetto dura finché il container non viene ricreato.
+- **🔄 Aggiorna tutto il server (git)** → `POST /api/update/apply?what=server`: disponibile solo
+  se il server gira da **checkout git** (c'è `.git`; `/api/update` risponde `deployment: "git"`).
+  Esegue `git fetch origin --tags` + `git checkout <tag-ultima-release>` + `npm ci` (solo se
+  `package-lock.json` è cambiato) + `npm run build -w @dnd5e/web`. Rifiuta con 409 se il working
+  tree è sporco (salvo `?force=1`). Dopo l'apply il processo vecchio resta in esecuzione:
+  serve un **riavvio** (`restartRequired: true`); con `DND5E_SELF_RESTART=true` il server si
+  riavvia da solo (spawn detached + exit) dopo aver risposto.
+- **Dentro Docker** il self-update del server **non è possibile** (niente `.git` nel container):
+  l'endpoint risponde 409 e il pannello mostra le istruzioni giuste — aggiornare sull'host con
+  `git pull && docker compose up -d --build` (l'immagine si builda in locale dal repo).
+- Tutte le apply sono registrate nell'**audit log** (`update-apply` con versione e IP).
+- Env utili: `DND5E_APP_ROOT` (root dell'app, default `process.cwd()`), `DND5E_SELF_RESTART=true`
+  (riavvio automatico dopo `what=server`, solo da checkout git).
+
 ## Desktop (Tauri, self-update per SO)
 
 - Il check lo fa il **processo Rust** (`check_update` in `src-tauri/src/lib.rs`, reqwest -> GitHub API,

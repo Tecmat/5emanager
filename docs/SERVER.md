@@ -145,8 +145,10 @@ Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse prox
 - `DND5E_REGISTRATION=open`: `register` crea subito l'account (e fa login immediato); via HTTP `POST /api/register`.
 - `DND5E_REGISTRATION=invite` (**solo su invito**): `register`/`POST /api/register` sono **chiusi** (403
   "solo su invito"); si registra solo da un link di invito creato dall'admin (vedi sotto).
-- L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data` v8);
+- L'admin può cambiare modalità dal pannello (`adminSetRegistration`, persistito in `accounts.data`);
   `/api/info` espone `registration` e `requireAuth`.
+- **Priorità**: il valore salvato dal pannello `/admin` vince sull'env `DND5E_REGISTRATION` (che resta solo
+  il valore iniziale/default, es. dal compose) e persiste ai riavvii; default `approval`.
 - La modalità è **visibile nell'app**: tag "solo su invito / aperta / con approvazione" nella card account
   (tab Home e Campagna, da `/api/me` o `/api/info`); in modalità invito il pulsante "Registrati" è nascosto
   e al suo posto appare il suggerimento di chiedere il link `/invite?token=…` (la pagina `/login` nasconde

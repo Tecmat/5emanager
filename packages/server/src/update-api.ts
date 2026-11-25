@@ -1,11 +1,15 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { Readable } from 'node:stream';
 import { inflateRawSync } from 'node:zlib';
+import { execFile, spawn } from 'node:child_process';
+import { promisify } from 'node:util';
 import { cpSync, existsSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { hostname } from 'node:os';
 import { registrationMode } from './accounts.js';
 import { audit } from './audit.js';
+
+const execFileP = promisify(execFile);
 
 /**
  * Endpoint di check-update lato server (utile quando il repo GitHub è PRIVATO):
@@ -150,11 +154,86 @@ export function unzipTo(buf: Buffer, destDir: string): void {
   }
 }
 
+/** root dell'app: checkout git in dev/source, /app dentro l'immagine Docker. DND5E_APP_ROOT la sovrascrive (test) */
+const APP_ROOT = process.env.DND5E_APP_ROOT ?? process.cwd();
+
+export type DeploymentMode = 'docker' | 'git' | 'dir';
 /**
- * POST /api/update/apply — aggiorna la web app servita da QUESTO server scaricando
- * web-dist.zip dall'ultima release GitHub (con backup di dist/ e ripristino in caso di errore).
+ * Come gira il server: 'docker' = immagine (niente .git dentro: self-update del server impossibile,
+ * si aggiorna ricreando il container), 'git' = checkout sorgenti (self-update via git disponibile),
+ * 'dir' = altro (es. test o installazione senza .git).
+ */
+export function deploymentMode(root: string = APP_ROOT, docker: boolean = existsSync('/.dockerenv')): DeploymentMode {
+  if (docker) return 'docker';
+  if (existsSync(join(root, '.git'))) return 'git';
+  return 'dir';
+}
+
+type RunFn = (cmd: string, args: string[], timeoutMs: number) => Promise<string>;
+const defaultRun: RunFn = async (cmd, args, timeoutMs) => {
+  const { stdout } = await execFileP(cmd, args, {
+    cwd: APP_ROOT,
+    timeout: timeoutMs,
+    maxBuffer: 16 * 1024 * 1024,
+    env: { ...process.env, GIT_TERMINAL_PROMPT: '0', CI: '1' },
+  });
+  return stdout.trim();
+};
+
+export interface ServerUpdateResult {
+  version: string;
+  from: string;
+  lockChanged: boolean;
+  restartRequired: boolean;
+}
+
+/**
+ * Self-update COMPLETO del server da checkout git (non dentro Docker): porta il codice al tag
+ * dell'ultima release (git fetch + checkout), reinstalla le dipendenze solo se package-lock.json
+ * e' cambiato, rebuilda la webapp. Il processo in esecuzione resta sulla vecchia versione fino al
+ * riavvio (restartRequired; con DND5E_SELF_RESTART=true si riavvia da solo dopo aver risposto).
+ */
+export async function applyServerUpdate(tag: string, opts: { force?: boolean; root?: string; docker?: boolean; run?: RunFn } = {}): Promise<ServerUpdateResult> {
+  const root = opts.root ?? APP_ROOT;
+  const mode = deploymentMode(root, opts.docker);
+  if (mode !== 'git') {
+    const e = new Error(
+      mode === 'docker'
+        ? "self-update del server non disponibile dentro il container Docker: aggiorna ricreando l'immagine sull'host ('git pull && docker compose up -d --build'); da qui puoi aggiornare solo la webapp (what=web)"
+        : "self-update del server non disponibile (nessun .git qui): da qui puoi aggiornare solo la webapp (what=web)",
+    ) as Error & { statusCode?: number };
+    e.statusCode = 409;
+    throw e;
+  }
+  if (!/^v?\d+\.\d+\.\d+(-[0-9A-Za-z.-]+)?$/.test(tag)) {
+    const e = new Error(`tag di release non valido: ${tag}`) as Error & { statusCode?: number };
+    e.statusCode = 400;
+    throw e;
+  }
+  const run = opts.run ?? defaultRun;
+  const dirty = await run('git', ['status', '--porcelain'], 15000);
+  if (dirty && !opts.force) {
+    const e = new Error(`working tree non pulito (${dirty.split('\n')[0]}…): committa o fai stash prima, oppure force=1`) as Error & { statusCode?: number };
+    e.statusCode = 409;
+    throw e;
+  }
+  const from = await run('git', ['rev-parse', '--short', 'HEAD'], 15000);
+  await run('git', ['fetch', 'origin', '--tags', '--force'], 120000);
+  await run('git', ['checkout', '--force', tag], 30000);
+  const changed = await run('git', ['diff', '--name-only', from, tag], 30000);
+  const lockChanged = changed.split('\n').filter(Boolean).includes('package-lock.json');
+  if (lockChanged) await run('npm', ['ci', '--no-audit', '--no-fund'], 600000);
+  await run('npm', ['run', 'build', '-w', '@dnd5e/web'], 300000);
+  return { version: tag, from, lockChanged, restartRequired: true };
+}
+
+/**
+ * POST /api/update/apply — aggiorna il server servito da QUESTO server:
+ *  - ?what=web (default): scarica web-dist.zip dall'ultima release GitHub e sostituisce la build
+ *    servita (con backup di dist/ e ripristino in caso di errore) — solo la webapp, niente terminale;
+ *  - ?what=server: self-update completo da checkout git (fetch + checkout tag + npm ci se serve +
+ *    rebuild webapp); dentro Docker restituisce 409 con le istruzioni giuste. Richiede admin.
  * Se DND5E_ADMIN_TOKEN è impostato, richiede l'header x-admin-token (o ?token=).
- * Così la webapp si aggiorna tutta dall'app, senza comandi da terminale.
  */
 export async function handleApplyUpdate(req: IncomingMessage, res: ServerResponse): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -167,8 +246,26 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
     const tok = String(req.headers['x-admin-token'] ?? url.searchParams.get('token') ?? '');
     if (tok !== ADMIN_TOKEN) return void json(401, { error: 'token admin richiesto (x-admin-token)' });
   }
+  const ip = String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
+  const what = url.searchParams.get('what') ?? 'web';
   try {
     const rel = await latestRelease();
+    if (what === 'server') {
+      const r = await applyServerUpdate(rel.tag, { force: url.searchParams.get('force') === '1' });
+      audit('admin', 'update-apply', `server -> ${rel.tag} (da ${r.from}, lockChanged=${r.lockChanged})`, ip);
+      json(200, { ok: true, target: 'server', version: r.version, from: r.from, lockChanged: r.lockChanged, restartRequired: r.restartRequired });
+      // riavvio automatico opzionale (solo fuori Docker): il processo vecchio esce dopo aver risposto
+      if (process.env.DND5E_SELF_RESTART === 'true' && deploymentMode() === 'git') {
+        setTimeout(() => {
+          try {
+            const c = spawn(process.execPath, process.argv.slice(1), { cwd: APP_ROOT, detached: true, stdio: 'ignore', env: process.env });
+            c.unref();
+          } catch { /* niente */ }
+          process.exit(0);
+        }, 800);
+      }
+      return;
+    }
     const asset = rel.assets.find((a) => a.name === 'web-dist.zip');
     if (!asset) return void json(404, { error: `web-dist.zip non presente nella release ${rel.tag}` });
     const r = await ghFetch(`/repos/${GH_REPO}/releases/assets/${asset.id}`, 'application/octet-stream');
@@ -188,10 +285,11 @@ export async function handleApplyUpdate(req: IncomingMessage, res: ServerRespons
       if (existsSync(bak)) moveDir(bak, STATIC_DIR); // ripristina la vecchia build
       throw e;
     }
-    audit('admin', 'update-apply', `webapp -> ${rel.tag}`, String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, ''));
-    return void json(200, { ok: true, version: rel.tag });
+    audit('admin', 'update-apply', `webapp -> ${rel.tag}`, ip);
+    return void json(200, { ok: true, target: 'web', version: rel.tag });
   } catch (e) {
-    return void json(502, { error: (e as Error).message });
+    const code = (e as { statusCode?: number }).statusCode ?? 502;
+    return void json(code, { error: (e as Error).message });
   }
 }
 
@@ -235,8 +333,9 @@ export async function handleUpdateApi(req: IncomingMessage, res: ServerResponse)
   if (path === '/api/update') {
     try {
       const rel = await latestRelease();
+      const mode = deploymentMode();
       res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-      res.end(JSON.stringify(rel));
+      res.end(JSON.stringify({ ...rel, deployment: mode, selfUpdate: mode === 'git' }));
     } catch (e) {
       res.writeHead(502, { 'content-type': 'application/json', 'cache-control': 'no-store' });
       res.end(JSON.stringify({ error: (e as Error).message }));

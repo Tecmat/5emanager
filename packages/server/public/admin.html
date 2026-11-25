@@ -71,7 +71,11 @@
     </div>
     <div class="row" style="margin-top:8px">
       <button id="update-app-btn" class="primary">⬇️ Aggiorna la webapp del server ora</button>
-      <span class="muted">scarica <code>web-dist.zip</code> dall'ultima release GitHub e sostituisce la build servita (con backup automatico) — niente terminale</span>
+      <span class="muted">scarica <code>web-dist.zip</code> dall'ultima release GitHub e sostituisce solo la build web servita (con backup automatico) — niente terminale</span>
+    </div>
+    <div class="row" style="margin-top:8px">
+      <button id="update-server-btn" class="primary" style="display:none">🔄 Aggiorna tutto il server (git) ora</button>
+      <span class="muted" id="update-server-hint"></span>
     </div>
     <div id="tools-status" style="margin-top:6px"></div>
   </div>
@@ -509,6 +513,46 @@ document.getElementById('update-app-btn').onclick = async () => {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
     st.innerHTML = '<span class="ok">✅ Webapp aggiornata a ' + esc(j.version || 'nuova versione') + ' — ricarica la pagina per usare la build nuova.</span>';
+  } catch (e) {
+    st.innerHTML = '<span class="error">❌ ' + esc(e.message) + '</span>';
+  }
+};
+
+// self-update del server: disponibile solo da checkout git; in Docker mostro le istruzioni giuste
+async function loadDeployment() {
+  const hint = document.getElementById('update-server-hint');
+  const btn = document.getElementById('update-server-btn');
+  try {
+    const r = await fetch('/api/update');
+    const j = await r.json().catch(() => ({}));
+    if (j.deployment === 'git') {
+      btn.style.display = '';
+      hint.textContent = 'server da checkout git: porta server + webapp all\'ultima release senza terminale (dopo il riavvio sei sulla nuova versione)';
+    } else if (j.deployment === 'docker') {
+      hint.textContent = 'sei in Docker: il server si aggiorna ricreando il container — sull\'host: git pull && docker compose up -d --build (da qui aggiorni solo la webapp)';
+    } else {
+      hint.textContent = 'self-update del server non disponibile qui (nessun .git): da qui aggiorni solo la webapp';
+    }
+  } catch { /* /api/update non raggiungibile: niente pulsante */ }
+}
+loadDeployment();
+
+document.getElementById('update-server-btn').onclick = async () => {
+  const st = document.getElementById('tools-status');
+  st.innerHTML = '<span class="muted">🔄 git fetch + checkout ultima release + rebuild…</span>';
+  try {
+    const token = tokenInput.value || '';
+    let r = await fetch('/api/update/apply?what=server', { method: 'POST', headers: token ? { 'x-admin-token': token } : {} });
+    if (r.status === 401) {
+      const tok = prompt('Token admin (DND5E_ADMIN_TOKEN):') || '';
+      sessionStorage.setItem('dnd5e.admin.token', tok);
+      tokenInput.value = tok;
+      r = await fetch('/api/update/apply?what=server', { method: 'POST', headers: { 'x-admin-token': tok } });
+    }
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || ('HTTP ' + r.status));
+    st.innerHTML = '<span class="ok">✅ Server aggiornato a ' + esc(j.version || '?') + ' (da ' + esc(j.from || '?') + (j.lockChanged ? ', dipendenze reinstallate' : '') + ').' +
+      (j.restartRequired ? ' Riavvio richiesto: con <code>DND5E_SELF_RESTART=true</code> riparte da solo, altrimenti riavvia il processo.' : '') + '</span>';
   } catch (e) {
     st.innerHTML = '<span class="error">❌ ' + esc(e.message) + '</span>';
   }
