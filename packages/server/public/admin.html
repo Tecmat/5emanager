@@ -64,6 +64,17 @@
   </div>
 
   <div class="card">
+    <h2>🔐 Sicurezza</h2>
+    <div id="sec-warnings"></div>
+    <div class="muted" style="font-size:12px;margin-top:6px">
+      Hardening attivo: cookie HttpOnly/SameSite (+ <code>Secure</code> e HSTS su HTTPS), header di sicurezza su tutte le risposte,
+      controllo Origin sui WebSocket, rate limit su login/register/invite (<code>DND5E_LOGIN_MAX_ATTEMPTS</code>, <code>DND5E_REGISTER_MAX_ATTEMPTS</code>, <code>DND5E_INVITE_MAX_ATTEMPTS</code>),
+      password con scrypt+sale, <code>/.well-known/security.txt</code> pubblico.
+      <span id="sec-allowlist"></span><br>Policy: <code>SECURITY.md</code> · deploy: <code>docs/DOCKER.md</code>
+    </div>
+  </div>
+
+  <div class="card">
     <h2>Strumenti admin</h2>
     <div class="row">
       <input id="broadcast-msg" placeholder="Messaggio da inviare a tutti i client connessi…" style="flex:1; min-width:260px">
@@ -222,6 +233,14 @@ function renderAudit(entries) {
 }
 
 function render(state) {
+  // card sicurezza: admin senza 2FA (TOTP/passkey)
+  const sec = document.getElementById('sec-warnings');
+  if (sec && state.accounts) {
+    const weak = state.accounts.filter((a) => a.role === 'admin' && !a.totp && !(a.passkeys > 0));
+    sec.innerHTML = weak.length
+      ? '<div class="error">⚠️ Admin senza 2FA (TOTP/passkey): <b>' + weak.map((a) => esc(a.username)).join(', ') + '</b> — attivala da Campagna → Account. I login admin senza 2FA vengono registrados nell\'audit log (<code>admin-login-no-2fa</code>).</div>'
+      : '<div class="ok">✅ Tutti gli account admin hanno la 2FA attiva (TOTP o passkey).</div>';
+  }
   // info server
   const si = document.getElementById('serverinfo');
   if (state.server) {
@@ -536,6 +555,12 @@ async function loadDeployment() {
   } catch { /* /api/update non raggiungibile: niente pulsante */ }
 }
 loadDeployment();
+
+// stato hardening: allowlist IP admin esposta da /api/info
+fetch('/api/info').then((r) => r.json()).then((j) => {
+  const el = document.getElementById('sec-allowlist');
+  if (el && j.adminAllowlist) el.textContent = 'Allowlist IP admin attiva (DND5E_ADMIN_ALLOWLIST): /admin, adminAuth e self-update solo dagli IP in lista. ';
+}).catch(() => {});
 
 document.getElementById('update-server-btn').onclick = async () => {
   const st = document.getElementById('tools-status');

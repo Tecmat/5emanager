@@ -66,6 +66,10 @@ export interface CombatState {
   template?: CombatTemplate;
   /** mappa tattica con i token dei combattenti (sincronizzata via state) */
   map?: TacticalMap;
+  /** timer di turno (secondi) impostato dal master: se presente, il countdown parte da turnStartedAt ed è uguale per tutti */
+  turnTimerSec?: number;
+  /** istante (ISO) di inizio del turno corrente: con turnTimerSec dà il countdown sincronizzato */
+  turnStartedAt?: string;
 }
 
 /** crea la mappa di default e mette i combattenti senza token in posizioni a griglia */
@@ -135,7 +139,7 @@ export function startCombat(char: Character, reg?: Registry): CombatState {
     bonusUsed: false,
     reactionUsed: false,
   };
-  return ensureMap({ combatants: [player], round: 1, turnIndex: 0, log: [`⚔️ Combattimento iniziato! ${char.name} entra con CA ${ac}.`] });
+  return ensureMap({ combatants: [player], round: 1, turnIndex: 0, turnStartedAt: new Date().toISOString(), log: [`⚔️ Combattimento iniziato! ${char.name} entra con CA ${ac}.`] });
 }
 
 /** combattimento con tutta la party: un combattente per personaggio */
@@ -172,6 +176,7 @@ export function startPartyCombat(chars: Character[], reg: Registry): CombatState
     combatants: sortByInitiative(combatants),
     round: 1,
     turnIndex: 0,
+    turnStartedAt: new Date().toISOString(),
     log: [`⚔️ Combattimento iniziato con ${combatants.length} PG!`],
   };
   return ensureMap(base);
@@ -288,7 +293,20 @@ export function nextTurn(state: CombatState): CombatState {
   });
   const cur = combatants[turnIndex];
   if (cur) log.push(`▶️ Round ${round} — turno di ${cur.name} (CA ${cur.ac}, PF ${cur.hp}/${cur.maxHp}).`);
-  return { ...state, combatants, turnIndex, round, log };
+  return { ...state, combatants, turnIndex, round, log, turnStartedAt: new Date().toISOString() };
+}
+
+/**
+ * Imposta il timer di turno condiviso (solo il master, via azione setTurnTimer):
+ * 0 disattiva il timer (torna a quello locale). Ritorna lo stato con turnTimerSec aggiornato.
+ */
+export function setTurnTimer(state: CombatState, seconds: number): CombatState {
+  const sec = Math.max(0, Math.min(3600, Math.round(seconds)));
+  const next = { ...state };
+  if (sec <= 0) delete next.turnTimerSec;
+  else next.turnTimerSec = sec;
+  next.turnStartedAt = new Date().toISOString();
+  return next;
 }
 
 export function currentCombatant(state: CombatState): Combatant | undefined {

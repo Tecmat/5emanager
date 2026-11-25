@@ -129,6 +129,59 @@ function clientIpOf(req: IncomingMessage): string {
   return String(req.socket.remoteAddress ?? '').replace(/^::ffff:/, '');
 }
 
+// --- allowlist IP delle superfici admin (DND5E_ADMIN_ALLOWLIST="192.168.1.0/24,10.0.0.5") ---
+function ipv4ToNum(ip: string): number | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (!m) return null;
+  const p = m.slice(1).map(Number);
+  if (p.some((n) => n > 255)) return null;
+  return (((p[0] << 24) >>> 0) + (p[1] << 16) + (p[2] << 8) + p[3]) >>> 0;
+}
+
+/** ip corrisponde a una entry della lista (IP esatto o CIDR IPv4, es. 10.0.0.0/8) */
+function ipInList(ip: string, list: string[]): boolean {
+  return list.some((entry) => {
+    if (!entry.includes('/')) return ip === entry;
+    const [base, bitsStr] = entry.split('/');
+    const bits = Number(bitsStr);
+    if (!Number.isInteger(bits) || bits < 0 || bits > 32) return false;
+    const ipN = ipv4ToNum(ip);
+    const baseN = ipv4ToNum(base);
+    if (ipN === null || baseN === null) return false;
+    if (bits === 0) return true;
+    const mask = (0xffffffff << (32 - bits)) >>> 0;
+    return (ipN & mask) === (baseN & mask);
+  });
+}
+
+function adminAllowlist(): string[] {
+  return (process.env.DND5E_ADMIN_ALLOWLIST ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+function trustXff(): boolean {
+  return (process.env.DND5E_TRUST_XFF ?? '').trim().toLowerCase() === 'true';
+}
+
+/**
+ * true se l'IP puo' accedere alle superfici admin (/admin, adminAuth WS, /api/update/apply).
+ * Senza DND5E_ADMIN_ALLOWLIST non si filtra nulla. Dietro reverse proxy: il socket vede l'IP del
+ * proxy, quindi per un allowlist per-client impostare DND5E_TRUST_XFF=true e usare X-Forwarded-For.
+ */
+function adminIpAllowed(ip: string | undefined, xff?: string): boolean {
+  const list = adminAllowlist();
+  if (list.length === 0) return true;
+  if (ip && ipInList(ip, list)) return true;
+  if (trustXff() && xff) {
+    const chain = xff.split(',').map((s) => s.trim().replace(/^::ffff:/, '')).filter(Boolean);
+    if (chain.some((c) => ipInList(c, list))) return true;
+  }
+  return false;
+}
+
+function adminIpAllowedReq(req: IncomingMessage): boolean {
+  return adminIpAllowed(clientIpOf(req), String(req.headers['x-forwarded-for'] ?? ''));
+}
+
 /**
  * Header di sicurezza su TUTTE le risposte HTTP (utile quando il server e' esposto su HTTPS
  * dietro reverse proxy): nosniff, no-referrer, anti-clickjacking, CSP restrittiva ma
@@ -222,7 +275,8 @@ function isPublicPath(path: string): boolean {
     path === '/api/logout' || path === '/api/me' || path === '/api/info' ||
     path === '/api/setup' || path === '/setup' || path === '/setup.html' ||
     path === '/invite' || path === '/invite.html' || path === '/api/invite' ||
-    path === '/version.json' || path === '/api/update' || path === '/api/update/asset'
+    path === '/version.json' || path === '/api/update' || path === '/api/update/asset' ||
+    path === '/.well-known/security.txt'
   );
 }
 const STATIC_DIR = process.env.DND5E_STATIC_DIR ?? join(process.cwd(), 'apps', 'web', 'dist');
@@ -253,6 +307,8 @@ function serveStatic(req: IncomingMessage, res: ServerResponse): void {
  * Senza REQUIRE_AUTH e senza token resta aperta SOLO se non esistono ancora account (LAN fresca).
  */
 function adminPageDecision(req: IncomingMessage): 'serve' | 'login' | 'forbidden' {
+  // allowlist IP: se impostata e l'IP non è in lista, /admin è 403 a prescindere da sessione/token
+  if (!adminIpAllowedReq(req)) return 'forbidden';
   const tok = sessionTokenOf(req);
   const uname = tok ? sessionUsername(tok) ?? loginByRememberToken(tok)?.username : undefined;
   if (uname) return accountRole(uname) === 'admin' ? 'serve' : 'forbidden';
@@ -350,6 +406,11 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
         return;
       }
     }
+    if (rawPath === '/api/update/apply' && !adminIpAllowedReq(req)) {
+      res.writeHead(403, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+      res.end(JSON.stringify({ error: 'IP non autorizzato (DND5E_ADMIN_ALLOWLIST)' }));
+      return;
+    }
     void handleUpdateApi(req, res);
     return;
   }
@@ -361,6 +422,18 @@ function serveStaticNext(req: IncomingMessage, res: ServerResponse): void {
     if (!serveSetupPage(res)) {
       res.writeHead(404);
       res.end('setup page non trovata');
+    }
+    return;
+  }
+  // security.txt (RFC 9116): sempre pubblico, anche con REQUIRE_AUTH
+  if (rawPath === '/.well-known/security.txt') {
+    const sec = join(dirname(fileURLToPath(import.meta.url)), '..', 'public', 'security.txt');
+    try {
+      res.writeHead(200, { 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'public, max-age=86400' });
+      res.end(readFileSync(sec));
+    } catch {
+      res.writeHead(404);
+      res.end('not found');
     }
     return;
   }
@@ -424,6 +497,8 @@ interface Conn {
   admin?: boolean;
   /** header Host della richiesta WS: da qui deriviamo RP ID/origin delle passkey */
   rpHost?: string;
+  /** X-Forwarded-For dell'upgrade (se presente e DND5E_TRUST_XFF=true, conta per l'allowlist admin) */
+  xff?: string;
   /** challenge WebAuthn in corso su questa connessione (register/login passkey) */
   passkeyChallenge?: { kind: 'register' | 'login'; challenge: string; username?: string };
 }
@@ -558,15 +633,18 @@ function totpNoteAttempt(username: string): void {
 // throttle tentativi di login con password: max N falliti/minuto per chiave (DND5E_LOGIN_MAX_ATTEMPTS, default 10).
 // Si contano solo i fallimenti: un login riuscito azzera il contatore.
 const loginAttempts = new Map<string, number[]>();
-function loginMaxAttempts(): number {
-  const n = Number(process.env.DND5E_LOGIN_MAX_ATTEMPTS ?? 10);
-  return Number.isFinite(n) && n > 0 ? n : 10;
+function envInt(name: string, def: number): number {
+  const n = Number(process.env[name] ?? def);
+  return Number.isFinite(n) && n > 0 ? n : def;
 }
-function loginThrottled(key: string): boolean {
+function loginMaxAttempts(): number {
+  return envInt('DND5E_LOGIN_MAX_ATTEMPTS', 10);
+}
+function loginThrottled(key: string, max?: number): boolean {
   const now = Date.now();
   const arr = (loginAttempts.get(key) ?? []).filter((t) => now - t < 60_000);
   loginAttempts.set(key, arr);
-  return arr.length >= loginMaxAttempts();
+  return arr.length >= (max ?? loginMaxAttempts());
 }
 function loginNoteAttempt(key: string): void {
   const now = Date.now();
@@ -685,7 +763,7 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
     }
     if (path === '/api/register') {
       const key = 'reg|' + clientIpOf(req);
-      if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+      if (loginThrottled(key, envInt('DND5E_REGISTER_MAX_ATTEMPTS', 5))) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
       loginNoteAttempt(key);
       const username = String(body.username ?? '').trim();
       const password = String(body.password ?? '');
@@ -736,6 +814,10 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
         const token = createSession(acc.username);
         noteLogin(acc.username);
         audit(acc.username, 'login', undefined, clientIpOf(req));
+        // hardening: avvisa in audit se un admin entra con password ma senza 2FA (TOTP/passkey)
+        if (accountRole(acc.username) === 'admin' && !acc.totp?.enabled && (acc.passkeys?.length ?? 0) === 0) {
+          audit(acc.username, 'admin-login-no-2fa', 'admin loggato senza 2FA (attiva TOTP o una passkey)', clientIpOf(req));
+        }
         const remTok = remember ? createRememberToken(acc.username) : undefined;
         return void json(200, authJson(token, acc.username, remTok), remTok ?? token, remember), true;
       } catch (e) {
@@ -776,7 +858,7 @@ async function handleInviteApi(req: IncomingMessage, res: ServerResponse): Promi
   if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
   // anti-bruteforce sul token (256 bit, ma contiamo lo stesso per IP) e sui fallimenti
   const key = 'inv|' + clientIpOf(req);
-  if (loginThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+  if (loginThrottled(key, envInt('DND5E_INVITE_MAX_ATTEMPTS', 10))) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
   try {
     const body = await readJsonBody(req);
     const acc = createAccountFromInvite(String(body.token ?? ''), String(body.username ?? ''), String(body.password ?? ''));
@@ -1023,7 +1105,13 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       }
       conn.token = createSession(acc.username);
       // un account con ruolo admin entra direttamente nel pannello admin (senza DND5E_ADMIN_TOKEN)
-      if (accountRole(acc.username) === 'admin') conn.admin = true;
+      if (accountRole(acc.username) === 'admin') {
+        conn.admin = true;
+        // hardening: avvisa in audit se l'admin entra con password ma senza 2FA (TOTP/passkey)
+        if (!acc.totp?.enabled && (acc.passkeys?.length ?? 0) === 0) {
+          audit(acc.username, 'admin-login-no-2fa', 'admin loggato senza 2FA (attiva TOTP o una passkey)', connIp(conn));
+        }
+      }
       noteLogin(acc.username);
       audit(acc.username, 'login', undefined, connIp(conn));
       sendAuth(conn.ws, conn.token, acc.username, false, msg.remember ? createRememberToken(acc.username) : undefined);
@@ -1221,6 +1309,12 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   if (msg.t === 'adminAuth') {
     // permessi admin via: token admin valido (DND5E_ADMIN_TOKEN) OPPURE sessione di un account con ruolo admin.
     // Senza token configurato vale solo su server fresco (nessun account) — mai per utenti non-admin loggati.
+    // Se DND5E_ADMIN_ALLOWLIST è impostata, l'IP del client deve essere in lista (altrimenti niente adminAuth).
+    if (!adminIpAllowed(connIp(conn), conn.xff)) {
+      audit('ip:' + (connIp(conn) ?? '?'), 'adminauth-blocked-ip', 'IP non in DND5E_ADMIN_ALLOWLIST', connIp(conn));
+      send(conn.ws, { t: 'error', message: 'IP non autorizzato per il pannello admin (DND5E_ADMIN_ALLOWLIST)' });
+      return;
+    }
     const uname = conn.token ? sessionUsername(conn.token) : undefined;
     const isAdminAccount = !!uname && accountRole(uname) === 'admin';
     const tokenOk = ADMIN_TOKEN !== '' && msg.token === ADMIN_TOKEN;
@@ -1515,7 +1609,7 @@ export function createDndServer(port = PORT, host = HOST) {
   });
 
   wss.on('connection', (ws, req) => {
-    const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10), rpHost: String(req.headers.host ?? '') };
+    const conn: Conn = { ws, id: 'c-' + Math.random().toString(36).slice(2, 10), rpHost: String(req.headers.host ?? ''), xff: String(req.headers['x-forwarded-for'] ?? '') };
     // con REQUIRE_AUTH il browser manda il cookie di sessione sull'upgrade WS: vale come login
     const tok = sessionTokenOf(req);
     if (tok) {

@@ -313,6 +313,7 @@ export function handleInfoApi(port: number, lan: string[]): (req: IncomingMessag
         lan,
         requireAuth: (process.env.DND5E_REQUIRE_AUTH ?? '').trim().toLowerCase() === 'true',
         registration,
+        adminAllowlist: (process.env.DND5E_ADMIN_ALLOWLIST ?? '').trim() !== '',
       }),
     );
     return true;

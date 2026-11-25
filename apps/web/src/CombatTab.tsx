@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
   addCombatant,
   clearTemplate,
@@ -14,6 +14,7 @@ import {
   setCombatantCondition,
   setMapSize,
   setTemplate,
+  setTurnTimer,
   startCombat,
   syncPlayerHp,
   type CombatState,
@@ -33,6 +34,12 @@ export default function CombatTab() {
   const [tplShape, setTplShape] = useState<TemplateShape>('cone');
   const [tplSize, setTplSize] = useState(15);
   const [tplWidth, setTplWidth] = useState(5);
+  const [timerSec, setTimerSec] = useState(60);
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    const iv = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(iv);
+  }, []);
 
   if (!char) return null;
 
@@ -47,6 +54,10 @@ export default function CombatTab() {
   }
 
   const cur = currentCombatant(combat);
+  // countdown del turno (riparte da turnStartedAt a ogni cambio turno, impostato dal core)
+  const timerLeft = combat.turnTimerSec && combat.turnStartedAt
+    ? Math.max(0, combat.turnTimerSec - Math.floor((nowMs - new Date(combat.turnStartedAt).getTime()) / 1000))
+    : null;
 
   const dropConcentration = () => {
     if (!char?.concentrationSpellId) return;
@@ -59,10 +70,30 @@ export default function CombatTab() {
     <div className="grid">
       <div className="card">
         <h3>{tf('cb.round', 'Round {n}', { n: combat.round })} {cur && <span className="tag custom"> {tf('cb.turn', 'turno: {name}', { name: cur.name })}</span>}</h3>
-        <div className="row" style={{ marginBottom: 10 }}>
+        <div className="row" style={{ marginBottom: 10, flexWrap: 'wrap' }}>
           <button className="primary" onClick={() => setCombat(nextTurn(combat))}>{t('cb.next', 'Turno successivo ▶')}</button>
           <button onClick={() => setCombat(rerollInitiatives(combat))}>{t('cb.reroll', '🎲 Tira initiative')}</button>
           <button className="danger" onClick={() => setCombat(null)}>{t('cb.close', 'Chiudi combattimento')}</button>
+          <span
+            className="tag"
+            style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', color: timerLeft !== null && timerLeft <= 10 ? 'var(--danger)' : undefined }}
+            title={t('cb.timerTitle', 'Timer del turno: riparte a ogni turno quando è attivo')}
+          >
+            ⏱ {timerLeft !== null ? `${Math.floor(timerLeft / 60)}:${String(timerLeft % 60).padStart(2, '0')}` : '—'}
+          </span>
+          <input
+            type="number" min={0} step={5} value={timerSec}
+            onChange={(e) => {
+              const v = Math.max(0, Number(e.target.value));
+              setTimerSec(v);
+              setCombat((c) => (c ? setTurnTimer(c, v) : c));
+            }}
+            style={{ width: 56 }}
+            title={t('cb.timerSec', 'Secondi per turno (0 = disattiva)')}
+          />
+          {combat.turnTimerSec ? (
+            <button onClick={() => setCombat((c) => (c ? setTurnTimer(c, 0) : c))} title={t('cb.timerOff', 'Disattiva il timer di turno')}>{t('cb.timerOffBtn', 'timer off')}</button>
+          ) : null}
         </div>
         <div className="row" style={{ marginBottom: 10 }}>
           <button onClick={() => setShowTpl((v) => !v)} title={t('cb.tpl', '📐 template')}>{t('cb.tpl', '📐 template')}</button>

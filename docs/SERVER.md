@@ -135,7 +135,15 @@ Hardening attivo (utile quando il server è esposto su HTTPS dietro reverse prox
 - controllo **Origin** sull'upgrade WebSocket (anti cross-site WebSocket hijacking): respinto (403) se
   l'origin non combacia con `Host`/`X-Forwarded-Host`/`DND5E_RP_ORIGIN` (i client non-browser senza Origin passano);
 - **rate limit** sui login falliti: max `DND5E_LOGIN_MAX_ATTEMPTS` (default 10) al minuto per username+IP
-  (HTTP `/api/login`, WS `login`) e per IP su `/api/register` e `/api/login-token` -> 429;
+  (HTTP `/api/login`, WS `login`) e per IP su `/api/register` (`DND5E_REGISTER_MAX_ATTEMPTS`, default 5),
+  `/api/invite` (`DND5E_INVITE_MAX_ATTEMPTS`, default 10) e `/api/login-token` -> 429;
+- **`/.well-known/security.txt`** (RFC 9116) sempre pubblico, anche con require-auth: punta a `SECURITY.md`;
+- **allowlist IP admin** `DND5E_ADMIN_ALLOWLIST` (IP o CIDR IPv4, es. `192.168.1.0/24,10.0.0.5`):
+  se impostata, `/admin`, `adminAuth` WS e `POST /api/update/apply` rispondono 403 agli IP fuori lista
+  (a prescindere da sessione/token). Dietro reverse proxy impostare `DND5E_TRUST_XFF=true` per far
+  contare `X-Forwarded-For` (il socket vede solo l'IP del proxy). `/api/info` espone `adminAllowlist`;
+- **2FA admin**: il pannello `/admin` (card 🔐 Sicurezza) avvisa se un account admin non ha TOTP né
+  passkey; ogni login admin senza 2FA viene registrato nell'audit log come `admin-login-no-2fa`;
 - password salvate con **scrypt + sale** (`scrypt$N$r$p$sale$hash`); i vecchi hash sha256 restano
   verificabili e vengono aggiornati a scrypt al primo login riuscito.
 

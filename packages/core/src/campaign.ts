@@ -16,6 +16,7 @@ import {
   setCombatantCondition,
   setMapSize,
   setTemplate,
+  setTurnTimer,
   startPartyCombat,
   useBonus,
   useReaction,
@@ -154,6 +155,7 @@ export type ClientAction =
   | { kind: 'heal'; targetId: string; amount: number }
   | { kind: 'nextTurn' }
   | { kind: 'endCombat' }
+  | { kind: 'setTurnTimer'; seconds: number }
   | { kind: 'addCustom'; data: Partial<SrdData> }
   | { kind: 'leave' }
   | { kind: 'kickPlayer'; playerId: string }
@@ -245,6 +247,12 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
     case 'endCombat':
       if (!isMaster) return [c, 'Solo il master può terminare il combattimento'];
       c.combat = null;
+      return [c];
+
+    case 'setTurnTimer':
+      if (!isMaster) return [c, 'Solo il master può impostare il timer di turno'];
+      if (!c.combat) return [c, 'Nessun combattimento in corso'];
+      c.combat = setTurnTimer(c.combat, action.seconds);
       return [c];
 
     case 'addEnemy':

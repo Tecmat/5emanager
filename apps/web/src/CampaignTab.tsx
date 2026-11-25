@@ -940,7 +940,18 @@ export default function CampaignTab() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [char, camp?.id, auth?.username]);
 
-  // timer di turno (locale, per dispositivo): riparte a ogni cambio turno
+  // timer di turno: se il master ha impostato turnTimerSec (sincronizzato via turnStartedAt) usa quello,
+  // altrimenti il timer locale per dispositivo che riparte a ogni cambio turno
+  const [nowMs, setNowMs] = useState(Date.now());
+  useEffect(() => {
+    const iv = window.setInterval(() => setNowMs(Date.now()), 1000);
+    return () => window.clearInterval(iv);
+  }, []);
+  const combatState = conn.phase === 'online' ? conn.campaign.combat : null;
+  const syncedLeft = combatState?.turnTimerSec && combatState.turnStartedAt
+    ? Math.max(0, combatState.turnTimerSec - Math.floor((nowMs - new Date(combatState.turnStartedAt).getTime()) / 1000))
+    : null;
+  const timerShown = syncedLeft ?? timerLeft;
   const combatTurnKey = conn.phase === 'online' ? conn.campaign.combat?.turnIndex ?? -1 : -1;
   useEffect(() => {
     if (conn.phase === 'online' && conn.campaign.combat) {
@@ -2020,8 +2031,12 @@ export default function CampaignTab() {
             >
               {t('cg.exportLog', '💾 Esporta log')}
             </button>
-            <span className="tag" style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }} title={t('cg.timerTitle', 'Timer del turno (locale)')}>
-              ⏱ {Math.floor(timerLeft / 60)}:{String(timerLeft % 60).padStart(2, '0')}
+            <span
+              className="tag"
+              style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', color: syncedLeft !== null && syncedLeft <= 10 ? 'var(--danger)' : undefined }}
+              title={syncedLeft !== null ? t('cg.timerSyncTitle', 'Timer di turno sincronizzato dal master (parte a ogni turno)') : t('cg.timerTitle', 'Timer del turno (locale)')}
+            >
+              ⏱ {Math.floor(timerShown / 60)}:{String(timerShown % 60).padStart(2, '0')}{syncedLeft !== null ? ' 🌐' : ''}
             </span>
             <input
               type="number" min={5} step={5} value={timerSec}
@@ -2029,6 +2044,21 @@ export default function CampaignTab() {
               style={{ width: 56 }}
               title={t('cg.timerSec', 'Secondi per turno')}
             />
+            {isMaster && (
+              <>
+                <button
+                  onClick={() => act({ kind: 'setTurnTimer', seconds: timerSec })}
+                  title={t('cg.timerSync', 'Imposta il timer di turno per TUTTI i giocatori (sincronizzato: riparte a ogni turno)')}
+                >
+                  ⏱🌐 {t('cg.timerSyncBtn', 'timer per tutti')}
+                </button>
+                {combat?.turnTimerSec ? (
+                  <button onClick={() => act({ kind: 'setTurnTimer', seconds: 0 })} title={t('cg.timerUnsync', 'Disattiva il timer sincronizzato (torna a quello locale)')}>
+                    {t('cg.timerUnsyncBtn', 'no sync')}
+                  </button>
+                ) : null}
+              </>
+            )}
             <button onClick={() => setTimerOn(true)} disabled={timerOn} title={t('cg.timerStart', 'Avvia timer')}>▶</button>
             <button onClick={() => setTimerOn(false)} disabled={!timerOn} title={t('cg.timerPause', 'Pausa')}>⏸</button>
             <button onClick={() => { setTimerOn(false); setTimerLeft(timerSec); }} title={t('cg.timerReset', 'Reset timer')}>↺</button>

@@ -74,7 +74,12 @@ Sicurezza già attiva lato server (non serve configurare nulla, ma il proxy deve
 - **audit log** su `docker/data/audit.log` (JSONL, ruotato a `.1` oltre 5 MB): login, azioni admin,
   inviti, self-update — leggibile dal pannello `/admin` (card "Audit log");
 - password degli account con **scrypt + sale** (i vecchi hash sha256 vengono aggiornati al login);
-  rate limit sui tentativi di login (default 10 falliti/minuto per username+IP, `DND5E_LOGIN_MAX_ATTEMPTS`).
+  rate limit sui tentativi di login/register/invite (default 10/min username+IP su login, 5/min su register,
+  10/min su invite: `DND5E_LOGIN_MAX_ATTEMPTS` / `DND5E_REGISTER_MAX_ATTEMPTS` / `DND5E_INVITE_MAX_ATTEMPTS`);
+- `/.well-known/security.txt` pubblico (punta a `SECURITY.md`); opzionale `DND5E_ADMIN_ALLOWLIST`
+  (IP/CIDR) per restringere `/admin`, `adminAuth` e self-update a certi IP — dietro proxy anche
+  `DND5E_TRUST_XFF=true` per usare `X-Forwarded-For`; il pannello `/admin` avvisa se un admin non ha 2FA
+  (TOTP/passkey) e l'audit log registra i login admin senza 2FA;
 
 Esempio con **Caddy** (HTTPS automatico con Let's Encrypt, Caddyfile di 3 righe), server su `127.0.0.1:3001`:
 
