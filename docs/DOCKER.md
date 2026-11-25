@@ -101,9 +101,7 @@ sudo sh -c 'printf "dnd.tuosito.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /et
 sudo systemctl enable --now caddy
 ```
 
-Per le **passkey WebAuthn** (login senza password) servono HTTPS + queste env sul container
-(se il proxy non passa `Host` intatto; altrimenti il server le deriva da solo). `DND5E_RP_ORIGIN`
-serve anche al controllo Origin dei WebSocket:
+Per le **passkey WebAuthn** (login senza password, pulsante 🔑 anche nella pagina `/login`) servono HTTPS + queste env in `docker/.env` — i compose ora le passano al container in automatico (`DND5E_RP_ID`/`DND5E_RP_ORIGIN`); se il proxy passa `Host` intatto il server le deriva da solo. `DND5E_RP_ORIGIN` serve anche al controllo Origin dei WebSocket:
 
 ```bash
 # in docker/.env (o .env della root del clone)

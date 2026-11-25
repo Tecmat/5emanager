@@ -93,6 +93,7 @@ dispositivo, chiavetta di sicurezza o password manager) con `@simplewebauthn/ser
   con `userVerification: 'preferred'` nelle options.
 - Test: `packages/server/test/passkeys.test.ts` (migrazione v6, CRUD, options, flusso WS).
 
+Nota: il login con passkey funziona anche dalla pagina `/login` standalone (pulsante 🔑 Passkey) via endpoint HTTP pubblici `/api/passkey/options` + `/api/passkey/verify` (challenge monouso, 3 min, rate limit per IP `DND5E_PASSKEY_MAX_ATTEMPTS`, audit `login-passkey`).
 ## Protocollo (JSON su WebSocket)
 
 Client→Server: `create`, `join` (con `role: 'master'` per rientrare come master quando

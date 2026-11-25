@@ -51,6 +51,7 @@
     <label class="chk"><input type="checkbox" id="remember" style="width:auto"> Mantieni l'accesso su questo dispositivo</label>
     <div class="row">
       <button class="primary" id="go" type="submit">Entra</button>
+      <button type="button" id="pkbtn" style="display:none" title="Accedi con una passkey (impronta/PIN/Windows Hello/password manager): niente password">🔑 Passkey</button>
     </div>
     <div class="err" id="err"></div>
     <div class="ok" id="ok"></div>
@@ -110,6 +111,46 @@ $('f').onsubmit = async (e) => {
     $('err').textContent = String(err);
   } finally {
     $('go').disabled = false;
+  }
+};
+
+// --- login con passkey (WebAuthn) direttamente da questa pagina, senza WS ---
+const b64uToBuf = (s) => Uint8Array.from(atob(String(s).replace(/-/g, '+').replace(/_/g, '/')), (c) => c.charCodeAt(0));
+const bufToB64u = (b) => btoa(String.fromCharCode(...new Uint8Array(b))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const pkBtn = $('pkbtn');
+if (window.PublicKeyCredential && window.isSecureContext) pkBtn.style.display = '';
+pkBtn.onclick = async () => {
+  $('err').textContent = ''; $('ok').textContent = '';
+  pkBtn.disabled = true;
+  try {
+    const r = await fetch('/api/passkey/options', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: $('u').value.trim() || undefined }) });
+    const j = await r.json();
+    if (!r.ok) { $('err').textContent = j.error || ('Errore ' + r.status); return; }
+    const o = j.options;
+    o.challenge = b64uToBuf(o.challenge);
+    if (o.allowCredentials) o.allowCredentials = o.allowCredentials.map((c) => ({ ...c, id: b64uToBuf(c.id) }));
+    const cred = await navigator.credentials.get({ publicKey: o });
+    if (!cred) { $('err').textContent = 'Nessuna passkey scelta'; return; }
+    const resp = {
+      id: cred.id,
+      rawId: bufToB64u(cred.rawId),
+      type: cred.type,
+      response: {
+        authenticatorData: bufToB64u(cred.response.authenticatorData),
+        clientDataJSON: bufToB64u(cred.response.clientDataJSON),
+        signature: bufToB64u(cred.response.signature),
+        userHandle: cred.response.userHandle ? bufToB64u(cred.response.userHandle) : null,
+      },
+    };
+    const r2 = await fetch('/api/passkey/verify', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ response: resp }) });
+    const j2 = await r2.json();
+    if (!r2.ok) { $('err').textContent = j2.error || 'Passkey non valida'; return; }
+    $('ok').textContent = 'Accesso riuscito con passkey, carico l\'app…';
+    location.reload(); // cookie di sessione impostato -> entro nell'app
+  } catch (e) {
+    $('err').textContent = 'Passkey non disponibile o annullata: ' + e;
+  } finally {
+    pkBtn.disabled = false;
   }
 };
 

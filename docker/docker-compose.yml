@@ -36,6 +36,9 @@ services:
       DND5E_REGISTRATION: ${DND5E_REGISTRATION:-approval}
       # IP LAN reale dell'host (in Docker il bridge 172.x non serve): es. DND5E_LAN_IP=192.168.1.36
       DND5E_LAN_IP: ${DND5E_LAN_IP:-}
+      # passkey WebAuthn (login passwordless su HTTPS): se il proxy passa Host intatto vengono derivati da soli
+      DND5E_RP_ID: ${DND5E_RP_ID:-}
+      DND5E_RP_ORIGIN: ${DND5E_RP_ORIGIN:-}
       # opzionale (repo privato): GITHUB_TOKEN: ${GITHUB_TOKEN:-}
     volumes:
       - ./data:/data

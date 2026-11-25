@@ -272,6 +272,7 @@ function isPublicPath(path: string): boolean {
   return (
     path === '/login' || path === '/login.html' ||
     path === '/api/login' || path === '/api/login-token' || path === '/api/register' ||
+    path === '/api/passkey/options' || path === '/api/passkey/verify' ||
     path === '/api/logout' || path === '/api/me' || path === '/api/info' ||
     path === '/api/setup' || path === '/setup' || path === '/setup.html' ||
     path === '/invite' || path === '/invite.html' || path === '/api/invite' ||
@@ -653,6 +654,8 @@ function totpNoteAttempt(username: string): void {
 // throttle tentativi di login con password: max N falliti/minuto per chiave (DND5E_LOGIN_MAX_ATTEMPTS, default 10).
 // Si contano solo i fallimenti: un login riuscito azzera il contatore.
 const loginAttempts = new Map<string, number[]>();
+/** challenge passkey emessi via HTTP (/api/passkey/options), validi 3 minuti */
+const pkChallenges = new Map<string, { username?: string; at: number }>();
 function envInt(name: string, def: number): number {
   const n = Number(process.env[name] ?? def);
   return Number.isFinite(n) && n > 0 ? n : def;
@@ -740,7 +743,7 @@ function readJsonBody(req: IncomingMessage, limit = 64 * 1024): Promise<Record<s
 /** gestisce /api/login, /api/login-token, /api/register, /api/logout, /api/me. Ritorna true se servita. */
 async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise<boolean> {
   const path = new URL(req.url ?? '/', 'http://localhost').pathname;
-  if (!['/api/login', '/api/login-token', '/api/register', '/api/logout', '/api/me'].includes(path)) return false;
+  if (!['/api/login', '/api/login-token', '/api/register', '/api/logout', '/api/me', '/api/passkey/options', '/api/passkey/verify'].includes(path)) return false;
   const secure = isSecureReq(req);
   const json = (code: number, obj: unknown, token?: string, remember = false) => {
     if (token) setSessionCookie(res, token, remember, secure);
@@ -764,6 +767,68 @@ async function handleAuthApi(req: IncomingMessage, res: ServerResponse): Promise
     if (secure) parts.push('Secure');
     res.setHeader('Set-Cookie', parts.join('; '));
     return void json(200, { ok: true }), true;
+  }
+
+  // --- login con passkey via HTTP (pagina /login standalone, senza WS) ---
+  // challenge emessi da /api/passkey/options, validi 3 minuti
+  const pkPrune = () => { const now = Date.now(); for (const [k, v] of pkChallenges) if (now - v.at > 180_000) pkChallenges.delete(k); };
+  const rpOfReq = (req2: IncomingMessage) => rpConfigFromHost(String(req2.headers['x-forwarded-host'] ?? req2.headers.host ?? ''));
+
+  if (path === '/api/passkey/options') {
+    if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
+    const key = 'pkopt|' + clientIpOf(req);
+    if (loginThrottled(key, envInt('DND5E_PASSKEY_MAX_ATTEMPTS', 10))) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+    loginNoteAttempt(key);
+    try {
+      const body = await readJsonBody(req);
+      const uname = String(body.username ?? '').trim().toLowerCase() || undefined;
+      let allow: StoredPasskey[] | undefined;
+      if (uname) {
+        const acc = getAccount(uname);
+        if (!acc) return void json(400, { error: 'Account non trovato: prima devi registrarti' }), true;
+        allow = acc.passkeys ?? [];
+        if (allow.length === 0) return void json(400, { error: 'Nessuna passkey su questo account: fai login con password e aggiungine una (tab Account → Sicurezza)' }), true;
+      }
+      const options = await authenticationOptionsFor(rpOfReq(req), allow);
+      pkPrune();
+      pkChallenges.set(options.challenge, { username: uname, at: Date.now() });
+      return void json(200, { options }), true;
+    } catch (e) { return void json(400, { error: (e as Error).message }), true; }
+  }
+
+  if (path === '/api/passkey/verify') {
+    if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
+    try {
+      const body = await readJsonBody(req);
+      const resp = body.response as { id: string; response?: { challenge?: string } };
+      const challenge = String(resp?.response?.challenge ?? '');
+      const ch = pkChallenges.get(challenge);
+      if (!ch) return void json(400, { error: 'Challenge scaduto o sconosciuto: ricomincia il login con passkey' }), true;
+      pkChallenges.delete(challenge);
+      let owner: { username: string; passkey: StoredPasskey } | undefined;
+      if (ch.username) {
+        const pk = getAccountPasskey(ch.username, resp.id);
+        if (pk) owner = { username: ch.username, passkey: pk };
+      } else {
+        owner = findPasskeyOwner(resp.id);
+      }
+      if (!owner) return void json(400, { error: 'Passkey non riconosciuta (non è registrata su questo server)' }), true;
+      const key = 'pk:' + owner.username.toLowerCase();
+      if (totpThrottled(key)) return void json(429, { error: 'Troppi tentativi: riprova tra 60 secondi' }), true;
+      try {
+        // la passkey conta come secondo fattore: niente TOTP in più
+        const newCounter = await verifyAuthentication(resp as never, challenge, rpOfReq(req), toWebAuthnCredential(owner.passkey));
+        updatePasskeyCounter(owner.username, resp.id, newCounter);
+        const token = createSession(owner.username);
+        noteLogin(owner.username);
+        audit(owner.username, 'login-passkey', undefined, clientIpOf(req));
+        return void json(200, { ok: true, username: owner.username }, token, false), true;
+      } catch (e) {
+        totpNoteAttempt(key);
+        audit('ip:' + clientIpOf(req), 'login-passkey-failed', (e as Error).message, clientIpOf(req));
+        return void json(400, { error: 'Asserzione passkey non verificata' }), true;
+      }
+    } catch (e) { return void json(400, { error: (e as Error).message }), true; }
   }
 
   if (req.method !== 'POST') return void json(405, { error: 'usa POST' }), true;
