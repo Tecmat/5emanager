@@ -283,3 +283,23 @@ main { padding: 18px 16px; }
 button.danger { background: transparent; }
 button.danger:hover:not(:disabled) { background: rgba(176, 64, 64, 0.15); border-color: #b04040; }
 input[type='checkbox'], input[type='radio'] { width: auto; accent-color: var(--accent); }
+
+/* ---- rifiniture estetiche v0.1.88 ---- */
+/* icone nei titoli delle card allineate al testo */
+.card h3 svg, .home-h svg { margin-right: 6px; vertical-align: -2px; }
+/* la striscia dorata in cima alla card si accende al passaggio */
+.card:hover { border-top-color: var(--accent); }
+/* righe tabella: hover più leggibile */
+tbody tr:hover { background: var(--panel2); }
+/* selezione testo nel colore accent */
+::selection { background: color-mix(in srgb, var(--accent) 45%, transparent); color: var(--text); }
+/* scrollbar tematizzata */
+:root, :root[data-theme='dark'] { scrollbar-color: var(--border) var(--bg); }
+:root[data-theme='light'] { scrollbar-color: #c9bda6 var(--bg); }
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 6px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+/* tag cliccabili coerenti con i bottoni */
+button.tag { cursor: pointer; }
+/* distacco visivo dei blocchi principali in Home */
+main .home-h { border-bottom: 1px solid var(--border); padding-bottom: 4px; }

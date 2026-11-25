@@ -47,6 +47,9 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 - ✅ **Login con passkey anche dalla pagina /login** (v0.1.86): endpoint HTTP pubblici `/api/passkey/options` + `/api/passkey/verify` (challenge monouso 3 min, rate limit `DND5E_PASSKEY_MAX_ATTEMPTS`, audit `login-passkey`), pulsante 🔑 in `login.html` con client WebAuthn hand-rolled (niente libreria nel standalone); compose (root e docker/) ora passano `DND5E_RP_ID`/`DND5E_RP_ORIGIN` al container — test `passkey-http.test.ts` (6)
 
+- ✅ **Coerenza UI/UX: niente più form account duplicati** (v0.1.88): la card "Server" in Home ora è compatta (picker server + stato: tag utente/ruolo/libreria/modalità + Vai a Campagna / Il mio account / Pannello admin; se non loggato, solo hint + pulsante Account) — login/registrazione/2FA/passkey/esci vivono solo nella tab Account
+- ✅ **Rifiniture estetiche** (v0.1.88): icone allineate nei titoli card, striscia dorata della card che si accende on-hover, hover righe tabella più leggibile, ::selection e scrollbar tematizzate, bordo inferiore delle sezioni Home
+
 ### Fase 2 — espansione gameplay (medio termine)
 - ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
 - ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento
