@@ -195,6 +195,12 @@ jobs:
             ./gradlew assembleDebug
             cp app/build/outputs/apk/debug/app-debug.apk ../app.apk
           fi
+      - name: Build AAB per il Play Store (solo release-signed, con keystore)
+        if: env.ANDROID_KEYSTORE_B64 != ''
+        run: |
+          cd apps/web/android
+          ./gradlew bundleRelease
+          cp app/build/outputs/bundle/release/app-release.aab ../app.aab
       - uses: actions/upload-artifact@v4
         with:
           name: app-apk
@@ -202,6 +208,11 @@ jobs:
       - uses: softprops/action-gh-release@v2
         with:
           files: apps/web/app.apk
+      # AAB solo se release-signed: è l'asset che si carica su Play Console
+      - uses: softprops/action-gh-release@v2
+        if: env.ANDROID_KEYSTORE_B64 != ''
+        with:
+          files: apps/web/app.aab
 
   docker-server:
     # immagine del server publicada su GHCR a ogni release: ghcr.io/tecmat/5emanager-server:<versione> + :latest

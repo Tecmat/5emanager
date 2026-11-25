@@ -4,6 +4,7 @@ import { installPermissionGranted, openInstallPermissionSettings } from './permi
 import Icon from './icons.js';
 import {
   applyAndroidUpdate,
+  isPlayStoreInstall,
   applyDesktopUpdate,
   applyServerUpdate,
   applyWebUpdate,
@@ -86,6 +87,13 @@ export default function UpdateButton() {
           await applyWebUpdate();
         }
       } else if (platform === 'android') {
+        // install da Google Play: niente self-update via APK (policy Play) -> si manda allo Store
+        if (await isPlayStoreInstall()) {
+          window.open('market://details?id=com.tecmat.emanager', '_blank');
+          setMsg(t('up.playStore', 'Apro il Play Store: aggiorna 5e Manager da lì (su Play gli update passano solo da Play).'));
+          setStatus('ready');
+          return;
+        }
         // APK scaricato e prompt di installazione aperto direttamente dentro l'app (niente browser/pop-up)
         setStatus('downloading');
         setProgress(null);

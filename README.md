@@ -134,6 +134,9 @@ Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
 3. **Piattaforme e dati** — PWA offline completa, notifiche push, import da D&D Beyond,
    sync cloud opzionale, iOS, test e2e Playwright
 
+## Privacy e sicurezza
+- [Privacy policy](PRIVACY.md) · [Security policy](SECURITY.md) · [Guida Play Store](docs/PLAY_STORE.md) · [Play Protect / APK sideload](docs/PLAY_PROTECT.md)
+
 ## Licenze
 
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD

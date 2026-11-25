@@ -276,6 +276,7 @@ export function apkDownloadUrls(info: UpdateInfo): string[] {
 }
 
 interface UpdateInstallerPlugin {
+  isPlayInstall(): Promise<{ value: boolean }>;
   downloadAndInstall(opts: { url: string }): Promise<void>;
   addListener(eventName: 'update-progress' | 'needsInstallPermission', cb: (p: any) => void): Promise<{ remove: () => Promise<void> }>;
 }
@@ -297,8 +298,21 @@ function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
  *   in sospeso: onNeedsPermission avvisa subito e un watchdog sblocca l'UI dopo 180 s;
  * - se il plugin manca (build vecchia) ritorna un errore col link diretto, mai un pop-up.
  */
+/** true se l'APK è installato da Google Play: lì il self-update via APK è vietato dalle policy Play
+ *  (gli aggiornamenti passano solo da Play Store) -> niente download, si manda l'utente allo Store */
+export async function isPlayStoreInstall(): Promise<boolean> {
+  try {
+    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return false;
+    const r = await UpdateInstaller.isPlayInstall();
+    return !!r?.value;
+  } catch { return false; }
+}
+
 export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: DownloadProgress) => void, onNeedsPermission?: () => void): Promise<void> {
   if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
+  if (await isPlayStoreInstall()) {
+    throw new Error('Versione da Google Play: gli aggiornamenti arrivano da Play Store (Profilo → Gestisci app → 5e Manager → Aggiorna)');
+  }
   const urls = apkDownloadUrls(info);
   if (urls.length === 0) throw new Error('Nessun URL APK disponibile per la v' + info.latest);
   // nota: NON usare isPluginAvailable come pre-check (falso negativo sui plugin custom senza

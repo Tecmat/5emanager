@@ -81,6 +81,19 @@ public class UpdateInstallerPlugin extends Plugin {
     }
 
     /** true se l'app può già aprire prompt di installazione APK ("installa app sconosciute") */
+    /** true se l'app è installata da Google Play (installer = com.android.vending) */
+    @PluginMethod
+    public void isPlayInstall(PluginCall call) {
+        boolean play = false;
+        try {
+            String installer = getContext().getPackageManager().getInstallerPackageName(getContext().getPackageName());
+            play = "com.android.vending".equals(installer);
+        } catch (Exception ignored) { /* senza installer (sideload/dev) -> false */ }
+        JSObject r = new JSObject();
+        r.put("value", play);
+        call.resolve(r);
+    }
+
     @PluginMethod
     public void hasInstallPermission(PluginCall call) {
         JSObject r = new JSObject();
