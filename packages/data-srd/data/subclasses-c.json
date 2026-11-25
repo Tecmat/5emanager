@@ -221,17 +221,17 @@
  {
   "id": "ancestral-guardian",
   "classId": "barbarian",
-  "name": "Guardiano degli Antenati",
+  "name": "Guardiano degli antichi",
   "features": {
    "3": [
     {
      "id": "ancestral-guardian-3",
      "name": "Protettori Ancestrali",
-     "description": "Gli spiriti degli antenati emergono per difendere gli alleati.",
+     "description": "Gli spiriti degli antichi emergono per difendere gli alleati.",
      "effects": [
       {
        "type": "custom",
-       "description": "Gli spiriti degli antenati emergono per difendere gli alleati."
+       "description": "Gli spiriti degli antichi emergono per difendere gli alleati."
       }
      ]
     }
@@ -240,11 +240,11 @@
     {
      "id": "ancestral-guardian-7",
      "name": "Vigilanza Ancestrale",
-     "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli Antenati al livello 7.",
+     "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli antichi al livello 7.",
      "effects": [
       {
        "type": "custom",
-       "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli Antenati al livello 7."
+       "description": "Vigilanza Ancestrale: potenziamento dell'archetipo Guardiano degli antichi al livello 7."
       }
      ]
     }
@@ -253,11 +253,11 @@
     {
      "id": "ancestral-guardian-11",
      "name": "Riduzione del Danno",
-     "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli Antenati al livello 11.",
+     "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli antichi al livello 11.",
      "effects": [
       {
        "type": "custom",
-       "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli Antenati al livello 11."
+       "description": "Riduzione del Danno: potenziamento dell'archetipo Guardiano degli antichi al livello 11."
       }
      ]
     }
@@ -265,12 +265,12 @@
    "15": [
     {
      "id": "ancestral-guardian-15",
-     "name": "Consultare gli Antenati",
-     "description": "Consultare gli Antenati: potenziamento dell'archetipo Guardiano degli Antenati al livello 15.",
+     "name": "Consultare gli antichi",
+     "description": "Consultare gli antichi: potenziamento dell'archetipo Guardiano degli antichi al livello 15.",
      "effects": [
       {
        "type": "custom",
-       "description": "Consultare gli Antenati: potenziamento dell'archetipo Guardiano degli Antenati al livello 15."
+       "description": "Consultare gli antichi: potenziamento dell'archetipo Guardiano degli antichi al livello 15."
       }
      ]
     }
@@ -278,12 +278,12 @@
    "18": [
     {
      "id": "ancestral-guardian-18",
-     "name": "Antenati Vendicativi",
-     "description": "Antenati Vendicativi: potenziamento dell'archetipo Guardiano degli Antenati al livello 18.",
+     "name": "antichi Vendicativi",
+     "description": "antichi Vendicativi: potenziamento dell'archetipo Guardiano degli antichi al livello 18.",
      "effects": [
       {
        "type": "custom",
-       "description": "Antenati Vendicativi: potenziamento dell'archetipo Guardiano degli Antenati al livello 18."
+       "description": "antichi Vendicativi: potenziamento dell'archetipo Guardiano degli antichi al livello 18."
       }
      ]
     }
@@ -852,12 +852,12 @@
  {
   "id": "ancients",
   "classId": "paladin",
-  "name": "Giuramento degli Antenati",
+  "name": "Giuramento degli Antichi",
   "features": {
    "3": [
     {
      "id": "ancients-3",
-     "name": "Aura degli Antenati",
+     "name": "Aura degli Antichi",
      "description": "Giuramento di custodire la luce e la vita contro le tenebre.",
      "effects": [
       {
@@ -871,11 +871,11 @@
     {
      "id": "ancients-7",
      "name": "Immune al Paura",
-     "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli Antenati al livello 7.",
+     "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli antichi al livello 7.",
      "effects": [
       {
        "type": "custom",
-       "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli Antenati al livello 7."
+       "description": "Immune al Paura: potenziamento dell'archetipo Giuramento degli antichi al livello 7."
       }
      ]
     }
@@ -884,11 +884,11 @@
     {
      "id": "ancients-15",
      "name": "Natura Integgerima",
-     "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli Antenati al livello 15.",
+     "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli antichi al livello 15.",
      "effects": [
       {
        "type": "custom",
-       "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli Antenati al livello 15."
+       "description": "Natura Integgerima: potenziamento dell'archetipo Giuramento degli antichi al livello 15."
       }
      ]
     }
@@ -897,11 +897,11 @@
     {
      "id": "ancients-20",
      "name": "Anziano Protettore",
-     "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli Antenati al livello 20.",
+     "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli antichi al livello 20.",
      "effects": [
       {
        "type": "custom",
-       "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli Antenati al livello 20."
+       "description": "Anziano Protettore: potenziamento dell'archetipo Giuramento degli antichi al livello 20."
       }
      ]
     }
