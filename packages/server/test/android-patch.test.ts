@@ -55,13 +55,43 @@ public class MainActivity extends BridgeActivity {
 }
 `;
 
+// file reali del template Capacitor 7 (android-template.tar.gz)
+const VARIABLES_GRADLE = `ext {
+    minSdkVersion = 23
+    compileSdkVersion = 35
+    targetSdkVersion = 35
+    androidxActivityVersion = '1.9.2'
+    androidxAppCompatVersion = '1.7.0'
+    androidxCoreVersion = '1.15.0'
+}`;
+
+const ROOT_BUILD_GRADLE = `buildscript {
+    dependencies {
+        classpath 'com.android.tools.build:gradle:8.7.2'
+    }
+}
+apply from: "variables.gradle"
+`;
+
+const WRAPPER_PROPS = `distributionBase=GRADLE_USER_HOME
+distributionUrl=https\\://services.gradle.org/distributions/gradle-8.11.1-all.zip
+`;
+
+const PROGUARD_RULES = `# Add project specific ProGuard rules here.
+`;
+
 function makeFakeProject(): string {
   const root = mkdtempSync(join(tmpdir(), '5e-android-'));
   mkdirSync(join(root, 'app/src/main/java/com/tecmat/emanager'), { recursive: true });
   mkdirSync(join(root, 'app/src/main/res'), { recursive: true });
+  mkdirSync(join(root, 'gradle/wrapper'), { recursive: true });
   writeFileSync(join(root, 'app/src/main/AndroidManifest.xml'), MANIFEST);
   writeFileSync(join(root, 'app/build.gradle'), BUILD_GRADLE);
+  writeFileSync(join(root, 'app/proguard-rules.pro'), PROGUARD_RULES);
   writeFileSync(join(root, 'app/src/main/java/com/tecmat/emanager/MainActivity.java'), MAIN_ACTIVITY);
+  writeFileSync(join(root, 'variables.gradle'), VARIABLES_GRADLE);
+  writeFileSync(join(root, 'build.gradle'), ROOT_BUILD_GRADLE);
+  writeFileSync(join(root, 'gradle/wrapper/gradle-wrapper.properties'), WRAPPER_PROPS);
   return root;
 }
 
@@ -112,6 +142,45 @@ describe('patch_android.py su progetto Capacitor finto', () => {
     expect(g.match(/storeFile file\('\.\.\/debug\.keystore'\)/g)?.length).toBe(1);
     const ma = readFileSync(join(root, 'app/src/main/java/com/tecmat/emanager/MainActivity.java'), 'utf8');
     expect(ma.match(/registerPlugin\(/g)?.length).toBe(2); // UpdateInstaller + LanBeacon, una volta sola
+    const v = readFileSync(join(root, 'variables.gradle'), 'utf8');
+    expect(v.match(/compileSdkVersion = 36/g)?.length).toBe(1);
+  });
+
+  it('porta il progetto a SDK 36 (AGP 8.13 + Gradle 8.14) e attiva R8 in release con keep dei plugin', () => {
+    const root = makeFakeProject();
+    roots.push(root);
+    execFileSync('python3', [PATCH_ANDROID, root]);
+    const v = readFileSync(join(root, 'variables.gradle'), 'utf8');
+    expect(v).toContain('compileSdkVersion = 36');
+    expect(v).toContain('targetSdkVersion = 36');
+    expect(v).toContain("androidxActivityVersion = '1.10.1'");
+    expect(v).toContain("androidxCoreVersion = '1.16.0'");
+    expect(v).toContain("androidxAppCompatVersion = '1.7.1'");
+    const b = readFileSync(join(root, 'build.gradle'), 'utf8');
+    expect(b).toContain('com.android.tools.build:gradle:8.13.0');
+    const w = readFileSync(join(root, 'gradle/wrapper/gradle-wrapper.properties'), 'utf8');
+    expect(w).toContain('gradle-8.14.2-bin.zip');
+    const g = readFileSync(join(root, 'app/build.gradle'), 'utf8');
+    expect(g).toContain('minifyEnabled true');
+    expect(g).toContain('shrinkResources true');
+    expect(g).toContain('proguard-android-optimize.txt');
+    expect(g).not.toContain("getDefaultProguardFile('proguard-android.txt')");
+    const p = readFileSync(join(root, 'app/proguard-rules.pro'), 'utf8');
+    expect(p).toContain('-keep class com.tecmat.emanager.** { *; }');
+  });
+
+  it('non fallisce su progetto minimo (senza variables.gradle / root build.gradle / wrapper / proguard)', () => {
+    const root = mkdtempSync(join(tmpdir(), '5e-android-min-'));
+    roots.push(root);
+    mkdirSync(join(root, 'app/src/main/java/com/tecmat/emanager'), { recursive: true });
+    mkdirSync(join(root, 'app/src/main/res'), { recursive: true });
+    writeFileSync(join(root, 'app/src/main/AndroidManifest.xml'), MANIFEST);
+    writeFileSync(join(root, 'app/build.gradle'), BUILD_GRADLE);
+    writeFileSync(join(root, 'app/src/main/java/com/tecmat/emanager/MainActivity.java'), MAIN_ACTIVITY);
+    execFileSync('python3', [PATCH_ANDROID, root]); // non deve lanciare FileNotFoundError
+    expect(existsSync(join(root, 'debug.keystore'))).toBe(true);
+    const g = readFileSync(join(root, 'app/build.gradle'), 'utf8');
+    expect(g).toContain('minifyEnabled true'); // R8 patchato comunque su app/build.gradle
   });
 });
 

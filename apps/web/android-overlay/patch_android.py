@@ -177,25 +177,29 @@ if "signingConfigs" not in g:
 gradle.write_text(g)
 
 # 2e) SDK 36 (requisito Play Store): compileSdk/targetSdk -> 36, AGP 8.13 (supporta compileSdk 36),
-#      Gradle 8.14 (minimo per AGP 8.13), androidx Activity/Core/AppCompat aggiornate per API 36
+#      Gradle 8.14 (minimo per AGP 8.13), androidx Activity/Core/AppCompat aggiornate per API 36.
+#      File opzionali: in un progetto finto/minimale (test) lo script non deve fallire.
 vg = root / "variables.gradle"
-v = vg.read_text()
-v = re.sub(r"compileSdkVersion\s*=\s*\d+", "compileSdkVersion = 36", v, count=1)
-v = re.sub(r"targetSdkVersion\s*=\s*\d+", "targetSdkVersion = 36", v, count=1)
-v = re.sub(r"androidxActivityVersion\s*=\s*'[^']*'", "androidxActivityVersion = '1.10.1'", v, count=1)
-v = re.sub(r"androidxCoreVersion\s*=\s*'[^']*'", "androidxCoreVersion = '1.16.0'", v, count=1)
-v = re.sub(r"androidxAppCompatVersion\s*=\s*'[^']*'", "androidxAppCompatVersion = '1.7.1'", v, count=1)
-vg.write_text(v)
+if vg.exists():
+    v = vg.read_text()
+    v = re.sub(r"compileSdkVersion\s*=\s*\d+", "compileSdkVersion = 36", v, count=1)
+    v = re.sub(r"targetSdkVersion\s*=\s*\d+", "targetSdkVersion = 36", v, count=1)
+    v = re.sub(r"androidxActivityVersion\s*=\s*'[^']*'", "androidxActivityVersion = '1.10.1'", v, count=1)
+    v = re.sub(r"androidxCoreVersion\s*=\s*'[^']*'", "androidxCoreVersion = '1.16.0'", v, count=1)
+    v = re.sub(r"androidxAppCompatVersion\s*=\s*'[^']*'", "androidxAppCompatVersion = '1.7.1'", v, count=1)
+    vg.write_text(v)
 
 root_build = root / "build.gradle"
-b = root_build.read_text()
-b = re.sub(r"classpath 'com\.android\.tools\.build:gradle:[^']*'", "classpath 'com.android.tools.build:gradle:8.13.0'", b, count=1)
-root_build.write_text(b)
+if root_build.exists():
+    b = root_build.read_text()
+    b = re.sub(r"classpath 'com\.android\.tools\.build:gradle:[^']*'", "classpath 'com.android.tools.build:gradle:8.13.0'", b, count=1)
+    root_build.write_text(b)
 
 gw = root / "gradle" / "wrapper" / "gradle-wrapper.properties"
-w = gw.read_text()
-w = re.sub(r"distributionUrl=.*", r"distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.2-bin.zip", w, count=1)
-gw.write_text(w)
+if gw.exists():
+    w = gw.read_text()
+    w = re.sub(r"distributionUrl=.*", r"distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.2-bin.zip", w, count=1)
+    gw.write_text(w)
 
 # 2f) R8 attivo in release: DEX ottimizzato + mapping.txt dentro l'AAB (avvisi Play Console
 #     "Nessun file di deoffuscamento" / "Ottimizzazione del codice DEX bassa")
@@ -208,9 +212,10 @@ if "minifyEnabled true" not in g:
 # 2g) keep dei plugin custom: il bridge Capacitor usa il simple name della classe come plugin ID,
 #      R8 non deve rinominarli (UpdateInstallerPlugin / LanBeaconPlugin sono richiamati via JS)
 pr = root / "app" / "proguard-rules.pro"
-p = pr.read_text()
-if "com.tecmat.emanager" not in p:
-    pr.write_text(p + "\n# keep plugin custom (bridge JS -> plugin ID = simple name della classe)\n-keep class com.tecmat.emanager.** { *; }\n")
+if pr.exists():
+    p = pr.read_text()
+    if "com.tecmat.emanager" not in p:
+        pr.write_text(p + "\n# keep plugin custom (bridge JS -> plugin ID = simple name della classe)\n-keep class com.tecmat.emanager.** { *; }\n")
 
 # 3) registra i plugin in MainActivity
 ma = pkg_dir / "MainActivity.java"
