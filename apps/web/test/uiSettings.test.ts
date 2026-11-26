@@ -29,6 +29,7 @@ beforeEach(() => {
   document.documentElement.removeAttribute('data-theme');
   document.documentElement.removeAttribute('data-border');
   document.documentElement.removeAttribute('data-icon-set');
+  document.documentElement.removeAttribute('data-animations');
 });
 
 describe('uiSettings', () => {
@@ -36,8 +37,9 @@ describe('uiSettings', () => {
     localStorage.setItem('dnd5e-theme', 'light');
     const s = defaultUISettings();
     expect(s.theme).toBe('light');
-    expect(s.paletteId).toBe('gold');
+    expect(s.paletteId).toBe('tavern');
     expect(s.iconSet).toBe('classic');
+    expect(s.animations).toBe(true);
     localStorage.removeItem('dnd5e-theme');
     expect(defaultUISettings().theme).toBe('auto');
   });
@@ -112,7 +114,7 @@ describe('robustezza impostazioni UI (fix v0.1.73: tab scomparse dopo update su 
   it('JSON corrotto -> default + chiave rimossa (self-heal, niente AppData da cancellare)', () => {
     localStorage.setItem(UI_KEY, '{non json');
     const s = loadUISettings();
-    expect(s.paletteId).toBe('gold');
+    expect(s.paletteId).toBe('tavern');
     expect(s.mainTabOrder).toEqual([]);
     expect(localStorage.getItem(UI_KEY)).toBeNull();
   });
@@ -124,12 +126,12 @@ describe('robustezza impostazioni UI (fix v0.1.73: tab scomparse dopo update su 
     }));
     const s = loadUISettings();
     expect(s.theme).toBe('auto');
-    expect(s.accent).toBe('#c9a227');
-    expect(s.accent2).toBe('#8a6fd8');
+    expect(s.accent).toBe('#e3a92f');
+    expect(s.accent2).toBe('#d96c2f');
     expect(s.radius).toBe(8);
     expect(s.border).toBe('soft');
     expect(s.iconSet).toBe('classic');
-    expect(s.paletteId).toBe('gold');
+    expect(s.paletteId).toBe('tavern');
     expect(s.mainTabOrder).toEqual([]);
     expect(s.mainTabHidden).toEqual([]);
     expect(s.sheetTabOrder).toEqual([]);
@@ -152,13 +154,56 @@ describe('robustezza impostazioni UI (fix v0.1.73: tab scomparse dopo update su 
 
   it('applyUISettings ignora un colore non-hex (fallback alla palette di default)', () => {
     applyUISettings({ ...defaultUISettings(), theme: 'dark', paletteId: 'custom', accent: 'non-un-colore', accent2: '#00ff00' });
-    expect(document.documentElement.style.getPropertyValue('--accent')).toBe('#c9a227');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(PALETTES[0].dark.accent);
     expect(document.documentElement.style.getPropertyValue('--accent2')).toBe('#00ff00');
   });
 
   it('applyUISettings con radius non numerico non scrive NaN', () => {
     applyUISettings({ ...defaultUISettings(), border: 'soft', radius: NaN });
     expect(document.documentElement.style.getPropertyValue('--radius')).toBe('8px');
+  });
+
+  it('tema completo: applyUISettings scrive anche le superfici (bg/panel/border/text) dalla palette', () => {
+    const tavern = PALETTES.find((p) => p.id === 'tavern')!;
+    applyUISettings({ ...defaultUISettings(), theme: 'dark', paletteId: 'tavern' });
+    const root = document.documentElement;
+    expect(root.style.getPropertyValue('--bg')).toBe(tavern.dark.bg);
+    expect(root.style.getPropertyValue('--panel')).toBe(tavern.dark.panel);
+    expect(root.style.getPropertyValue('--border')).toBe(tavern.dark.border);
+    expect(root.style.getPropertyValue('--text')).toBe(tavern.dark.text);
+    expect(root.style.getPropertyValue('--accent')).toBe(tavern.dark.accent);
+    applyUISettings({ ...defaultUISettings(), theme: 'light', paletteId: 'tavern' });
+    expect(root.style.getPropertyValue('--bg')).toBe(tavern.light.bg);
+    expect(root.style.getPropertyValue('--accent')).toBe(tavern.light.accent);
+  });
+
+  it('colori custom: le superfici restano quelle del tema di default, gli accenti sono custom', () => {
+    const def = PALETTES[0];
+    applyUISettings({ ...defaultUISettings(), theme: 'dark', paletteId: 'custom', accent: '#ff0000', accent2: '#00ff00' });
+    const root = document.documentElement;
+    expect(root.style.getPropertyValue('--bg')).toBe(def.dark.bg);
+    expect(root.style.getPropertyValue('--accent')).toBe('#ff0000');
+    expect(root.style.getPropertyValue('--accent2')).toBe('#00ff00');
+  });
+
+  it('animazioni: flag booleano -> data-animations su :root, persistito e validato', () => {
+    applyUISettings({ ...defaultUISettings(), animations: false });
+    expect(document.documentElement.dataset.animations).toBe('off');
+    expect(loadUISettings().animations).toBe(false);
+    applyUISettings({ ...defaultUISettings(), animations: true });
+    expect(document.documentElement.dataset.animations).toBe('on');
+    localStorage.setItem(UI_KEY, JSON.stringify({ animations: 'sì' }));
+    expect(loadUISettings().animations).toBe(true);
+  });
+
+  it('iconSet rpg accettato; paletteId legacy (gold) resta valido', () => {
+    localStorage.setItem(UI_KEY, JSON.stringify({ iconSet: 'rpg', paletteId: 'gold' }));
+    const s = loadUISettings();
+    expect(s.iconSet).toBe('rpg');
+    expect(s.paletteId).toBe('gold');
+    applyUISettings(s);
+    expect(document.documentElement.dataset.iconSet).toBe('rpg');
+    expect(document.documentElement.style.getPropertyValue('--accent')).toBe(PALETTES.find((p) => p.id === 'gold')!.dark.accent);
   });
 });
 

@@ -66,14 +66,21 @@ export default function DiceRoller() {
         </div>
       )}
       <div style={{ marginTop: 8 }}>
-        {history.map((r, i) => (
-          <div key={i} className="muted" style={{ fontSize: 12 }}>
-            <b style={{ color: 'var(--text)', fontSize: 14 }}>{r.total}</b>{' '}
+        {history.map((r, i) => {
+          const isD20 = /(^|[^a-z])d20($|[^0-9])/i.test(r.expr);
+          const crit = isD20 && r.rolls.includes(20);
+          const fumble = isD20 && r.rolls.includes(1);
+          return (
+          <div key={i} className={`muted dice-row${crit ? ' crit' : ''}${fumble ? ' fumble' : ''}`} style={{ fontSize: 12 }}>
+            <b className="dice-total" style={{ color: 'var(--text)', fontSize: 14 }}>{r.total}</b>{' '}
+            {crit && <span className="tag custom">★ {t('dr.crit', 'Critico!')}</span>}
+            {fumble && <span className="tag" style={{ borderColor: '#b04040', color: '#e08080' }}>✗ {t('dr.fumble', 'Fallimento critico')}</span>}{' '}
             {r.expr} → [{r.rolls.join(', ')}]{r.dropped.length ? ` (${tf('dr.dropped', 'scartati: {list}', { list: r.dropped.join(', ') })})` : ''}{r.mod ? ` ${r.mod > 0 ? '+' : ''}${r.mod}` : ''}
             {r.mode !== 'none' ? ` · ${r.mode === 'advantage' ? t('dr.adv', 'vantaggio') : t('dr.dis', 'svantaggio')}` : ''}
             {r.rolls.length === 0 && r.total === 0 && r.expr === expr ? ` — ${t('dr.invalid', 'espressione non valida')}` : ''}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );

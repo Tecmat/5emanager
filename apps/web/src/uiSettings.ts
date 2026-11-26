@@ -1,37 +1,61 @@
 import { useSyncExternalStore } from 'react';
 
 /**
- * Impostazioni UI persistenti (localStorage `dnd5e.ui.v1`): tema, palette colori,
+ * Impostazioni UI persistenti (localStorage `dnd5e.ui.v1`): tema, temi colore completi (superfici+accenti),
  * raggio angoli / stile bordi, set di icone e ordinamento/visibilità delle tab.
  * `applyUISettings` scrive le CSS variable su :root, quindi il tema si applica
  * a tutta l'app senza ricaricare.
  */
 
 export type ThemePref = 'dark' | 'light' | 'auto';
-export type IconSet = 'classic' | 'lucide';
+export type IconSet = 'classic' | 'lucide' | 'rpg';
 export type BorderStyle = 'soft' | 'sharp' | 'pill';
 
-export interface PaletteColors {
+/** colori completi di un tema: superfici + accenti (per variante scura/chiara) */
+export interface ThemeColors {
+  bg: string;
+  panel: string;
+  panel2: string;
+  border: string;
+  text: string;
+  muted: string;
   accent: string;
   accent2: string;
 }
+
+/** retrocompatibilit\u00e0: le palette anciennes avevano solo accent/accent2 */
+export type PaletteColors = Pick<ThemeColors, 'accent' | 'accent2'>;
 
 export interface PalettePreset {
   id: string;
   nameKey: string;
   nameFb: string;
-  dark: PaletteColors;
-  light: PaletteColors;
+  dark: ThemeColors;
+  light: ThemeColors;
 }
 
-/** palette predefinite (accento + accento secondario per tema scuro/chiaro) */
+/* superfici dei temi completi (usate anche come fallback per i colori custom) */
+const CLASSIC_DARK: ThemeColors = { bg: '#14110d', panel: '#201b15', panel2: '#2a231b', border: '#3e352a', text: '#ece4d4', muted: '#a3947c', accent: '#c9a227', accent2: '#8a6fd8' };
+const CLASSIC_LIGHT: ThemeColors = { bg: '#f3edde', panel: '#fffdf4', panel2: '#efe6d0', border: '#d6c9ab', text: '#2c2517', muted: '#71654c', accent: '#9a7a0c', accent2: '#5f43d6' };
+const TAVERN_DARK: ThemeColors = { bg: '#191008', panel: '#251a0f', panel2: '#312214', border: '#4d3a22', text: '#f2e8d5', muted: '#b5a284', accent: '#e3a92f', accent2: '#d96c2f' };
+const PARCHMENT_LIGHT: ThemeColors = { bg: '#efe4c8', panel: '#fbf3dd', panel2: '#f0e3c2', border: '#d3bd90', text: '#3b2f1a', muted: '#7c6b4a', accent: '#9a6b10', accent2: '#b0561d' };
+const ARCANE_DARK: ThemeColors = { bg: '#0e0c1e', panel: '#1b1633', panel2: '#262052', border: '#3d3476', text: '#e9e5fa', muted: '#9d95c8', accent: '#a06cd5', accent2: '#e0b34a' };
+const ARCANE_LIGHT: ThemeColors = { bg: '#eeebfa', panel: '#faf8ff', panel2: '#e7e1f6', border: '#cfc5ea', text: '#2b2450', muted: '#6f679c', accent: '#7d3fc4', accent2: '#9a7a0c' };
+
+/** palette = tema completo (superfici + accenti); le "solo accento" riusan le superfici classiche */
+function accentOnly(id: string, nameKey: string, nameFb: string, dark: PaletteColors, light: PaletteColors): PalettePreset {
+  return { id, nameKey, nameFb, dark: { ...CLASSIC_DARK, ...dark }, light: { ...CLASSIC_LIGHT, ...light } };
+}
+
+/** temi predefiniti: ogni voce definisce SUPERFICI e accenti per tema scuro e chiaro */
 export const PALETTES: PalettePreset[] = [
-  { id: 'gold', nameKey: 'ui.pal.gold', nameFb: 'Oro antico', dark: { accent: '#c9a227', accent2: '#8a6fd8' }, light: { accent: '#9a7a0c', accent2: '#5f43d6' } },
-  { id: 'arcane', nameKey: 'ui.pal.arcane', nameFb: 'Violetto arcano', dark: { accent: '#a06cd5', accent2: '#d8a03f' }, light: { accent: '#7d3fc4', accent2: '#9a7a0c' } },
-  { id: 'forest', nameKey: 'ui.pal.forest', nameFb: 'Foresta', dark: { accent: '#4caf7d', accent2: '#d8a03f' }, light: { accent: '#2e7d4f', accent2: '#9a7a0c' } },
-  { id: 'blood', nameKey: 'ui.pal.blood', nameFb: 'Sangue', dark: { accent: '#d05a5a', accent2: '#8a6fd8' }, light: { accent: '#a82f2f', accent2: '#5f43d6' } },
-  { id: 'ocean', nameKey: 'ui.pal.ocean', nameFb: 'Oceano', dark: { accent: '#4f9dd8', accent2: '#d8a03f' }, light: { accent: '#2273b8', accent2: '#9a7a0c' } },
-  { id: 'mono', nameKey: 'ui.pal.mono', nameFb: 'Monocromatico', dark: { accent: '#b8b8c0', accent2: '#8a6fd8' }, light: { accent: '#55555e', accent2: '#5f43d6' } },
+  { id: 'tavern', nameKey: 'ui.pal.tavern', nameFb: 'Taverna', dark: TAVERN_DARK, light: PARCHMENT_LIGHT },
+  { id: 'arcane', nameKey: 'ui.pal.arcane', nameFb: 'Arcano', dark: ARCANE_DARK, light: ARCANE_LIGHT },
+  { id: 'gold', nameKey: 'ui.pal.gold', nameFb: 'Classico (oro)', dark: CLASSIC_DARK, light: CLASSIC_LIGHT },
+  accentOnly('forest', 'ui.pal.forest', 'Foresta', { accent: '#4caf7d', accent2: '#d8a03f' }, { accent: '#2e7d4f', accent2: '#9a7a0c' }),
+  accentOnly('blood', 'ui.pal.blood', 'Sangue', { accent: '#d05a5a', accent2: '#8a6fd8' }, { accent: '#a82f2f', accent2: '#5f43d6' }),
+  accentOnly('ocean', 'ui.pal.ocean', 'Oceano', { accent: '#4f9dd8', accent2: '#d8a03f' }, { accent: '#2273b8', accent2: '#9a7a0c' }),
+  accentOnly('mono', 'ui.pal.mono', 'Monocromatico', { accent: '#b8b8c0', accent2: '#8a6fd8' }, { accent: '#55555e', accent2: '#5f43d6' }),
 ];
 
 export interface UISettings {
@@ -45,6 +69,8 @@ export interface UISettings {
   radius: number;
   border: BorderStyle;
   iconSet: IconSet;
+  /** animazioni e transizioni UI (rispettano comunque prefers-reduced-motion) */
+  animations: boolean;
   /** ordinamento tab principali (id delle pagine) */
   mainTabOrder: string[];
   mainTabHidden: string[];
@@ -63,12 +89,13 @@ export function defaultUISettings(): UISettings {
   } catch { /* ignora */ }
   return {
     theme,
-    paletteId: 'gold',
-    accent: '#c9a227',
-    accent2: '#8a6fd8',
+    paletteId: 'tavern',
+    accent: '#e3a92f',
+    accent2: '#d96c2f',
     radius: 8,
     border: 'soft',
     iconSet: 'classic',
+    animations: true,
     mainTabOrder: [],
     mainTabHidden: [],
     sheetTabOrder: [],
@@ -102,7 +129,8 @@ export function loadUISettings(): UISettings {
       accent2: typeof p.accent2 === 'string' && HEX_RE.test(p.accent2) ? p.accent2 : d.accent2,
       radius: typeof p.radius === 'number' && Number.isFinite(p.radius) ? p.radius : d.radius,
       border: p.border === 'soft' || p.border === 'sharp' || p.border === 'pill' ? p.border : d.border,
-      iconSet: p.iconSet === 'classic' || p.iconSet === 'lucide' ? p.iconSet : d.iconSet,
+      iconSet: p.iconSet === 'classic' || p.iconSet === 'lucide' || p.iconSet === 'rpg' ? p.iconSet : d.iconSet,
+      animations: typeof p.animations === 'boolean' ? p.animations : d.animations,
       mainTabOrder: strArr(p.mainTabOrder),
       mainTabHidden: strArr(p.mainTabHidden),
       sheetTabOrder: strArr(p.sheetTabOrder),
@@ -143,17 +171,25 @@ export function resolvedTheme(s: UISettings): 'dark' | 'light' {
   return s.theme;
 }
 
-/** applica le impostazioni scrivendo le CSS variable su :root e salvando su localStorage */
+/** applica le impostazioni scrivendo le CSS variable (tema completo: superfici + accenti) su :root e salvando su localStorage */
 export function applyUISettings(s: UISettings): void {
   const root = document.documentElement;
   const theme = resolvedTheme(s);
   root.dataset.theme = theme;
   try { localStorage.setItem('dnd5e-theme', theme); } catch { /* quota */ }
   const pal = s.paletteId === 'custom' ? null : (PALETTES.find((p) => p.id === s.paletteId) ?? PALETTES[0]);
-  const rawAccent = HEX_RE.test(s.accent) ? s.accent : PALETTES[0].dark.accent;
-  const rawAccent2 = HEX_RE.test(s.accent2) ? s.accent2 : PALETTES[0].dark.accent2;
-  const accent = theme === 'light' ? (pal?.light.accent ?? darken(rawAccent, 0.3)) : (pal?.dark.accent ?? rawAccent);
-  const accent2 = theme === 'light' ? (pal?.light.accent2 ?? darken(rawAccent2, 0.15)) : (pal?.dark.accent2 ?? rawAccent2);
+  // superfici: dalla palette scelta, oppure dal tema di default quando i colori sono custom
+  const surf = (pal ?? PALETTES[0])[theme];
+  const rawAccent = HEX_RE.test(s.accent) ? s.accent : surf.accent;
+  const rawAccent2 = HEX_RE.test(s.accent2) ? s.accent2 : surf.accent2;
+  const accent = pal ? surf.accent : (theme === 'light' ? darken(rawAccent, 0.3) : rawAccent);
+  const accent2 = pal ? surf.accent2 : (theme === 'light' ? darken(rawAccent2, 0.15) : rawAccent2);
+  root.style.setProperty('--bg', surf.bg);
+  root.style.setProperty('--panel', surf.panel);
+  root.style.setProperty('--panel2', surf.panel2);
+  root.style.setProperty('--border', surf.border);
+  root.style.setProperty('--text', surf.text);
+  root.style.setProperty('--muted', surf.muted);
   root.style.setProperty('--accent', accent);
   root.style.setProperty('--accent2', accent2);
   root.style.setProperty('--accent-dim', rgba(accent, 0.5));
@@ -165,6 +201,7 @@ export function applyUISettings(s: UISettings): void {
   root.style.setProperty('--tag-radius', s.border === 'pill' ? '999px' : s.border === 'sharp' ? '4px' : '20px');
   root.dataset.border = s.border;
   root.dataset.iconSet = s.iconSet;
+  root.dataset.animations = s.animations ? 'on' : 'off';
   try { localStorage.setItem(UI_KEY, JSON.stringify(s)); } catch { /* quota */ }
 }
 
