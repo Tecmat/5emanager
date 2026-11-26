@@ -201,21 +201,32 @@ if gw.exists():
     w = re.sub(r"distributionUrl=.*", r"distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14.2-bin.zip", w, count=1)
     gw.write_text(w)
 
-# 2f) R8 attivo in release: DEX ottimizzato + mapping.txt dentro l'AAB (avvisi Play Console
-#     "Nessun file di deoffuscamento" / "Ottimizzazione del codice DEX bassa")
+# 2f) R8 attivo in release: mapping.txt dentro l'AAB (avviso Play "Nessun file di deoffuscamento").
+#     NIENTE proguard-android-optimize.txt: le ottimizzazioni aggressive possono rompere il
+#     bridge WebView/plugin a runtime (crash all'avvio) -> si usa il default non-ottimizzato
+#     proguard-android.txt, che cmq offusca e produce mapping.txt.
 if "minifyEnabled true" not in g:
     g = re.sub(r"minifyEnabled\s+false", "minifyEnabled true", g, count=1)
     g = g.replace("minifyEnabled true", "minifyEnabled true\n            shrinkResources true", 1)
-    g = g.replace("getDefaultProguardFile('proguard-android.txt')", "getDefaultProguardFile('proguard-android-optimize.txt')")
     gradle.write_text(g)
 
-# 2g) keep dei plugin custom: il bridge Capacitor usa il simple name della classe come plugin ID,
-#      R8 non deve rinominarli (UpdateInstallerPlugin / LanBeaconPlugin sono richiamati via JS)
+# 2g) keep R8: il bridge Capacitor usa il simple name della classe come plugin ID e le
+#      annotazioni @PluginMethod/@JavascriptInterface -> niente rinomina/rimozione
+KEEP_BLOCK = (
+    "\n# --- R8 safety: bridge WebView + plugin custom + beacon LAN ---\n"
+    "-keep class com.tecmat.emanager.** { *; }\n"
+    "-keep class com.getcapacitor.** { *; }\n"
+    "-keep class org.nanohttpd.** { *; }\n"
+    "-keepattributes JavascriptInterface,InnerClasses,EnclosingMethod,Signature,*Annotation*,AnnotationDefault\n"
+    "-keepclassmembers class * {\n"
+    "    @android.webkit.JavascriptInterface <methods>;\n"
+    "}\n"
+)
 pr = root / "app" / "proguard-rules.pro"
 if pr.exists():
     p = pr.read_text()
     if "com.tecmat.emanager" not in p:
-        pr.write_text(p + "\n# keep plugin custom (bridge JS -> plugin ID = simple name della classe)\n-keep class com.tecmat.emanager.** { *; }\n")
+        pr.write_text(p + KEEP_BLOCK)
 
 # 3) registra i plugin in MainActivity
 ma = pkg_dir / "MainActivity.java"

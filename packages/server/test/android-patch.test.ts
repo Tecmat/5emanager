@@ -163,10 +163,15 @@ describe('patch_android.py su progetto Capacitor finto', () => {
     const g = readFileSync(join(root, 'app/build.gradle'), 'utf8');
     expect(g).toContain('minifyEnabled true');
     expect(g).toContain('shrinkResources true');
-    expect(g).toContain('proguard-android-optimize.txt');
-    expect(g).not.toContain("getDefaultProguardFile('proguard-android.txt')");
+    // R8 conservativo: niente proguard-android-optimize (può rompere il bridge a runtime)
+    expect(g).toContain("getDefaultProguardFile('proguard-android.txt')");
+    expect(g).not.toContain('proguard-android-optimize.txt');
     const p = readFileSync(join(root, 'app/proguard-rules.pro'), 'utf8');
     expect(p).toContain('-keep class com.tecmat.emanager.** { *; }');
+    expect(p).toContain('-keep class com.getcapacitor.** { *; }');
+    expect(p).toContain('-keep class org.nanohttpd.** { *; }');
+    expect(p).toContain('-keepattributes JavascriptInterface');
+    expect(p).toContain('@android.webkit.JavascriptInterface <methods>;');
   });
 
   it('non fallisce su progetto minimo (senza variables.gradle / root build.gradle / wrapper / proguard)', () => {
