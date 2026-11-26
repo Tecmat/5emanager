@@ -52,6 +52,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 - ✅ **Pronto per il Play Store** (v0.1.89): AAB release-signed `app.aab` in release (con keystore nei secret) oltre all'APK; self-update via APK **disabilitato su install Play** (`isPlayInstall` nel plugin → pulsante apre il Play Store, policy Google rispettata); `PRIVACY.md` + `docs/PLAY_STORE.md` (Data Safety, listing IT/EN, track); test `update-playstore.test.ts`
 
+- ✅ **Restyling v0.1.90**: badge dorato con icona spade nell'header del brand (`brand-badge` in `App.tsx`), tab attive con pill piena e hover sulle inattive, hero Home più grande (titolo 30px), placeholder avatar con bordo e gradiente, hover del pulsante danger con glow rosso, tag "custom" delle sheet con accento — `styles.css`
+
 ### Fase 2 — espansione gameplay (medio termine)
 - ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
 - ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento

@@ -215,7 +215,7 @@ export default function App() {
       <header className="top">
         <span className="row">
           {char?.portrait && <img className="portrait" style={{ width: 36, height: 36 }} src={char.portrait} alt={char.name} />}
-          <h1><Icon name="swords" size={19} /> D&D 5e{char ? ` — ${char.name}` : ''}</h1>
+          <h1><span className="brand-badge"><Icon name="swords" size={16} /></span>D&D 5e{char ? ` — ${char.name}` : ''}</h1>
           {viewChar && (
             <>
               <span className="tag custom"><Icon name="eye" size={12} /> {t('app.viewing', 'stai vedendo la scheda di')} {viewLabel} ({t('app.readonly', 'sola lettura')})</span>
