@@ -35,7 +35,7 @@ Con questi secret la release CI produce `app.apk` **release-signed**; senza secr
 - APK/AAB release-signed con keystore tuo (come sopra, `bundleRelease`)
 - privacy policy pubblicata (URL nell'app listing) che dichiari: fotocamera (QR), install unknown apps (self-update), rete
 - Data Safety form: nessun dato raccolto/transmesso a server tuoi; le schede restano sul dispositivo o sul TUO server
-- `targetSdk 35` (già così)
+- `targetSdk 36` (requisito Play Store, già così dalla v0.1.92)
 
 ## Firma stabile degli APK debug in CI (v0.1.58+)
 

@@ -56,6 +56,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 - ✅ **AAB release-signed validato end-to-end (v0.1.91)**: con i 4 secret Android impostati (`ANDROID_KEYSTORE_B64` + password/alias), il job `android` della release firma `assembleRelease` e produce **`app.aab`** (asset Play Store) oltre a `app.apk` release-signed — `versionCode` automatico 191
 
+- ✅ **Play Store: targetSdk 36 + R8 attivo (v0.1.92)**: `patch_android.py` porta il template a `compileSdk/targetSdk 36` (requisito Play 2026), AGP 8.13.0 + Gradle 8.14.2 + androidx Activity 1.10.1 / Core 1.16.0 / AppCompat 1.7.1; release con `minifyEnabled true` + `shrinkResources true` + `proguard-android-optimize.txt` (DEX ottimizzato + `mapping.txt` dentro l'AAB) e `-keep class com.tecmat.emanager.**` per i plugin custom (bridge JS); CI installa `platforms;android-36` + `build-tools;36.0.0`
+
 ### Fase 2 — espansione gameplay (medio termine)
 - ✅ **Mappa tattica minimale** (v0.1.69): griglia 5 ft con token trascinabili (`TacticalMap.tsx`), stato in `combat.map` (`core/rules/combat.ts`: `ensureMap`/`moveToken`/`setMapSize`) e azioni `moveToken`/`setMapSize` in `core/campaign.ts` — sincronizzata via `state` su server e P2P; permessi: master sempre, PG solo il proprio token nel suo turno; ridimensionabile dal master; token auto-assegnati ad addEnemy; presente in combattimento live (Campagna) e locale (CombatTab); test in `campaign.test.ts`
 - ✅ **Party tracker lato master sempre visibile** (v0.1.69): DM screen sempre attivo per il master (PF/CA/percezione passiva/intuizione/condizioni/esaurimento + badge disconnesso) + striscia compatta "Party" nell'header campagna con PF/CA di ogni PG anche fuori dal combattimento

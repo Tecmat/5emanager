@@ -1,7 +1,7 @@
 # Pubblicare 5e Manager su Google Play Store
 
 Prerequisiti già pronti nel repo: appId `com.tecmat.emanager`, `versionCode` automatico dalla versione
-(`0.1.88` → `188`, monotono), `targetSdk 35`, icone adattive, CI che produce `app.apk` (sideload) e —
+(`0.1.88` → `188`, monotono), `targetSdk 36` (requisito Play Store), icone adattive, CI che produce `app.apk` (sideload) e —
 con il keystore nei secret — **`app.aab` release-signed** (l'asset per Play).
 
 ## 1) Secret GitHub (una volta sola)

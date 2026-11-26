@@ -169,7 +169,7 @@ jobs:
           ANDROID_HOME: /usr/local/lib/android/sdk
         run: |
           yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null
-          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-35" "build-tools;35.0.0"
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       - run: cd apps/web && npx cap add android && npx cap sync
