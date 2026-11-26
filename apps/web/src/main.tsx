@@ -6,6 +6,7 @@ import { NetProvider } from './netStore.js';
 import { initDeepLinks } from './deepLink.js';
 import { requestStartupPermissions } from './permissions.js';
 import { applyUISettings, loadUISettings, UI_KEY } from './uiSettings.js';
+import '@fontsource-variable/cinzel'; // font display "epico" (OFL), woff2 self-hosted nel bundle
 import './styles.css';
 
 /**
