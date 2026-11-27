@@ -161,6 +161,7 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
   const level = totalLevel(char);
   const pb = proficiencyBonus(level);
   const hpMax = maxHp(char, reg);
+  const hpPct = Math.max(0, Math.min(100, (char.hp.current / Math.max(1, hpMax)) * 100));
   const { ac, breakdown } = armorClass(char, reg);
   const cap = carryingCapacity(char);
   const race = reg.races.get(char.raceId);
@@ -319,6 +320,9 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
             >
               ⭐ {char.inspiration ? t('ov.inspirationOn', 'Ispirazione attiva') : t('ov.inspiration', 'Ispirazione')}
             </button>
+          </div>
+          <div className={`hpbar${hpPct <= 25 ? ' low' : ''}`} style={{ marginTop: 8 }} title={tf('ov.hp', 'PF {cur}/{max}{temp}', { cur: char.hp.current, max: hpMax, temp: '' })}>
+            <div style={{ width: `${hpPct}%` }} />
           </div>
           <div className="muted" style={{ marginTop: 6 }} title={breakdown.join('\n')}>CA: {breakdown.join(' · ')}</div>
           {spellcastingInfoAll(char, reg).length > 0 && (

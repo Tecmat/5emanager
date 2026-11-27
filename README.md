@@ -142,6 +142,7 @@ Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
 Contenuti SRD 5e sotto OGL 1.0a / CC-BY 4.0 (Wizards of the Coast). I contenuti non-SRD
 vanno inseriti solo come custom dall'utente.
 Icone del set "Lucide": [Lucide](https://lucide.dev), licenza ISC (Copyright © 2013–2025 Cole Bemis e contributori).
+Font display "Cinzel" (via Fontsource, woff2 self-hosted nel bundle): [Cinzel](https://fonts.google.com/specimen/Cinzel), licenza OFL 1.1 (Copyright 2012 Natanael Gama).
 
 ## Nota sicurezza
 

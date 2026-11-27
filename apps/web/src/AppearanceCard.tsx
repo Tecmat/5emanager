@@ -76,7 +76,19 @@ export default function AppearanceCard() {
           <select value={ui.iconSet} onChange={(e) => updateUISettings({ iconSet: e.target.value as IconSet })}>
             <option value="classic">{t('ui.iconsClassic', 'Classiche (interne)')}</option>
             <option value="lucide">{t('ui.iconsLucide', 'Lucide (open source)')}</option>
+            <option value="rpg">{t('ui.iconsRpg', 'RPG (a tema D&D)')}</option>
           </select>
+        </div>
+        <div>
+          <label>{t('ui.anim', 'Animazioni')}</label>
+          <div className="segmented">
+            <button type="button" className={ui.animations ? 'seg active' : 'seg'} onClick={() => updateUISettings({ animations: true })}>
+              {t('ui.animOn', 'Attive')}
+            </button>
+            <button type="button" className={!ui.animations ? 'seg active' : 'seg'} onClick={() => updateUISettings({ animations: false })}>
+              {t('ui.animOff', 'Spente')}
+            </button>
+          </div>
         </div>
         <div>
           <label>{t('ui.border', 'Stile bordi')}</label>
@@ -107,7 +119,7 @@ export default function AppearanceCard() {
             aria-label={t(p.nameKey, p.nameFb)}
             style={{
               width: 34, height: 24, padding: 0, borderRadius: 6,
-              background: `linear-gradient(135deg, ${p.dark.accent}, ${p.dark.accent2})`,
+              background: `linear-gradient(135deg, ${p.dark.bg} 0%, ${p.dark.accent} 55%, ${p.dark.accent2} 100%)`,
               border: ui.paletteId === p.id ? '2px solid var(--text)' : '1px solid var(--border)',
             }}
           />

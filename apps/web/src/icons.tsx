@@ -288,6 +288,69 @@ const PATHS: Record<IconName, ReactElement> = {
 };
 
 /** set di icone open source Lucide (licenza ISC — vedi README, sezione Licenze) */
+/** set "rpg": varianti a tema D&D per le icone principali, le altre ereditano le classiche */
+const RPG: Partial<Record<IconName, ReactElement>> = {
+  dice: (
+    <>
+      <polygon points="12 2 21 7 21 17 12 22 3 17 3 7 12 2" />
+      <polygon points="12 7.5 16.8 15.5 7.2 15.5 12 7.5" />
+      <path d="M12 2v5.5" />
+      <path d="M21 7l-4.2 8.5" />
+      <path d="M3 7l4.2 8.5" />
+      <path d="M12 22v-6.5" />
+      <path d="M21 17l-4.2-1.5" />
+      <path d="M3 17l4.2-1.5" />
+    </>
+  ),
+  swords: (
+    <>
+      <path d="M12 2.5 19 5.5v5.2c0 4.6-3 7.9-7 9.8-4-1.9-7-5.2-7-9.8V5.5l7-3Z" />
+      <path d="M12 6.5v8" />
+      <path d="M9.2 10h5.6" />
+      <circle cx="12" cy="16.6" r="0.9" fill="currentColor" stroke="none" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M12 6.2C10 4.9 7.2 4.3 4 4.3v14.4c3.2 0 6 .6 8 1.9 2-1.3 4.8-1.9 8-1.9V4.3c-3.2 0-6 .6-8 1.9Z" />
+      <path d="M12 6.2v14.4" />
+    </>
+  ),
+  flask: (
+    <>
+      <path d="M10 2.5h4" />
+      <path d="M11 2.5v4.6L6.6 15a2.6 2.6 0 0 0 2.3 3.9h6.2a2.6 2.6 0 0 0 2.3-3.9L13 7.1V2.5" />
+      <path d="M8 14.5h8" />
+      <circle cx="11" cy="17" r="0.9" fill="currentColor" stroke="none" />
+      <circle cx="13.6" cy="15.8" r="0.7" fill="currentColor" stroke="none" />
+    </>
+  ),
+  map: (
+    <>
+      <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2Z" />
+      <path d="M9 4v14" />
+      <path d="M15 6v14" />
+      <path d="m10.2 10.2 3.6 3.6" />
+      <path d="m13.8 10.2-3.6 3.6" />
+    </>
+  ),
+  bag: (
+    <>
+      <path d="M8 7V5a4 4 0 0 1 8 0v2" />
+      <rect x="5" y="7" width="14" height="13" rx="3" />
+      <path d="M9 12h6v5H9z" />
+    </>
+  ),
+  wand: (
+    <>
+      <path d="m4 20 8.5-8.5" />
+      <path d="M15.5 3.5l.9 2.1 2.1.9-2.1.9-.9 2.1-.9-2.1-2.1-.9 2.1-.9.9-2.1Z" />
+      <path d="M19.5 12l.6 1.4 1.4.6-1.4.6-.6 1.4-.6-1.4-1.4-.6 1.4-.6.6-1.4Z" />
+      <path d="M9.5 4.5l.5 1.2 1.2.5-1.2.5-.5 1.2-.5-1.2-1.2-.5 1.2-.5.5-1.2Z" />
+    </>
+  ),
+};
+
 const LUCIDE: Record<IconName, LucideIcon> = {
   home: Home, user: User, wand: Wand2, bag: Backpack, swords: Swords, map: MapIcon, flask: FlaskConical,
   globe: Globe, plus: Plus, pencil: Pencil, undo: Undo2, moon: Moon, sun: Sun, lock: Lock, eye: Eye,
@@ -336,7 +399,7 @@ const CANDY: Partial<Record<IconName, [string, string]>> = {
 
 export default function Icon({ name, size = 16, className = '', candy = false }: { name: IconName; size?: number; className?: string; candy?: boolean }) {
   const { iconSet } = useUISettings();
-  const paths = PATHS[name];
+  const paths = iconSet === 'rpg' ? (RPG[name] ?? PATHS[name]) : PATHS[name];
   if (iconSet === 'lucide') {
     const L = LUCIDE[name] ?? Search;
     if (candy) {
@@ -403,7 +466,7 @@ export default function Icon({ name, size = 16, className = '', candy = false }:
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
-      strokeWidth={1.8}
+      strokeWidth={iconSet === 'rpg' ? 2.1 : 1.8}
       strokeLinecap="round"
       strokeLinejoin="round"
       aria-hidden="true"

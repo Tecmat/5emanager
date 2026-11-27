@@ -1,28 +1,35 @@
 :root {
-  --bg: #14110d;
-  --panel: #201b15;
-  --panel2: #2a231b;
-  --border: #3e352a;
-  --text: #ece4d4;
-  --muted: #a3947c;
-  --accent: #c9a227;
-  --accent2: #8a6fd8;
-  --accent-dim: rgba(201, 162, 39, 0.5);
-  --stripe: rgba(201, 162, 39, 0.045);
-  --gridline: rgba(201, 162, 39, 0.05);
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
-  font-family: 'Segoe UI', system-ui, sans-serif;
+  --bg: #191008;
+  --panel: #251a0f;
+  --panel2: #312214;
+  --border: #4d3a22;
+  --text: #f2e8d5;
+  --muted: #b5a284;
+  --accent: #e3a92f;
+  --accent2: #d96c2f;
+  --accent-dim: rgba(227, 169, 47, 0.5);
+  --stripe: rgba(227, 169, 47, 0.045);
+  --gridline: rgba(227, 169, 47, 0.05);
+  --font-display: 'Cinzel Variable', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, 'Times New Roman', serif;
+  --font-body: 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  /* grana sottile (SVG feTurbulence inline, nessuna richiesta di rete) usata come texture di sfondo */
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.05'/%3E%3C/svg%3E");
+  font-family: var(--font-body);
 }
 * { box-sizing: border-box; }
 body { margin: 0; background: var(--bg); color: var(--text); }
 button {
-  background: var(--panel2); color: var(--text); border: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel2) 86%, #fff 6%), var(--panel2));
+  color: var(--text); border: 1px solid var(--border);
   border-radius: var(--btn-radius, var(--radius, 8px)); padding: 6px 12px; cursor: pointer; font-size: 13px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07), 0 1px 3px rgba(0, 0, 0, 0.35);
 }
 button:hover { border-color: var(--accent); }
 button.primary {
-  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 82%, #fff), color-mix(in srgb, var(--accent) 85%, #000));
-  color: #1c1607; font-weight: 700; border-color: color-mix(in srgb, var(--accent) 60%, #000);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 86%, #fff), color-mix(in srgb, var(--accent) 80%, #000));
+  color: #1c1607; font-weight: 700; border-color: color-mix(in srgb, var(--accent) 55%, #000);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.3);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), inset 0 -2px 5px rgba(0, 0, 0, 0.22), 0 2px 10px color-mix(in srgb, var(--accent) 28%, transparent);
 }
 :root[data-theme='light'] button.primary { color: #fffdf4; border-color: #7c610c; }
 button.danger { border-color: #b04040; color: #e08080; }
@@ -38,7 +45,12 @@ label { display: block; font-size: 12px; color: var(--muted); margin: 8px 0 2px;
 .grid { display: grid; gap: 12px; }
 .cols2 { grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); }
 .cols3 { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
-.card { background: var(--panel); border: 1px solid var(--border); border-top: 2px solid var(--accent-dim); border-radius: calc(var(--radius, 8px) + 4px); padding: 14px 16px; }
+.card {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--panel) 90%, #fff 4%), var(--panel));
+  border: 1px solid var(--border); border-top: 2px solid var(--accent-dim);
+  border-radius: calc(var(--radius, 8px) + 4px); padding: 14px 16px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 1px 3px rgba(0, 0, 0, 0.25);
+}
 .card h3 { margin: 0 0 8px; font-size: 14px; color: var(--accent); text-transform: uppercase; letter-spacing: 0.05em; }
 .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
 .muted { color: var(--muted); font-size: 12px; }
@@ -69,22 +81,22 @@ details summary { cursor: pointer; color: var(--muted); font-size: 12px; }
 .modal-bg { position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex; align-items: center; justify-content: center; z-index: 10; }
 .modal { background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 18px; width: min(560px, 92vw); max-height: 85vh; overflow: auto; }
 .modal h2 { margin-top: 0; font-size: 16px; }
-.xpbar { height: 6px; background: var(--panel2); border-radius: 3px; overflow: hidden; margin-top: 4px; }
+.xpbar { height: 8px; background: var(--panel2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; margin-top: 4px; }
 .xpbar > div { height: 100%; background: var(--accent); }
 
 :root[data-theme='light'] {
-  --bg: #f3edde;
-  --panel: #fffdf4;
-  --panel2: #efe6d0;
-  --border: #d6c9ab;
-  --text: #2c2517;
-  --muted: #71654c;
-  --accent: #9a7a0c;
-  --accent2: #5f43d6;
-  --accent-dim: rgba(154, 122, 12, 0.55);
-  --stripe: rgba(154, 122, 12, 0.05);
-  --gridline: rgba(120, 96, 40, 0.07);
-  --font-display: 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, serif;
+  --bg: #efe4c8;
+  --panel: #fbf3dd;
+  --panel2: #f0e3c2;
+  --border: #d3bd90;
+  --text: #3b2f1a;
+  --muted: #7c6b4a;
+  --accent: #9a6b10;
+  --accent2: #b0561d;
+  --accent-dim: rgba(154, 107, 16, 0.55);
+  --stripe: rgba(154, 107, 16, 0.05);
+  --gridline: rgba(122, 96, 40, 0.07);
+  --font-display: 'Cinzel Variable', 'Iowan Old Style', 'Palatino Linotype', 'Book Antiqua', Palatino, Georgia, 'Times New Roman', serif;
 }
 :root[data-theme='light'] body { background: var(--bg); }
 .segmented { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -127,24 +139,39 @@ textarea:focus:not(:focus-visible) {
     scroll-behavior: auto !important;
   }
 }
+/* animazioni disattivate dall'utente (data-animations='off' su :root) */
+:root[data-animations='off'] *,
+:root[data-animations='off'] *::before,
+:root[data-animations='off'] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
 
 /* ---- polish grafico (v0.1.27) ---- */
 body {
   background:
+    radial-gradient(ellipse 120% 90% at 50% -10%, transparent 55%, rgba(0, 0, 0, 0.32) 100%),
+    var(--noise),
     radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb, var(--accent2) 14%, transparent), transparent 60%),
     radial-gradient(900px 420px at -10% 0%, color-mix(in srgb, var(--accent) 13%, transparent), transparent 55%),
     repeating-linear-gradient(0deg, var(--gridline) 0 1px, transparent 1px 28px),
     repeating-linear-gradient(90deg, var(--gridline) 0 1px, transparent 1px 28px),
     var(--bg);
+  background-attachment: fixed;
   min-height: 100vh;
 }
 :root[data-theme='light'] body {
   background:
+    radial-gradient(ellipse 120% 90% at 50% -10%, transparent 60%, rgba(122, 90, 40, 0.16) 100%),
+    var(--noise),
     radial-gradient(1200px 500px at 80% -10%, color-mix(in srgb, var(--accent2) 10%, transparent), transparent 60%),
     radial-gradient(900px 420px at -10% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 55%),
     repeating-linear-gradient(0deg, var(--gridline) 0 1px, transparent 1px 28px),
     repeating-linear-gradient(90deg, var(--gridline) 0 1px, transparent 1px 28px),
     var(--bg);
+  background-attachment: fixed;
 }
 button {
   transition: transform 0.08s ease, border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
@@ -182,12 +209,12 @@ header.top { backdrop-filter: blur(6px); box-shadow: 0 2px 12px rgba(0, 0, 0, 0.
 
 /* host P2P trovato in LAN: pulsante "carino" che attrae l'attenzione */
 .lan-host-btn {
-  background: linear-gradient(135deg, rgba(122, 90, 248, 0.25), rgba(201, 162, 39, 0.15));
+  background: linear-gradient(135deg, color-mix(in srgb, var(--accent2) 25%, transparent), color-mix(in srgb, var(--accent) 15%, transparent));
   animation: pulseGlow 1.8s ease-in-out infinite;
 }
 @keyframes pulseGlow {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(122, 90, 248, 0.35); }
-  50% { box-shadow: 0 0 12px 2px rgba(122, 90, 248, 0.45); }
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent2) 35%, transparent); }
+  50% { box-shadow: 0 0 12px 2px color-mix(in srgb, var(--accent2) 45%, transparent); }
 }
 
 /* dado: micro-animazione al click (classe .rolling aggiunta da DiceRoller) */
@@ -267,10 +294,10 @@ main { padding: 18px 16px; }
 .home-hero {
   border-top: 3px solid var(--accent);
   background:
-    radial-gradient(600px 200px at 50% -40%, rgba(201, 162, 39, 0.16), transparent 70%),
+    radial-gradient(600px 200px at 50% -40%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 70%),
     var(--panel);
 }
-.home-title { color: var(--accent); font-size: 26px; text-shadow: 0 2px 12px rgba(201, 162, 39, 0.25); }
+.home-title { color: var(--accent); font-size: 26px; text-shadow: 0 2px 12px color-mix(in srgb, var(--accent) 25%, transparent); }
 .home-h { color: var(--accent); }
 .sheet-card { border-radius: calc(var(--radius, 8px) + 4px); }
 .tag { background: var(--panel2); border-radius: 20px; }
@@ -316,8 +343,12 @@ main .home-h { border-bottom: 1px solid var(--border); padding-bottom: 4px; }
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 header.top h1 { display: flex; align-items: center; font-size: 20px; gap: 0; }
-/* tab: attiva con pill piena, hover con striscia */
-.tabs button.active { background: var(--panel2); }
+/* tab: attiva con pill piena al colore del tema, hover con striscia */
+.tabs button.active {
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 20%, var(--panel2)), var(--panel2));
+  border-bottom-color: var(--accent);
+  box-shadow: 0 2px 10px color-mix(in srgb, var(--accent) 16%, transparent);
+}
 .tabs button:hover:not(.active) { background: var(--stripe); }
 /* hero Home più da poster */
 .home-hero { padding: 34px 18px 30px; }
@@ -332,3 +363,53 @@ header.top h1 { display: flex; align-items: center; font-size: 20px; gap: 0; }
 button.danger:hover:not(:disabled) { box-shadow: 0 2px 10px rgba(224, 96, 96, 0.22); border-color: #d05050; }
 /* tag "attiva" sulle schede in évidence */
 .sheet-card .tag.custom { border-color: var(--accent); color: var(--accent); }
+
+/* ---- restyling: temi completi D&D (taverna / pergamena / arcano), texture, animazioni ---- */
+/* card: sollevamento morbido al passaggio (la transition e' gia' in .card) */
+.card:hover { transform: translateY(-1px); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 6px 18px rgba(0, 0, 0, 0.3); }
+
+/* titoli display: glow al colore del tema */
+h1 { text-shadow: 0 2px 14px color-mix(in srgb, var(--accent) 30%, transparent); }
+
+/* barre di progresso (XP/HP): pill con bordo + riflesso che scorre */
+.xpbar > div, .hpbar > div { position: relative; overflow: hidden; }
+.xpbar > div::after, .hpbar > div::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.35) 50%, transparent 70%);
+  background-size: 220% 100%;
+  animation: barShine 2.8s linear infinite;
+}
+@keyframes barShine { from { background-position: 120% 0; } to { background-position: -120% 0; } }
+.xpbar > div { background: linear-gradient(90deg, var(--accent), var(--accent2)); }
+
+/* barra PF stile "pozione": rosso->brace->oro, impulso quando i PF sono bassi */
+.hpbar { height: 10px; background: var(--panel2); border: 1px solid var(--border); border-radius: 999px; overflow: hidden; }
+.hpbar > div {
+  height: 100%;
+  background: linear-gradient(90deg, #a83232, #d97b2f 55%, var(--accent));
+  transition: width 0.35s ease;
+}
+.hpbar.low > div { background: linear-gradient(90deg, #7e1f1f, #c0392b); animation: lowHpPulse 1.4s ease-in-out infinite; }
+@keyframes lowHpPulse { 0%, 100% { filter: brightness(1); } 50% { filter: brightness(1.45); } }
+
+/* dado: enfasi sul risultato (20 = critico dorato, 1 = fallimento rosso) */
+.dice-row { border-radius: 6px; padding: 2px 6px; margin: 0 -6px; }
+.dice-total { display: inline-block; }
+.dice-row.crit { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+.dice-row.crit .dice-total { color: var(--accent); animation: critPop 0.7s ease; text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 70%, transparent); }
+.dice-row.fumble { background: rgba(200, 60, 60, 0.1); }
+.dice-row.fumble .dice-total { color: #e06060; animation: fumbleShake 0.5s ease; }
+@keyframes critPop { 0% { transform: scale(1); } 35% { transform: scale(1.45); filter: brightness(1.7); } 100% { transform: scale(1); } }
+@keyframes fumbleShake { 0%, 100% { transform: translateX(0); } 25% { transform: translateX(-4px); } 50% { transform: translateX(4px); } 75% { transform: translateX(-2px); } }
+
+/* modale: doppia cornice da "pergamena incorniciata" */
+.modal {
+  box-shadow:
+    0 0 0 1px var(--bg),
+    0 0 0 2px var(--border),
+    0 0 0 3px color-mix(in srgb, var(--accent2) 22%, transparent),
+    0 16px 48px rgba(0, 0, 0, 0.55);
+}
+
+/* tag: tracking da capitoline "runico" */
+.tag { letter-spacing: 0.03em; }
