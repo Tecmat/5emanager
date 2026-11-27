@@ -12,14 +12,25 @@ export class NetClient {
     return new Promise((resolve, reject) => {
       const ws = new WebSocket(url);
       this.ws = ws;
+      // la promise deve concludersi ESATTAMENTE una volta: alcuni WebView (es. WebKitGTK)
+      // segnalano una connessione fallita solo con onclose, senza onerror — senza questo
+      // flag il timeout verrebbe cancellato e la promise resterebbe appesa per sempre
+      // (pulsante Login "muto", nessun errore mostrato)
+      let settled = false;
       // timeout: un host irraggiungibile/filtrato non deve bloccare il pulsante su "Connessione..."
       const to = setTimeout(() => {
+        if (settled) return;
+        settled = true;
         try { ws.close(); } catch { /* ignora */ }
         reject(new Error('Timeout connessione a ' + url + ' (8s): host irraggiungibile?'));
       }, 8000);
-      ws.onopen = () => { clearTimeout(to); resolve(); };
-      ws.onerror = () => { clearTimeout(to); reject(new Error('Connessione a ' + url + ' fallita')); };
-      ws.onclose = () => { clearTimeout(to); this.handlers.forEach((h) => h({ t: 'closed' })); };
+      ws.onopen = () => { if (settled) return; settled = true; clearTimeout(to); resolve(); };
+      ws.onerror = () => { if (settled) return; settled = true; clearTimeout(to); reject(new Error('Connessione a ' + url + ' fallita')); };
+      ws.onclose = () => {
+        clearTimeout(to);
+        if (!settled) { settled = true; reject(new Error('Connessione a ' + url + ' chiusa prima dell\u2019apertura')); }
+        this.handlers.forEach((h) => h({ t: 'closed' }));
+      };
       ws.onmessage = (e) => {
         const m = JSON.parse(e.data);
         this.handlers.forEach((h) => h(m));
