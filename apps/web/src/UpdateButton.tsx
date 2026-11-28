@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
+import { useNet } from './netStore.js';
 import Icon from './icons.js';
 import {
   applyDesktopUpdate,
@@ -8,6 +9,7 @@ import {
   checkSwUpdate,
   checkUpdate,
   detectPlatform,
+  getCurrentVersion,
   downloadDesktopUpdate,
   errMsg,
   type DownloadProgress,
@@ -30,6 +32,14 @@ export default function UpdateButton() {
   const [downloaded, setDownloaded] = useState(false);
   const [msg, setMsg] = useState('');
   const platform = detectPlatform();
+  const { auth } = useNet();
+  // Pannello update solo dove ha senso: desktop sempre (self-update Tauri); web solo se admin
+  // loggato (l'apply del server richiede il token admin); Android (APK/AAB) mai: su Play gli
+  // aggiornamenti arrivano solo da Google Play -> lí resta solo l'indicatore di versione.
+  const canUpdate = platform === 'desktop' || (platform === 'web' && auth?.role === 'admin');
+  const isAndroid = platform === 'android'; // prima dell'early return: senno' TS restringe il tipo
+  const [ver, setVer] = useState('');
+  useEffect(() => { void getCurrentVersion().then(setVer); }, []);
 
   const run = async () => {
     setStatus('checking');
@@ -47,9 +57,9 @@ export default function UpdateButton() {
     }
   };
 
-  // check automatico all'avvio (una volta per sessione)
+  // check automatico all'avvio (una volta per sessione, solo se il pannello e' abilitato)
   useEffect(() => {
-    void run();
+    if (canUpdate) void run();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -101,6 +111,19 @@ export default function UpdateButton() {
   const busy = status === 'checking' || status === 'downloading';
   const pct = progress && progress.total > 0 ? Math.round((progress.received / progress.total) * 100) : null;
 
+  // solo indicatore di versione (Android APK/AAB, oppure web senza login admin)
+  if (!canUpdate) {
+    return (
+      <span
+        className="muted"
+        style={{ fontSize: 11, alignSelf: 'center' }}
+        title={t('up.versionOnly', "Versione dell'app — Android: aggiornamenti da Google Play; web: il pannello update e' riservato all'amministratore")}
+      >
+        v{ver || '…'}
+      </span>
+    );
+  }
+
   return (
     <span style={{ position: 'relative', display: 'inline-flex' }}>
       <button
@@ -127,7 +150,7 @@ export default function UpdateButton() {
           </div>
           <div className="row" style={{ marginTop: 8 }}>
             <button onClick={run} disabled={busy}>{busy ? t('up.checking', 'Controllo…') : t('up.check', 'Cerca aggiornamenti')}</button>
-            {info?.pageUrl && (platform === 'android' ? (
+            {info?.pageUrl && (isAndroid ? (
               // su Android niente pop-up/browser: il link della release resta come testo copiabile
               <span className="muted" style={{ fontSize: 11, wordBreak: 'break-all', alignSelf: 'center' }} title={t('up.pageUrlTitle', 'Copia questo link se vuoi aprire la pagina della release a mano')}>
                 {info.pageUrl}
@@ -149,7 +172,7 @@ export default function UpdateButton() {
                   {t('up.webHint', 'La web app si aggiorna con il redeploy del server (git pull + npm run build). Subito puoi usare la nuova AppImage/APK dalla release.')}
                 </div>
               )}
-              {platform === 'android' && info.available && (
+              {isAndroid && info.available && (
                 <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                   {t('up.androidUpdateHint', 'Su Android l\'app si aggiorna da Google Play (⋮ → Gestisci app → 5e Manager → Aggiorna); le build sideload (APK da GitHub) si aggiornano scaricando la nuova APK dalla pagina della release.')}
                 </div>

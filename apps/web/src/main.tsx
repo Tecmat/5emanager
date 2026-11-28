@@ -5,6 +5,7 @@ import { StoreProvider } from './store.js';
 import { NetProvider } from './netStore.js';
 import { initDeepLinks } from './deepLink.js';
 import { requestStartupPermissions } from './permissions.js';
+import { detectPlatform } from './update.js';
 import { applyUISettings, loadUISettings, UI_KEY } from './uiSettings.js';
 import '@fontsource-variable/cinzel'; // font display "epico" (OFL), woff2 self-hosted nel bundle
 import './styles.css';
@@ -59,6 +60,7 @@ window.addEventListener('unhandledrejection', (e) => console.error('[5emanager] 
 
 // Android: deep link dai QR (5ELAN:/5EP2P1: aperti dalla fotocamera di sistema) + permessi all'avvio
 void initDeepLinks();
+document.documentElement.dataset.platform = detectPlatform();
 void requestStartupPermissions();
 
 // recovery: ?resetui=1 cancella SOLO le impostazioni UI (tema/palette/tab) — le schede restano in IndexedDB.

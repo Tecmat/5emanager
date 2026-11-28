@@ -42,6 +42,7 @@ import { sha256Hex } from './netStore.js';
 import LevelUpDialog from './LevelUpDialog.js';
 import DiceRoller from './DiceRoller.js';
 import { printSheet } from './pdf.js';
+import { detectPlatform } from './update.js';
 
 const RULE_LABELS: [keyof HouseRules, string][] = [
   ['bypassSpellLimit', 'Ignora limite incantesimi appresi'],
@@ -202,11 +203,21 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
     return out;
   }, [char, reg]);
 
-  const exportChar = () => {
-    const blob = new Blob([JSON.stringify(char, null, 2)], { type: 'application/json' });
+  const exportChar = async () => {
+    const content = JSON.stringify(char, null, 2);
+    const name = `${char.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    // su desktop (Tauri/AppImage) i download via blob-anchor sono bloccati dalla WebView:
+    // si salva il file con un comando Tauri (Downloads o HOME)
+    if (detectPlatform() === 'desktop') {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const p = await invoke('save_text_file', { name, content });
+      alert(tf('ov.savedTo', 'Salvato in {p}', { p: String(p) }));
+      return;
+    }
+    const blob = new Blob([content], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = `${char.name.replace(/\s+/g, '-').toLowerCase()}.json`;
+    a.download = name;
     a.click();
   };
 
@@ -229,7 +240,14 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
       app: '5emanager', version: 1, exportedAt: new Date().toISOString(),
       sheets, custom,
     };
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const content = JSON.stringify(data, null, 2);
+    if (detectPlatform() === 'desktop') {
+      const { invoke } = await import('@tauri-apps/api/core');
+      const p = await invoke('save_text_file', { name: '5emanager-libreria.json', content });
+      alert(tf('ov.savedTo', 'Salvato in {p}', { p: String(p) }));
+      return;
+    }
+    const blob = new Blob([content], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
     a.download = '5emanager-libreria.json';

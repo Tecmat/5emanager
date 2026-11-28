@@ -434,6 +434,19 @@ fn app_version(app: tauri::AppHandle) -> String {
 }
 
 /// confronta la versione corrente con l'ultima release GitHub e individua l'asset AppImage
+/// salva un file di testo (export JSON scheda/libreria) in ~/Downloads (o HOME se manca)
+#[tauri::command]
+fn save_text_file(name: String, content: String) -> Result<String, String> {
+    let home = std::env::var("HOME").map_err(|e| e.to_string())?;
+    let dl = std::path::Path::new(&home).join("Downloads");
+    let dir = if dl.is_dir() { dl } else { std::path::PathBuf::from(&home) };
+    let safe: String = name.chars().map(|c| if c.is_alphanumeric() || matches!(c, '-' | '_' | '.') { c } else { '_' }).collect();
+    let fname = if safe.is_empty() { "export.json".to_string() } else { safe };
+    let path = dir.join(fname);
+    std::fs::write(&path, content).map_err(|e| e.to_string())?;
+    Ok(path.to_string_lossy().into_owned())
+}
+
 #[tauri::command]
 async fn check_update(app: tauri::AppHandle) -> Result<UpdateInfo, String> {
     let current = app.package_info().version.to_string();
@@ -757,7 +770,8 @@ pub fn run() {
             lan_beacon_broadcast,
             lan_beacon_stop,
             lan_beacon_set_code,
-            lan_local_ip
+            lan_local_ip,
+            save_text_file
         ])
         .setup(|app| {
             let _ = app.handle().emit("app-ready", ());
