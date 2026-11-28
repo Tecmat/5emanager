@@ -21,8 +21,8 @@ npx cap open ios                      # apre apps/web/ios/App/App.xcworkspace in
 
 In Xcode:
 
-1. Seleziona il target **App** → tab **Signing & Capabilities** → imposta **Team** (il tuo Apple ID / team pago)
-   e un **Bundle Identifier** unico (es. `it.tuominio.cinqueemanager`).
+1. Seleziona il target **App** → tab **Signing & Capabilities** → imposta **Team** (il proprio Apple ID / team pago)
+   e un **Bundle Identifier** unico (es. `it.esempio.cinqueemanager`).
 2. Tab **General** → versione/build come in `apps/web/package.json`.
 3. **Product → Scheme → Edit Scheme → Run → Info → Launch: Default** (se vuoi deep link/QR funzionanti verifica gli scheme in `Info.plist`).
 4. Seleziona un dispositivo reale (o un simulatore) → **Product → Run** (⌘R) per il test, oppure

@@ -40,8 +40,8 @@ docker compose up -d --build     # builda l'immagine dal sorgente locale
 
 ### Dalla cartella `docker/`
 
-Il template **`docker/.env.example`** va copiato in `docker/.env` (che **non** è tracciato: i tuoi
-secret restano solo sul server, nessun conflitto ai `git pull`):
+Il template **`docker/.env.example`** va copiato in `docker/.env` (che **non** è tracciato: i propri
+secret restano solo in locale sul server, nessun conflitto ai `git pull`):
 
 ```bash
 cd docker
@@ -58,10 +58,10 @@ docker compose up -d --build                    # oppure build dal sorgente loca
   il login come account admin (senza sessione → redirect a `/login`, account non-admin → 403)
 - Dati persistenti: `docker/data/`
 
-## 2) HTTPS su Internet — con il TUO reverse proxy (scegli tu quale)
+## 2) HTTPS su Internet — con il proprio reverse proxy (a scelta)
 
-Il progetto **non include più nginx**: il server gira solo sulla porta `3001` e sta a te esporlo
-su Internet con il reverse proxy e il servizio HTTPS che preferisci (Caddy, Traefik, nginx, HAProxy,
+Il progetto **non include più nginx**: il server gira solo sulla porta `3001` e va esposto
+su Internet con il reverse proxy e il servizio HTTPS scelto (Caddy, Traefik, nginx, HAProxy,
 Cloudflare Tunnel, ecc.). Requisiti minimi del proxy:
 
 - **TLS** con certificato valido (es. Let's Encrypt) e redirect da http a https
@@ -97,7 +97,7 @@ Esempio con **Caddy** (HTTPS automatico con Let's Encrypt, Caddyfile di 3 righe)
 
 ```bash
 sudo apt install -y caddy   # oppure il proxy che preferisci
-sudo sh -c 'printf "dnd.tuosito.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo sh -c 'printf "dnd.esempio.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
 sudo systemctl enable --now caddy
 ```
 
@@ -105,14 +105,14 @@ Per le **passkey WebAuthn** (login senza password, pulsante 🔑 anche nella pag
 
 ```bash
 # in docker/.env (o .env della root del clone)
-DND5E_RP_ID=dnd.tuosito.it
-DND5E_RP_ORIGIN=https://dnd.tuosito.it
+DND5E_RP_ID=dnd.esempio.it
+DND5E_RP_ORIGIN=https://dnd.esempio.it
 ```
 
-### Accesso anche dalla LAN (oltre a https dal tuo proxy)
+### Accesso anche dalla LAN (oltre a https dal proprio proxy)
 
 Se vuoi che le app in LAN trovino il server con la scansione rete (`ws://192.168.1.36:3001`) mentre
-da remoto si passa dal tuo proxy su 443, avvia con l'override LAN (bind solo sull'IP LAN: la 3001
+da remoto si passa dal proprio proxy su 443, avvia con l'override LAN (bind solo sull'IP LAN: la 3001
 resta chiusa verso Internet):
 
 ```bash
@@ -122,7 +122,7 @@ docker compose -f docker-compose.yml -f docker-compose.lan.yml up -d --build
 docker ps   # 5emanager-server mostra 192.168.1.36:3001:3001
 ```
 
-## 3) Deploy remoto passo-passo (VPS + dominio + tuo reverse proxy)
+## 3) Deploy remoto passo-passo (VPS + dominio + proprio reverse proxy)
 
 Prerequisiti: dominio con **record A** → IP pubblico del server, porte **80/443 aperte** nel firewall
 (es. `ufw allow 80/tcp && ufw allow 443/tcp`), Docker + compose installati, repo clonato in `/opt/5emanager`.
@@ -134,29 +134,29 @@ docker compose up -d        # dalla root del clone; oppure: cd docker && cp .env
 
 # 2) token admin e (per le passkey) RP ID/origin — in .env (root o docker/.env):
 #    DND5E_ADMIN_TOKEN=<token-lungo-casuale>
-#    DND5E_RP_ID=dnd.tuosito.it
-#    DND5E_RP_ORIGIN=https://dnd.tuosito.it
+#    DND5E_RP_ID=dnd.esempio.it
+#    DND5E_RP_ORIGIN=https://dnd.esempio.it
 
-# 3) il TUO reverse proxy con HTTPS (esempio Caddy, cert automatico)
+# 3) il proprio reverse proxy con HTTPS (esempio Caddy, cert automatico)
 sudo apt install -y caddy
-sudo sh -c 'printf "dnd.tuosito.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo sh -c 'printf "dnd.esempio.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
 sudo systemctl enable --now caddy
 
 # 4) verifica automatica
-./deploy/smoke-test.sh https://dnd.tuosito.it
+./deploy/smoke-test.sh https://dnd.esempio.it
 # (controlla: index, /version.json, /api/info, /admin, handshake WebSocket 101, redirect http->https)
 ```
 
-- Web app: `https://dnd.tuosito.it` · Admin: `https://dnd.tuosito.it/admin` · Multiplayer: `wss://dnd.tuosito.it`
-  (la web app deriva `wss://` in automatico dall'origin https; nelle app native inserisci `wss://dnd.tuosito.it`).
+- Web app: `https://dnd.esempio.it` · Admin: `https://dnd.esempio.it/admin` · Multiplayer: `wss://dnd.esempio.it`
+  (la web app deriva `wss://` in automatico dall'origin https; nelle app native inserisci `wss://dnd.esempio.it`).
 - **Passkey**: su HTTPS con `DND5E_RP_ID`/`DND5E_RP_ORIGIN` (o `Host` passato dal proxy).
 - **Primo admin**: con zero account apri `/setup` e crea il primo admin; poi pannello `/admin` col token.
   In alternativa imposta `DND5E_ADMIN_USER` prima del primo avvio.
 - **Aggiornamenti**: `/admin` → "⬇️ Aggiorna la webapp del server ora" (scarica `web-dist.zip` dalla
   release GitHub con backup/rollback). Per il container: `git pull && docker compose up -d --build`.
 - **Backup dati**: `tar czf backup-data.tgz -C docker data` (campagne, account incl. TOTP/passkey, librerie).
-- **Sicurezza**: tieni `DND5E_ADMIN_TOKEN` segreto, **non esporre mai la 3001 su Internet senza TLS**,
-  limita `/admin` se vuoi (allowlist IP nel tuo proxy), proteggi `docker/data` (hash password, secret TOTP, chiavi pubbliche passkey).
+- **Sicurezza**: mantenere `DND5E_ADMIN_TOKEN` segreto, **non esporre mai la 3001 su Internet senza TLS**,
+  limita `/admin` se necessario (allowlist IP nel proprio proxy), proteggi `docker/data` (hash password, secret TOTP, chiavi pubbliche passkey).
 
 ## Variabili d'ambiente utili (container `5emanager`)
 
@@ -165,12 +165,12 @@ sudo systemctl enable --now caddy
 | `PORT` / `HOST` | `3001` / `0.0.0.0` | porta e bind del server |
 | `DND5E_DATA_DIR` | `/data` | dove salva campagne, account e schede (volume persistente) |
 | `DND5E_STATIC_DIR` | `/app/apps/web/dist` | web app servita (buildata dentro l'immagine) |
-| `DND5E_ADMIN_TOKEN` | *(vuoto)* | token per `/admin`, `/api/setup` e `POST /api/update/apply`. Se mancante, l'entrypoint Docker ne genera uno (log + `/data/admin-token.txt`) — **impostalo o prendilo dai log in produzione** |
+| `DND5E_ADMIN_TOKEN` | *(vuoto)* | token per `/admin`, `/api/setup` e `POST /api/update/apply`. Se mancante, l'entrypoint Docker ne genera uno (log + `/data/admin-token.txt`) — **da impostare, oppure recuperare dai log in produzione** |
 | `GITHUB_TOKEN` | *(vuoto)* | solo se il repo GitHub fosse privato: sblocca check-update e self-update |
-| `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https — impostali se il tuo reverse proxy non passa `Host` intatto (vedi §2) |
+| `DND5E_RP_ID` / `DND5E_RP_ORIGIN` | derivati da `Host` | passkey WebAuthn: dominio e origin https — impostali se il proprio reverse proxy non passa `Host` intatto (vedi §2) |
 | `DND5E_ADMIN_USER` | *(vuoto)* | username che diventa admin a prescindere dal file (bootstrap primo admin) |
 | `DND5E_LAN_IP` / `DND5E_LAN_IPS` | auto (interfacce di rete) | in Docker gli IP rilevati sono quelli del bridge (172.x): impostali con l'IP LAN reale dell'host (es. `DND5E_LAN_IP=192.168.1.36`) così la scansione LAN delle app mostra l'indirizzo giusto |
-| `DND5E_REQUIRE_AUTH` | `true` (nei compose) | **webapp di Docker chiusa**: senza account non si accede al sito (si vede solo la pagina di login; `/api/login`, `/api/register`, `/api/info`, `/setup`, `/version.json` restano pubblici). Sui WS `create`/`join`/`action` richiedono la sessione. Le app scaricabili (AppImage/APK/…) restano indipendenti: là il login è facoltativo. Mettilo `false` solo in LAN fidata |
+| `DND5E_REQUIRE_AUTH` | `true` (nei compose) | **webapp di Docker chiusa**: senza account non si accede al sito (si vede solo la pagina di login; `/api/login`, `/api/register`, `/api/info`, `/setup`, `/version.json` restano pubblici). Sui WS `create`/`join`/`action` richiedono la sessione. Le app scaricabili (AppImage/APK/…) restano indipendenti: là il login è facoltativo. Impostarlo a `false` solo in una LAN fidata |
 | `DND5E_REGISTRATION` | `approval` | valore **iniziale** della modalità di registrazione (`approval`/`open`/`invite`); cambiando da `/admin` → Impostazioni server il nuovo valore è **persistente e ha priorità** sull'env (salvato in `docker/data/accounts.data`) |
 
 ## Comandi utili
