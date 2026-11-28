@@ -100,7 +100,7 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello + campo **upcast** con anteprima `+NdM per slot` (v0.1.98) — `CustomTab.tsx`, `validate.ts`
 - ✅ **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
 - ✅ **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab) — `App.tsx`
-- ✅ **P2 Accessibilità** (v0.1.98): `:focus-visible`, `prefers-reduced-motion`, `role=tablist/tab` + `aria-selected` sulle nav, aria-label sui bottoni solo-icona — `styles.css`, `App.tsx`
+- ✅ **P2 Accessibilità** (v0.1.98): `:focus-visible`, `prefers-reduced-motion`, `aria-current` sulle tab attive delle nav, aria-label sui bottoni solo-icona — `styles.css`, `App.tsx`
 - ✅ **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
 - i18n esteso a tutte le nuove UI (IT/EN)
 
