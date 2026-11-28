@@ -135,7 +135,7 @@ Il P2P LAN è il nuovo punto di partenza: le prossime priorità (dettagli in
    sync cloud opzionale, iOS, test e2e Playwright
 
 ## Privacy e sicurezza
-- [Privacy policy](PRIVACY.md) · [Security policy](SECURITY.md) · [Guida Play Store](docs/PLAY_STORE.md) · [Play Protect / APK sideload](docs/PLAY_PROTECT.md)
+- [Privacy policy](PRIVACY.md) · [Security policy](SECURITY.md)
 
 ## Licenze
 

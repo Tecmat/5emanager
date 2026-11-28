@@ -184,7 +184,7 @@ jobs:
       - name: Avviso firma (Play Protect segna gli APK debug-signed)
         if: env.ANDROID_KEYSTORE_B64 == ''
         run: |
-          echo "::warning::Nessun keystore (secret ANDROID_KEYSTORE_B64 mancante): app.apk resta debug-signed e Play Protect lo segnala come dannoso in sideload - vedi docs/PLAY_PROTECT.md"
+          echo "::warning::Nessun keystore (secret ANDROID_KEYSTORE_B64 mancante): app.apk resta debug-signed e Play Protect lo segnala come dannoso in sideload"
       - name: Build APK (release se c'è il keystore, altrimenti debug)
         run: |
           cd apps/web/android

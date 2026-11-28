@@ -19,3 +19,6 @@ playwright-report/
 # docker runtime: .env con i secret e le dir dati/certificati restano solo sul server
 docker/.env
 docker/data/
+
+# runbook privati (pubblicazione store, keystore, procedure operative): mai committare
+docs-private/

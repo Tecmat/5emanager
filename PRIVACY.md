@@ -20,11 +20,11 @@ dispositivo dell'utente** (IndexedDB) o sul **suo server self-hosted**, che l'ut
   del dispositivo solo ai peer della stessa rete.
 - **Fotocamera (`CAMERA`)**: usata **solo quando si scansiona un QR** (codice invito campagna / server), mai in
   background; l'immagine è processata solo in locale per leggere il codice.
-- **Self-update (Android, solo versioni sideload)**: il permesso `REQUEST_INSTALL_PACKAGES` serve per
-  installare gli aggiornamenti APK scaricati dalla pagina ufficiale delle release GitHub
-  (`github.com/Tecmat/5emanager/releases`). **Sulla versione Google Play questo self-update è disabilitato**
-  e gli aggiornamenti arrivano solo da Play Store. L'APK scaricato è verificato: magic PK, versione non
-  inferiore a quella installata e **firma confrontata con l'app in ejecución**.
+- **Aggiornamenti (Android)**: l'app **non si auto-aggiorna in-app** (il permesso
+  `REQUEST_INSTALL_PACKAGES` è stato rimosso). Sulla versione Google Play gli aggiornamenti arrivano
+  solo dallo Store; le build sideload (APK dalle release GitHub) si aggiornano scaricando la nuova
+  APK dalla pagina ufficiale delle release (`github.com/Tecmat/5emanager/releases`) e installandola
+  a mano.
 - **Passkey (WebAuthn)**: le chiavi private restano **nel dispositivo/gestore password dell'utente** e sul server
   resta solo la chiave pubblica; il login usa challenge firmati, mai la chiave privata.
 - **Promemoria sessione (notifiche locali)**: le notifiche sono generate dal dispositivo, senza rete.
@@ -44,7 +44,5 @@ Questa policy viene aggiornata se cambiano le pratiche; la data in cima indica l
 # Privacy Policy — 5e Manager (English summary)
 5e Manager does **not** collect, sell or share personal data with third-party servers. No analytics, no ads,
 no tracking SDKs. User data stays **on the user's device** (IndexedDB) or on **their own self-hosted server**.
-Camera is used only when scanning a QR code; the `REQUEST_INSTALL_PACKAGES` permission is used only for
-self-updating sideloaded Android builds from the official GitHub releases (disabled on the Google Play
-version, where updates come only from the Play Store). Passkey private keys never leave the user's device.
+Camera is used only when scanning a QR code. The Android app does not self-update in-app (the `REQUEST_INSTALL_PACKAGES` permission was removed): on Google Play updates come only from the Play Store, and sideloaded builds update by downloading the new APK from the official GitHub releases. Passkey private keys never leave the user's device.
 Contact: privacy@tecmat.it

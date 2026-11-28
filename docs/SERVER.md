@@ -60,7 +60,7 @@ compatibile con Google Authenticator, Aegis, ecc.), implementata in purezza in `
 - **Sicurezza**: throttle anti-bruteforce (max 5 tentativi/minuto per username, in memoria);
   disattivazione solo con password (`disableTotp`). Il secret TOTP è salvato in `accounts.data`
   → proteggi `DND5E_DATA_DIR` (come già per le campagne).
-- Play Protect: vedi [docs/PLAY_PROTECT.md](docs/PLAY_PROTECT.md) — APK release-signed via secret
+- Play Protect: APK release-signed via secret CI (il runbook di pubblicazione è privato e non versionato)
   `ANDROID_KEYSTORE_B64` (la CI avvisa se manca), e il plugin di self-update valida l'APK prima
   dell'installazione (firma confrontata con l'app installata, no downgrade, magic PK) così un
  安装 fallita su Samsung/One UI (“app non installata”) diventa un messaggio chiaro.
