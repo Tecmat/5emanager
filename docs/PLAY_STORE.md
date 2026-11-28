@@ -19,9 +19,8 @@ Da quel momento ogni release allega `app.aab` (AAB release-signed) oltre a `app.
    - Raccolta dati: **No** (niente raccolta/trasmissione a server terzi; i dati restano on-device o sul
      server self-hosted dell'utente).
    - Fotocamera: sì, **facoltativa**, solo per scansione QR; non in background; non raccolta.
-   - Permessi: solo `CAMERA` (scansione QR, facoltativa) e rete. `REQUEST_INSTALL_PACKAGES` è **rimosso**
-     dall'app: niente self-update via APK (vietato dalle policy Play) — gli update arrivano da Play Store,
-     o dalla pagina delle release GitHub per le build sideload.
+   - `REQUEST_INSTALL_PACKAGES`: usado solo nelle build sideload per self-update da GitHub releases;
+     **disabilitato nella build Play** (gli update arrivano solo da Play). Dichiaralo con questa motivazione.
    - Sicurezza: crittografia in transito (HTTPS/WSS verso il server dell'utente); in LAN http/ws su IP privati.
 5. **Dichiarazione permessi/content rating**: compila il questionario IARC (app di utilità, senza contenuti
    sensibili: parliamo di D&D ma non c'è violenza grafica/utenti reali — materiali SRD sotto OGL, niente UGC).
@@ -50,10 +49,9 @@ Da quel momento ogni release allega `app.aab` (AAB release-signed) oltre a `app.
 3. **Produzione**: promuovi la release dopo i test; `versionCode` sale da solo a ogni tag.
 
 ## 5) Note importanti
-- Il **self-update via APK è stato rimosso** dall'app (policy Google: `REQUEST_INSTALL_PACKAGES` è una
-  permission "restricted" e va rimossa dal manifest). Su Android gli update arrivano da **Play Store**;
-  le build sideload (GitHub `app.apk`) si aggiornano scaricando la nuova APK dalla pagina della release.
-
+- Su Play il **self-update via APK è disabilitato** (policy Google): il pulsante update apre il Play Store
+  (`isPlayInstall` nel plugin `UpdateInstaller`). Le build sideload (GitHub `app.apk`) continuano ad
+  auto-aggiornarsi come prima.
 - `usesCleartextTraffic` resta attivo **solo per la LAN** (server/host P2P su IP privati); su Internet
   l'app usa solo HTTPS/WSS. Dichiaralo nel form Data Safety.
 - Ogni nuova release = nuovo tag `vX.Y.Z` → CI produce `app.aab` → caricalo in Console.
