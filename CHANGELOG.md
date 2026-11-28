@@ -2,7 +2,7 @@
 
 Tutte le versioni notevoli di 5e Manager. Il formato segue [Keep a Changelog](https://keepachangelog.com/it/1.1.0/); le novità vengono mostrate anche in-app al cambio di versione (`apps/web/src/news.ts`).
 
-## [0.2.0] — in preparazione
+## [0.2.0] — 2026-11-28
 
 ### Aggiunto
 - **Versionamento delle schede**: snapshot persistenti per scheda (auto max 1/ora, manuale con etichetta, automatico prima del level-up) con ripristino ed eliminazione — `apps/web/src/versions.ts`, card in Panoramica.
