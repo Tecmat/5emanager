@@ -166,6 +166,11 @@ export default function App() {
     getCurrentVersion()
       .then((v) => {
         if (cancelled || !v || v === '0.0.0') return;
+        // niente dialog "novità" nei test automatici (navigator.webdriver) così gli e2e non vengono bloccati
+        if (navigator.webdriver) {
+          try { localStorage.setItem(NEWS_SEEN_KEY, v); } catch { /* quota */ }
+          return;
+        }
         let seen = '';
         try { seen = localStorage.getItem(NEWS_SEEN_KEY) ?? ''; } catch { /* ignora */ }
         if (seen === v) return;
