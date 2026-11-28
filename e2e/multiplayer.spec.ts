@@ -51,6 +51,16 @@ async function dismissIntro(page: Page) {
 
 test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli XP dal master', async ({ page }) => {
   test.setTimeout(120_000);
+  // registra i messaggi WS inviati dalla pagina host (diagnostica)
+  await page.addInitScript(() => {
+    const w = window as unknown as { __sent: string[] };
+    w.__sent = [];
+    const orig = WebSocket.prototype.send;
+    WebSocket.prototype.send = function (data: unknown) {
+      try { w.__sent.push(String(data).slice(0, 300)); } catch { /* noop */ }
+      return orig.call(this, data);
+    };
+  });
 
   // ---- host: crea una scheda e poi la campagna sul server 127.0.0.1:3999 ----
   await page.goto('/');
@@ -130,7 +140,8 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
     )) as { campaign: { characters: Record<string, { xp: number }> } };
   } catch (e) {
     const banner = await page.locator('.error, .notice').allTextContents().catch(() => []);
-    throw new Error(`${(e as Error).message} | banner pagina: ${JSON.stringify(banner)} | pageerrors: ${JSON.stringify(pageErrors)}`);
+    const sent = await page.evaluate(() => (window as unknown as { __sent: string[] }).__sent ?? []).catch(() => []);
+    throw new Error(`${(e as Error).message} | banner: ${JSON.stringify(banner)} | pageerrors: ${JSON.stringify(pageErrors)} | ws-sent-dalla-pagina: ${JSON.stringify(sent)}`);
   }
   expect(st.campaign.characters[playerId].xp).toBe(300);
 
