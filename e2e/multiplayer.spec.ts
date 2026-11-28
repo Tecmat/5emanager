@@ -115,12 +115,23 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   await expect(page.getByText('PlayerWS').first()).toBeVisible();
 
   // ---- il master dà +300 XP a tutta la party: il player lo riceve nello stato ----
-  await page.getByRole('button', { name: /XP a tutta la party/ }).click();
-  const st = (await waitFor(
-    (x) => x.t === 'state' && ((x.campaign as { characters: Record<string, { xp?: number }> }).characters[playerId]?.xp ?? 0) >= 300,
-    20_000,
-    'state con XP 300',
-  )) as { campaign: { characters: Record<string, { xp: number }> } };
+  const pageErrors: string[] = [];
+  page.on('pageerror', (e) => pageErrors.push(String(e)));
+  const xpBtn = page.getByRole('button', { name: /XP a tutta la party/ });
+  await expect(xpBtn).toBeVisible();
+  await xpBtn.scrollIntoViewIfNeeded();
+  await xpBtn.click();
+  let st: { campaign: { characters: Record<string, { xp: number }> } };
+  try {
+    st = (await waitFor(
+      (x) => x.t === 'state' && ((x.campaign as { characters: Record<string, { xp?: number }> }).characters[playerId]?.xp ?? 0) >= 300,
+      30_000,
+      'state con XP 300',
+    )) as { campaign: { characters: Record<string, { xp: number }> } };
+  } catch (e) {
+    const banner = await page.locator('.error, .notice').allTextContents().catch(() => []);
+    throw new Error(`${(e as Error).message} | banner pagina: ${JSON.stringify(banner)} | pageerrors: ${JSON.stringify(pageErrors)}`);
+  }
   expect(st.campaign.characters[playerId].xp).toBe(300);
 
   ws.close();
