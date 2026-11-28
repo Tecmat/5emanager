@@ -60,6 +60,8 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   await page.getByRole('button', { name: 'Crea personaggio' }).click();
   await expect(page.locator('header h1')).toContainText('Host E2E');
 
+  // dalla vista scheda si torna al menu principale (tasto "Home") e poi alla tab Campagna
+  await page.getByRole('button', { name: 'Home' }).first().click();
   await page.getByRole('button', { name: 'Campagna' }).first().click();
   await page.getByPlaceholder('ws://localhost:3001').fill(SERVER);
   await page.getByPlaceholder('Eroe').fill('Host');
