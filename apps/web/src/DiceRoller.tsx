@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { rollDice, type AdvantageMode, type DiceRollResult } from '@dnd5e/core';
 import { useStore } from './store.js';
+import { getUISettings } from './uiSettings.js';
 
 const MACROS_KEY = 'dnd5e.macros.v1';
+const SOUND_KEY = 'dnd5e.diceSound.v1';
 
 export default function DiceRoller() {
   const { t, tf } = useStore();
@@ -18,16 +20,77 @@ export default function DiceRoller() {
   };
 
   const [rolling, setRolling] = useState(false);
+  const [preview, setPreview] = useState<number | null>(null);
+  const [soundOn, setSoundOn] = useState(() => {
+    try { return localStorage.getItem(SOUND_KEY) === '1'; } catch { return false; }
+  });
+  const toggleSound = () => {
+    setSoundOn((v) => {
+      try { localStorage.setItem(SOUND_KEY, v ? '0' : '1'); } catch { /* quota */ }
+      return !v;
+    });
+  };
 
-  const roll = () => {
-    const r = rollDice(expr, mode);
-    setRolling(true);
-    window.setTimeout(() => setRolling(false), 380);
+  /** click breve di dado (WebAudio, niente asset) */
+  const playDiceSound = () => {
+    try {
+      const AC = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (!AC) return;
+      const ctx = new AC();
+      const dur = 0.09;
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * dur), ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / data.length);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'bandpass';
+      filt.frequency.value = 1800;
+      filt.Q.value = 0.8;
+      const gain = ctx.createGain();
+      gain.gain.value = 0.25;
+      src.connect(filt);
+      filt.connect(gain);
+      gain.connect(ctx.destination);
+      src.start();
+      window.setTimeout(() => { void ctx.close(); }, 250);
+    } catch { /* audio non disponibile */ }
+  };
+
+  /** limiti plausibili dell'espressione per l'animazione (somma dei dadi) */
+  const exprBounds = (e: string): { min: number; max: number } => {
+    const dice = [...e.matchAll(/(\d*)d(\d+)/gi)].map((m) => ({ n: Math.max(1, Number(m[1] || 1)), s: Number(m[2]) }));
+    if (!dice.length) return { min: 1, max: 20 };
+    return { min: dice.reduce((a, d) => a + d.n, 0), max: dice.reduce((a, d) => a + d.n * d.s, 0) };
+  };
+
+  const commit = (r: DiceRollResult | null) => {
     if (!r) {
       setHistory((h) => [{ expr, rolls: [], dropped: [], mod: 0, total: 0, mode }]);
       return;
     }
     setHistory((h) => [r, ...h].slice(0, 8));
+  };
+
+  const roll = () => {
+    const r = rollDice(expr, mode);
+    if (!r || !getUISettings().animations) {
+      commit(r);
+      if (r && soundOn) playDiceSound();
+      return;
+    }
+    setRolling(true);
+    const { min, max } = exprBounds(expr);
+    const iv = window.setInterval(() => {
+      setPreview(Math.floor(Math.random() * (max - min + 1)) + min);
+    }, 55);
+    window.setTimeout(() => {
+      window.clearInterval(iv);
+      setPreview(null);
+      setRolling(false);
+      commit(r);
+      if (soundOn) playDiceSound();
+    }, 420);
   };
 
   return (
@@ -41,6 +104,9 @@ export default function DiceRoller() {
           <option value="disadvantage">{t('dr.disadvantage', 'Svantaggio')}</option>
         </select>
         <button className={`primary ${rolling ? 'rolling' : ''}`} onClick={roll}>🎲 {t('dr.roll', 'Tira')}</button>
+        <button onClick={toggleSound} title={soundOn ? t('dr.soundOff', 'Disattiva il suono del dado') : t('dr.soundOn', 'Attiva il suono del dado')}>
+          {soundOn ? '🔊' : '🔇'}
+        </button>
         <button
           title={t('dr.macroAdd', 'Salva espressione come macro')}
           onClick={() => { const e = expr.trim(); if (e && !macros.includes(e)) saveMacros([...macros, e]); }}
@@ -64,6 +130,9 @@ export default function DiceRoller() {
             </span>
           ))}
         </div>
+      )}
+      {rolling && preview !== null && (
+        <div className="dice-preview" aria-hidden="true">{preview}</div>
       )}
       <div style={{ marginTop: 8 }}>
         {history.map((r, i) => {

@@ -967,6 +967,8 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.exportCampaignTitle': 'Scarica lo stato completo della campagna (JSON, senza password)',
     'dr.macro': 'Macro:',
     'dr.macroAdd': 'Salva espressione come macro',
+    'dr.soundOn': 'Attiva il suono del dado',
+    'dr.soundOff': 'Disattiva il suono del dado',
     'cu.dmgAvg': 'danno medio {avg} · baseline liv {lvl}: {base}',
   },
   en: {
@@ -1920,6 +1922,8 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.exportCampaignTitle': 'Download the full campaign state (JSON, no password)',
     'dr.macro': 'Macros:',
     'dr.macroAdd': 'Save expression as macro',
+    'dr.soundOn': 'Enable dice sound',
+    'dr.soundOff': 'Disable dice sound',
     'cu.dmgAvg': 'avg damage {avg} · baseline lvl {lvl}: {base}',
   },
 };

@@ -66,3 +66,33 @@ test('personalizza interfaccia: cambia palette e nasconde una tab principale', a
   await expect(page.locator('nav.tabs button', { hasText: 'Contenuti custom' })).toHaveCount(0);
   await expect(page.locator('nav.tabs button', { hasText: 'Campagna' })).toHaveCount(1);
 });
+
+test('flusso PG: crea un mago, assegna XP, sali di livello e lancia un incantesimo', async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.goto('/');
+  await dismissIntro(page);
+
+  // crea un mago dalla Home (classe = terza select del form: razza, sottorazza, classe)
+  await page.getByRole('button', { name: 'Nuova scheda' }).first().click();
+  const form = page.locator('form', { hasText: 'Nuovo personaggio' }).first();
+  await form.getByPlaceholder('Aldric il Coraggioso').fill('E2E Mago');
+  await form.locator('select').nth(2).selectOption('wizard');
+  await form.getByRole('button', { name: 'Crea personaggio' }).click();
+  await expect(page.locator('header h1')).toContainText('E2E Mago');
+
+  // XP: il campo è precompilato a 300 (soglia livello 2) -> aggiungi e sali di livello
+  const xpRow = page.locator('div.row', { has: page.getByRole('button', { name: 'Aggiungi XP' }) }).first();
+  await xpRow.getByRole('button', { name: 'Aggiungi XP' }).click();
+  await expect(page.getByText('Livello da XP: 2')).toBeVisible();
+  await page.getByRole('button', { name: 'Sali di livello' }).click();
+  await page.getByRole('button', { name: 'Conferma level-up' }).click();
+  await expect(page.getByText(/livello 2 \/ 900 XP/)).toBeVisible();
+
+  // lancia il primo incantesimo a slot disponibile dalla tab Incantesimi
+  await page.getByRole('button', { name: /Incantesimi/ }).click();
+  await page.getByRole('button', { name: 'Lancia', exact: true }).first().click();
+
+  // il lancio finisce nel diario di sessione in Panoramica
+  await page.getByRole('button', { name: /Panoramica/ }).click();
+  await expect(page.getByText(/Lancia .+ \(slot 1°\)/).first()).toBeVisible();
+});

@@ -50,6 +50,8 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Coerenza UI/UX: niente più form account duplicati** (v0.1.88): la card "Server" in Home ora è compatta (picker server + stato: tag utente/ruolo/libreria/modalità + Vai a Campagna / Il mio account / Pannello admin; se non loggato, solo hint + pulsante Account) — login/registrazione/2FA/passkey/esci vivono solo nella tab Account
 - ✅ **Rifiniture estetiche** (v0.1.88): icone allineate nei titoli card, striscia dorata della card che si accende on-hover, hover righe tabella più leggibile, ::selection e scrollbar tematizzate, bordo inferiore delle sezioni Home
 
+- ✅ **Tira dado animato + suono opzionale** (v0.1.98): il totale "rotola" con valori casuali durante il tiro (rispetta `data-animations=off`) e click WebAudio opzionale con toggle 🔊/🔕 persistente — `DiceRoller.tsx`, `styles.css`
+- ✅ **E2E Playwright: flusso PG completo** (v0.1.98): crea mago → +300 XP → level-up → lancia incantesimo → voce nel diario — `e2e/app.spec.ts`
 - ✅ **Pronto per il Play Store** (v0.1.89): AAB release-signed `app.aab` in release (con keystore nei secret) oltre all'APK; self-update via APK **disabilitato su install Play** (`isPlayInstall` nel plugin → pulsante apre il Play Store, policy Google rispettata); `PRIVACY.md` + runbook Play (Data Safety, listing IT/EN, track — privato, non versionato); test `update-playstore.test.ts`
 
 - ✅ **Restyling v0.1.90**: badge dorato con icona spade nell'header del brand (`brand-badge` in `App.tsx`), tab attive con pill piena e hover sulle inattive, hero Home più grande (titolo 30px), placeholder avatar con bordo e gradiente, hover del pulsante danger con glow rosso, tag "custom" delle sheet con accento — `styles.css`
@@ -84,55 +86,55 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 
 ## ✅ P1/P2 completate (v0.1.13, branch vibe/dnd5e-scheda-f0caaa)
 
-- **P1 Upcast del danno**: `upcastExtraDice`/`spellDamagePreview` nel core (parse dell'`higherLevel`, es. +1d6/slot) — anteprima "a slot N°: danno X + Y" in tab Incantesimi e voce `upcast +NdM` nel diario al lancio
-- **P1 XP a tutta la party**: azione `masterAddXpAll` (server + P2P) + bottone ⭐ nel pannello master
-- **P1 Inventario di gruppo + tesoreria condivisa**: `Campaign.groupInventory`/`groupCurrency` con azioni `groupAddItem` (tutti), `groupRemoveItem`/`groupGiveItem`/`groupAddCurrency` (master), card 🎒 in Campagna; migrazione campagne existentes (`migrateCampaign`)
-- **P1 Note di sessione condivise**: `Campaign.notes` + azione `setCampaignNote` (master), card 📝 in Campagna
-- **P1 Reminder TS concentrazione**: `damageCombatant` logga `🎯 TS Cos CD max(10, metà danno)` quando un combattente concentrato subisce danni
-- **P1 Preferiti incantesimi ⭐**: `Character.favoriteSpells` + stella per riga + filtro "solo ⭐" in Incantesimi
-- **P2 Pergamene/oggetti che lanciano**: `InventoryItem.spellId` + `castItemSpell` (1 carica, nessuno slot, niente componenti materiali) + bottone ✨ in Inventario
-- **P2 Template aree in combattimento**: cono/sfera/linea/cubo con misure in ft su griglia 5 ft (SVG `TemplateView`), azioni `setTemplate`/`clearTemplate` (master o turno corrente), in Combattimento locale e live
-- **P2 Generatore casuale master**: `rules/random.ts` + `data-srd/data/random.json` (nomi, incontri e tesori per tier di livello) — card 🎲 in Campagna con "aggiungi nemici al combattimento" e "metti nel gruppo/tesoreria"
-- **P2 Rarità/valore + vendita**: `rarity`/`valueGp` sugli oggetti, filtro per rarità, colonna valore, bottone 💰 vendi (+MO), "Tesoro totale" in Panoramica-inventario (`totalTreasureGp`)
-- **P2 Undo**: snapshot in memoria (max 30) in `store.tsx`, bottone ↩ in header + **Ctrl/Cmd+Z**; shortcuts **1-6** cambiano tab, **E** edit on/off
+- ✅ **P1 Upcast del danno**: `upcastExtraDice`/`spellDamagePreview` nel core (parse dell'`higherLevel`, es. +1d6/slot) — anteprima "a slot N°: danno X + Y" in tab Incantesimi e voce `upcast +NdM` nel diario al lancio
+- ✅ **P1 XP a tutta la party**: azione `masterAddXpAll` (server + P2P) + bottone ⭐ nel pannello master
+- ✅ **P1 Inventario di gruppo + tesoreria condivisa**: `Campaign.groupInventory`/`groupCurrency` con azioni `groupAddItem` (tutti), `groupRemoveItem`/`groupGiveItem`/`groupAddCurrency` (master), card 🎒 in Campagna; migrazione campagne existentes (`migrateCampaign`)
+- ✅ **P1 Note di sessione condivise**: `Campaign.notes` + azione `setCampaignNote` (master), card 📝 in Campagna
+- ✅ **P1 Reminder TS concentrazione**: `damageCombatant` logga `🎯 TS Cos CD max(10, metà danno)` quando un combattente concentrato subisce danni
+- ✅ **P1 Preferiti incantesimi ⭐**: `Character.favoriteSpells` + stella per riga + filtro "solo ⭐" in Incantesimi
+- ✅ **P2 Pergamene/oggetti che lanciano**: `InventoryItem.spellId` + `castItemSpell` (1 carica, nessuno slot, niente componenti materiali) + bottone ✨ in Inventario
+- ✅ **P2 Template aree in combattimento**: cono/sfera/linea/cubo con misure in ft su griglia 5 ft (SVG `TemplateView`), azioni `setTemplate`/`clearTemplate` (master o turno corrente), in Combattimento locale e live
+- ✅ **P2 Generatore casuale master**: `rules/random.ts` + `data-srd/data/random.json` (nomi, incontri e tesori per tier di livello) — card 🎲 in Campagna con "aggiungi nemici al combattimento" e "metti nel gruppo/tesoreria"
+- ✅ **P2 Rarità/valore + vendita**: `rarity`/`valueGp` sugli oggetti, filtro per rarità, colonna valore, bottone 💰 vendi (+MO), "Tesoro totale" in Panoramica-inventario (`totalTreasureGp`)
+- ✅ **P2 Undo**: snapshot in memoria (max 30) in `store.tsx`, bottone ↩ in header + **Ctrl/Cmd+Z**; shortcuts **1-6** cambiano tab, **E** edit on/off
 - **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello (CustomTab)
-- **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
+- ✅ **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
 - **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab)
 - **P2 Accessibilità**: `:focus-visible`, `prefers-reduced-motion`, aria-label su bottoni icona e tab
-- **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
+- ✅ **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
 - i18n esteso a tutte le nuove UI (IT/EN)
 
 ## 💡 Idee nuove (P3 — proposte, da valutare insieme)
 
 - Log dei tiri del combattimento persistente per round (estendere `combat.log` con storico separato)
-- Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
-- Beep/avviso sonoro opzionale al cambio turno (il timer c'è già)
-- Crafting/ricette e compravendita con calcolo del resto
-- Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
-- PWA offline completa (service worker che cachea anche i dati SRD)
+- ✅ Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
+- ✅ Beep/avviso sonoro opzionale al cambio turno (il timer c'è già)
+- ✅ Crafting/ricette e compravendita con calcolo del resto
+- ✅ Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
+- ✅ PWA offline completa (service worker che cachea anche i dati SRD)
 - Notifiche push promemoria sessione (Android/desktop)
 - iOS via Capacitor (stesso codice) — momentaneamente in pausa
 - Sync cloud opzionale (login multi-dispositivo, conflitto last-write)
-- Generatore di dungeon/stanze casuali (tabelle JSON, come il generatore incontri)
-- Schede "pronte" (pregen) da sfogliare e clonare
-- Esportazione campagna intera (log + schede + tesoreria) in un file
-- Statistiche di campagna (danni totali, incantesimi lanciati, round) dal log
+- ✅ Generatore di dungeon/stanze casuali (tabelle JSON, come il generatore incontri)
+- ✅ Schede "pronte" (pregen) da sfogliare e clonare
+- ✅ Esportazione campagna intera (log + schede + tesoreria) in un file
+- ✅ Statistiche di campagna (danni totali, incantesimi lanciati, round) dal log
 
 ## ✅ P3 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
 
-- **P2P semplificato**: codice invito come testo + **QR** + copia/condivisione nativa; flusso host→giocatore→host in 2 passi
-- **Discovery P2P**: gli host si annunciano su un server LAN (`p2pAnnounce`, TTL 90 s) e i giocatori vedono la **lista degli host sulla rete** e si uniscono con un click (il server relay-a solo i codici SDP)
-- Riposo breve con **dadi vita** (`shortRest` in core: PF = tiro + mod Cos per dado, risveglio da 0 PF, cap a PF max) + bottone in Panoramica
-- **Slot equipaggiamento standard** (testa, amuleto, mantello, armatura, guanti, cintura, stivali, 2 anelli, scudo, 2 mani) con validazione: equipaggiare un oggetto libera lo slot (`setEquipped`/`setItemSlot`), warning conflitti (`equipConflicts`), armi in mano libera automatica
-- **Simula il PG fino al 20** (`simulateTo20` in core: ASI automatico, archetipo/stile auto) + test su tutte le classi SRD + bottone 🧪 in tab Custom per validare anche le classi custom
-- **Timer di turno** nel pannello combattimento (avvia/pausa/reset, reset automatico al cambio turno, secondi configurabili)
-- **Tema automatico** dal sistema (`prefers-color-scheme`) se non c'è una scelta salvata
-- Creazione PG migliorata: **stile di combattimento al liv 1** (guerriero) direttamente in creazione
-- **42 archetipi** (3-4 per classe, 8 scuole del mago) in `subclasses-c.json`, selezionabili dal registro
+- ✅ **P2P semplificato**: codice invito come testo + **QR** + copia/condivisione nativa; flusso host→giocatore→host in 2 passi
+- ✅ **Discovery P2P**: gli host si annunciano su un server LAN (`p2pAnnounce`, TTL 90 s) e i giocatori vedono la **lista degli host sulla rete** e si uniscono con un click (il server relay-a solo i codici SDP)
+- ✅ Riposo breve con **dadi vita** (`shortRest` in core: PF = tiro + mod Cos per dado, risveglio da 0 PF, cap a PF max) + bottone in Panoramica
+- ✅ **Slot equipaggiamento standard** (testa, amuleto, mantello, armatura, guanti, cintura, stivali, 2 anelli, scudo, 2 mani) con validazione: equipaggiare un oggetto libera lo slot (`setEquipped`/`setItemSlot`), warning conflitti (`equipConflicts`), armi in mano libera automatica
+- ✅ **Simula il PG fino al 20** (`simulateTo20` in core: ASI automatico, archetipo/stile auto) + test su tutte le classi SRD + bottone 🧪 in tab Custom per validare anche le classi custom
+- ✅ **Timer di turno** nel pannello combattimento (avvia/pausa/reset, reset automatico al cambio turno, secondi configurabili)
+- ✅ **Tema automatico** dal sistema (`prefers-color-scheme`) se non c'è una scelta salvata
+- ✅ Creazione PG migliorata: **stile di combattimento al liv 1** (guerriero) direttamente in creazione
+- ✅ **42 archetipi** (3-4 per classe, 8 scuole del mago) in `subclasses-c.json`, selezionabili dal registro
 
 ## ✅ P0 completate (dic 2026, branch vibe/dnd5e-scheda-f0caaa)
 
-- Esaurimento 1–6 con effetti automatici (core `rules/exhaustion.ts`: svantaggio prove, velocità, PF max dimezzati, morte a liv 6) + selettore in Panoramica
+- ✅ Esaurimento 1–6 con effetti automatici (core `rules/exhaustion.ts`: svantaggio prove, velocità, PF max dimezzati, morte a liv 6) + selettore in Panoramica
 - Tiri della morte a click in Panoramica a 0 PF (✓/✗, risveglio a 1 PF, 💀)
 - Bonus attacco incantesimo e CD mostrati in Panoramica per ogni classe lanciante (`spellcastingInfoAll`)
 - Lancio rituale senza slot (🕯 in tab Incantesimi) + consumo componenti materiali dall'inventario (cariche o quantità)
