@@ -313,6 +313,16 @@ export const DEFAULT_HOUSE_RULES: HouseRules = {
   bypassPrereq: false,
 };
 
+/** la parte "anima" del PG: testo libero di flavor (D&D 5e: aspetto, personalità, ideali, legami, difetti, storia) */
+export interface CharacterFlavor {
+  appearance?: string;
+  personalityTraits?: string;
+  ideals?: string;
+  bonds?: string;
+  flaws?: string;
+  backstory?: string;
+}
+
 export interface Character {
   id: string;
   houseRules: HouseRules;
@@ -338,6 +348,8 @@ export interface Character {
   hp: { current: number; temp: number };
   /** ritratto del PG come data URL (immagine ridimensionata) */
   portrait?: string;
+  /** anima del PG: campi flavor opzionali (retrocompatibile: assente nelle schede vecchie) */
+  flavor?: CharacterFlavor;
   /** tiri della morte quando a 0 PF */
   deathSaves: { successes: number; failures: number };
   /** condizioni attive (es. 'avvelenato', 'invisibile') */

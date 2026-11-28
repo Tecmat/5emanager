@@ -30,6 +30,7 @@ import {
   XP_TABLE,
   type Ability,
   type Character,
+  type CharacterFlavor,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
 import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
@@ -87,6 +88,11 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
   const editField = <K extends keyof Character>(key: K, value: Character[K]) => {
     if (!char) return;
     setChar({ ...char, [key]: value, updatedAt: new Date().toISOString() });
+  };
+
+  const editFlavor = (key: keyof CharacterFlavor, value: string) => {
+    if (!char) return;
+    setChar({ ...char, flavor: { ...(char.flavor ?? {}), [key]: value || undefined }, updatedAt: new Date().toISOString() });
   };
 
   const setupLock = async () => {
@@ -297,6 +303,29 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
             <div style={{ marginTop: 6 }}>
               <label>{t('ov.notes', 'Note')}</label>
               <textarea rows={2} value={char.notes ?? ''} onChange={(e) => editField('notes', e.target.value)} style={{ width: '100%' }} />
+            </div>
+          )}
+          {editing && (
+            <div style={{ marginTop: 10 }}>
+              <h4 style={{ margin: '4px 0 8px' }}>🧬 {t('ov.flavorTitle', 'Anima del PG')}</h4>
+              <div className="grid cols2">
+                {(['appearance', 'personalityTraits', 'ideals', 'bonds', 'flaws'] as const).map((k) => (
+                  <div key={k}>
+                    <label>{t(`ov.${k}`, k)}</label>
+                    <input value={char.flavor?.[k] ?? ''} onChange={(e) => editFlavor(k, e.target.value)} style={{ width: '100%' }} />
+                  </div>
+                ))}
+              </div>
+              <label style={{ marginTop: 6 }}>{t('ov.backstory', 'Storia del personaggio')}</label>
+              <textarea rows={4} value={char.flavor?.backstory ?? ''} onChange={(e) => editFlavor('backstory', e.target.value)} style={{ width: '100%' }} />
+            </div>
+          )}
+          {!editing && char.flavor && Object.values(char.flavor).some(Boolean) && (
+            <div className="muted" style={{ marginTop: 8, fontSize: 12, whiteSpace: 'pre-line' }}>
+              {(['appearance', 'personalityTraits', 'ideals', 'bonds', 'flaws', 'backstory'] as const)
+                .map((k) => (char.flavor?.[k] ? `${t(`ov.${k}`, k)}: ${char.flavor[k]}` : ''))
+                .filter(Boolean)
+                .join('\n')}
             </div>
           )}
           <div className="row" style={{ marginTop: 8 }}>
