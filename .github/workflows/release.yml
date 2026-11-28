@@ -173,7 +173,7 @@ jobs:
       - run: npm ci
       - run: npm run build -w @dnd5e/web
       - run: cd apps/web && npx cap add android && npx cap sync
-      # overlay: plugin UpdateInstaller + LanBeacon, icone d20, FileProvider, cleartext, permessi
+      # overlay: plugin AppSettings + LanBeacon, icone d20, cleartext, permessi
       - run: python3 apps/web/android-overlay/patch_android.py apps/web/android
       # firma release se il keystore è configurato (altrimenti resta debug-signed)
       - name: Keystore da secret (opzionale)
