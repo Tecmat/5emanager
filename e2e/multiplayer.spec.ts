@@ -91,24 +91,33 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   console.log('campaignId estratto dall UI:', campaignId);
   const ws = new WebSocket(SERVER);
   const received: Record<string, unknown>[] = [];
+  const listeners = new Set<() => void>();
+  // handler persistente: nessun messaggio viene perso tra un waitFor e l'altro
+  ws.on('message', (data: WebSocket.RawData) => {
+    const msg = JSON.parse(data.toString()) as Record<string, unknown>;
+    received.push(msg);
+    for (const l of [...listeners]) l();
+  });
   const waitFor = (pred: (m: Record<string, unknown>) => boolean, ms = 20_000, what = 'messaggio') =>
     new Promise<Record<string, unknown>>((resolve, reject) => {
       const hit = received.find(pred);
       if (hit) return resolve(hit);
       const timer = setTimeout(
-        () => reject(new Error(`timeout (${what}) in attesa del messaggio WS; ricevuti: ${JSON.stringify(received)}`)),
+        () => {
+          listeners.delete(l);
+          reject(new Error(`timeout (${what}) in attesa del messaggio WS; ricevuti: ${JSON.stringify(received)}`));
+        },
         ms,
       );
-      const onMsg = (data: WebSocket.RawData) => {
-        const msg = JSON.parse(data.toString()) as Record<string, unknown>;
-        received.push(msg);
-        if (pred(msg)) {
+      const l = () => {
+        const h = received.find(pred);
+        if (h) {
           clearTimeout(timer);
-          ws.off('message', onMsg);
-          resolve(msg);
+          listeners.delete(l);
+          resolve(h);
         }
       };
-      ws.on('message', onMsg);
+      listeners.add(l);
     });
   await new Promise<void>((res, rej) => { ws.on('open', () => res()); ws.on('error', rej); });
 
