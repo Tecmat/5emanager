@@ -1370,6 +1370,12 @@ export default function CampaignTab({ onGoAccount = () => {} }: { onGoAccount?: 
           {campaign.players.map((p) => (
             <span key={p.id} className={`tag ${p.id === you.id ? 'custom' : ''}`} title={p.online === false ? t('cg.offlineTitle', 'Disconnesso: in attesa di riconnessione automatica') : undefined}>
               {p.name}{p.role === 'master' ? ' 👑' : ''}{p.online === false ? ` 🔌 ${t('cg.offline', 'disconnesso')}` : ''}{campaign.characters[p.id] ? ` — ${campaign.characters[p.id].name}` : ` ${t('cg.withoutSheet', '(senza scheda)')}`}
+              {p.id !== you.id && (
+                <button style={{ marginLeft: 4, padding: '0 4px' }} title={t('cg.reportTitle', 'Segnala questo giocatore (va nel log di moderazione del server e avvisa il master)')}
+                  onClick={() => { const reason = window.prompt(tf('cg.reportReason', 'Motivo della segnalazione di {name} (facoltativo):', { name: p.name })) ?? ''; act({ kind: 'reportPlayer', playerId: p.id, reason }); }}>
+                  🚩
+                </button>
+              )}
             </span>
           ))}
         </div>
@@ -1669,6 +1675,15 @@ export default function CampaignTab({ onGoAccount = () => {} }: { onGoAccount?: 
                       🚫 {t('cg.kick', 'Espelli')}
                     </button>
                   )}
+                  {p.role !== 'master' && (
+                    <button className="danger" style={{ marginLeft: 8 }} title={t('cg.blockTitle', 'Blocca questo giocatore: viene espulso subito e non può più rientrare in campagna (salvo sblocco)')}
+                      onClick={() => {
+                        const reason = window.prompt(tf('cg.blockReason', 'Motivo del blocco di {name} (facoltativo):', { name: p.name })) ?? '';
+                        if (window.confirm(tf('cg.blockConfirm', 'Bloccare {name}? Non potrà più entrare in questa campagna.', { name: p.name }))) act({ kind: 'blockPlayer', playerId: p.id, reason });
+                      }}>
+                      ⛔ {t('cg.block', 'Blocca')}
+                    </button>
+                  )}
                 </summary>
                 {ch && (
                   <div style={{ marginTop: 6 }}>
@@ -1693,6 +1708,19 @@ export default function CampaignTab({ onGoAccount = () => {} }: { onGoAccount?: 
             );
           })}
           <div className="muted" style={{ marginTop: 4 }}>{t('cg.secretNote', 'Le azioni 🔫 sono applicate di nascosto: non finiscono nel log pubblico del combattimento.')}</div>
+        </div>
+      )}
+
+      {isMaster && (
+        <div className="card">
+          <h3>⛔ {t('cg.blockedList', 'Giocatori bloccati')}</h3>
+          {(campaign.blockedPlayers ?? []).length === 0 && <div className="muted">{t('cg.blockedEmpty', 'Nessuno bloccato.')}</div>}
+          {(campaign.blockedPlayers ?? []).map((b) => (
+            <div key={b.id} className="row" style={{ marginBottom: 4 }}>
+              <span className="tag custom"><b>{b.name}</b>{b.username ? ` (@${b.username})` : ''}{b.reason ? ` — ${b.reason}` : ''}</span>
+              <button onClick={() => act({ kind: 'unblockPlayer', playerId: b.id })}>{t('cg.unblock', 'Sblocca')}</button>
+            </div>
+          ))}
         </div>
       )}
 

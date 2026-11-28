@@ -5,7 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
 import { networkInterfaces } from 'node:os';
 import { WebSocketServer, WebSocket } from 'ws';
-import { createRegistry, loadData, setPlayerOnline, type Registry } from '@dnd5e/core';
+import { createRegistry, isPlayerBlocked, loadData, setPlayerOnline, type Registry } from '@dnd5e/core';
 import { SRD_DATA } from '@dnd5e/data-srd';
 import type { Campaign, ClientMessage, PlayerInfo, ServerMessage } from './protocol.js';
 import {
@@ -93,6 +93,8 @@ import { applyAction } from './combat-ops.js';
 import { handleInfoApi, handleUpdateApi } from './update-api.js';
 import { handleSetupApi, serveSetupPage } from './setup-api.js';
 import { audit, readAudit } from './audit.js';
+import { moderationEnabled, moderationLog, readModerationLog } from './moderation.js';
+import { sanitizePortrait } from './media.js';
 
 const PORT = Number(process.env.PORT ?? 3001);
 const HOST = process.env.HOST ?? '0.0.0.0';
@@ -1013,6 +1015,7 @@ function sendAdminState(ws: WebSocket): void {
       lan: lanAddresses(PORT),
       requireAuth: REQUIRE_AUTH,
       registration: registrationMode(),
+      moderationLog: moderationEnabled(),
     },
   });
 }
@@ -1421,7 +1424,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     return;
   }
 
-  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite' || msg.t === 'adminAudit' || msg.t === 'adminRevokeDevice' || msg.t === 'adminRevokeAllDevices' || msg.t === 'adminRevokeSessions') {
+  if (msg.t === 'adminList' || msg.t === 'adminCreateCampaign' || msg.t === 'adminUpdateCampaign' || msg.t === 'adminDeleteCampaign' || msg.t === 'adminDeleteAccount' || msg.t === 'adminApproveAccount' || msg.t === 'adminRejectAccount' || msg.t === 'adminDeleteCharacter' || msg.t === 'adminSetRole' || msg.t === 'adminSetRegistration' || msg.t === 'adminResetPassword' || msg.t === 'adminDisableTotp' || msg.t === 'adminClearPasskeys' || msg.t === 'adminCampaignDetail' || msg.t === 'adminKickPlayer' || msg.t === 'adminBroadcast' || msg.t === 'adminCreateInvite' || msg.t === 'adminRevokeInvite' || msg.t === 'adminAudit' || msg.t === 'adminModerationLog' || msg.t === 'adminRevokeDevice' || msg.t === 'adminRevokeAllDevices' || msg.t === 'adminRevokeSessions') {
     if (!conn.admin) {
       send(conn.ws, { t: 'error', message: 'Non autorizzato: fai prima adminAuth (pannello /admin)' });
       return;
@@ -1492,6 +1495,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         const next = removePlayer(c, kickPlayerId);
         campaigns.set(next.id, next);
         dropRejoinToken(kickCampaignId, kickPlayerId);
+        moderationLog(connActor(conn), 'admin-kick-player', `campaign=${kickCampaignId} player=${kickPlayerId}`, connIp(conn));
         broadcast(next);
       }
       if (msg.t === 'adminBroadcast') {
@@ -1506,6 +1510,11 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     if (msg.t === 'adminAudit') {
       const limit = Number(msg.limit);
       send(conn.ws, { t: 'auditLog', entries: readAudit(Number.isFinite(limit) && limit > 0 ? Math.min(500, limit) : 100) });
+      return;
+    }
+    if (msg.t === 'adminModerationLog') {
+      const limit = Number(msg.limit);
+      send(conn.ws, { t: 'moderationLog', entries: readModerationLog(Number.isFinite(limit) && limit > 0 ? Math.min(500, limit) : 100) });
       return;
     }
     // ogni azione admin risuscia finisce nell'audit log (actor + dettaglio, mai password/token).
@@ -1541,7 +1550,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
   }
 
   if (msg.t === 'create') {
-    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: 'master', online: true };
+    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: 'master', online: true, username: conn.token ? sessionUsername(conn.token) ?? undefined : undefined };
     const c = createCampaign(msg.campaignName, msg.password, player);
     campaigns.set(c.id, c);
     conn.campaignId = c.id;
@@ -1576,6 +1585,7 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         if (prev) { clearTimeout(prev); offlineTimers.delete(key); }
         setPlayerOnline(c, existing.id, true);
         if (msg.name) existing.name = msg.name;
+        if (conn.token) { const u = sessionUsername(conn.token); if (u) existing.username = u; }
         saveCampaign(c);
         conn.campaignId = c.id;
         conn.playerId = existing.id;
@@ -1589,12 +1599,25 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       send(conn.ws, { t: 'error', message: 'Password sbagliata' });
       return;
     }
+    // blocklist del master: niente rientro per id (token di rientro), username (account) o nome (anonimo)
+    const joinUsername = conn.token ? sessionUsername(conn.token) : undefined;
+    const joinTokenEntry = msg.playerToken ? rejoinTokens.get(msg.playerToken) : undefined;
+    const blocked = isPlayerBlocked(c, {
+      playerId: joinTokenEntry && joinTokenEntry.campaignId === c.id ? joinTokenEntry.playerId : undefined,
+      username: joinUsername,
+      name: msg.name,
+    });
+    if (blocked) {
+      moderationLog(joinUsername ?? 'anon', 'blocked-join-attempt', `campaign=${c.id} name=${String(msg.name).slice(0, 60)} blocked=${blocked.name}`, connIp(conn));
+      send(conn.ws, { t: 'error', message: 'Sei stato bloccato dal master di questa campagna' });
+      return;
+    }
     // rientro come master: concesso se non c'è già un master collegato (la password della campagna protegge l'accesso)
     if (msg.role === 'master' && c.players.some((p) => p.role === 'master' && p.online !== false)) {
       send(conn.ws, { t: 'error', message: 'C\'è già un master collegato in questa campagna' });
       return;
     }
-    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'master' : 'player', online: true };
+    const player: PlayerInfo = { id: randomUUID(), name: msg.name, role: msg.role === 'master' ? 'master' : 'player', online: true, username: joinUsername ?? undefined };
     addPlayer(c, player);
     conn.campaignId = c.id;
     conn.playerId = player.id;
@@ -1614,7 +1637,16 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         return;
       }
       try {
-        if (msg.action.kind === 'saveCharacter') saveAccountCharacter(username, msg.action.character);
+        if (msg.action.kind === 'saveCharacter') {
+          const ch = msg.action.character;
+          const portrait = sanitizePortrait(ch.portrait);
+          if (portrait !== ch.portrait) {
+            audit(connActor(conn), 'portrait-sanitized', `account=${username} character=${ch.id}`, connIp(conn));
+            saveAccountCharacter(username, { ...ch, portrait });
+          } else {
+            saveAccountCharacter(username, ch);
+          }
+        }
         else if (msg.action.kind === 'deleteCharacter') deleteAccountCharacter(username, msg.action.characterId);
         else if (msg.action.kind === 'saveP2PCampaign') saveAccountP2PCampaign(username, msg.action.saved);
         else deleteAccountP2PCampaign(username, msg.action.id);
@@ -1657,7 +1689,16 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
       return;
     }
     const reg = campaignRegistry(c);
-    const action = msg.action;
+    let action = msg.action;
+    // il ritratto va validato lato server (mai fidarsi del client): data URL immagine reale, size e dimensioni limitate
+    if (action.kind === 'setCharacter') {
+      const portrait = sanitizePortrait(action.character.portrait);
+      if (portrait !== action.character.portrait) {
+        audit(connActor(conn), 'portrait-sanitized', `campaign=${c.id} player=${conn.playerId} character=${action.character.id}`, connIp(conn));
+        moderationLog(connActor(conn), 'portrait-sanitized', `campaign=${c.id} character=${action.character.id}`, connIp(conn));
+        action = { ...action, character: { ...action.character, portrait } };
+      }
+    }
     const [next, err] = applyAction(c, conn.playerId, reg, action);
     if (err) {
       send(conn.ws, { t: 'error', message: err });
@@ -1667,8 +1708,8 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
     broadcast(next);
     // uscita volontaria: il token di rientro non deve pi\u00f9 valere
     if (action.kind === 'leave') dropRejoinToken(next.id, conn.playerId);
-    // kick: disconnetti subito il giocatore espulso e invalida il suo token di rientro
-    if (action.kind === 'kickPlayer') {
+    // kick/block: disconnetti subito il giocatore espulso e invalida il suo token di rientro
+    if (action.kind === 'kickPlayer' || action.kind === 'blockPlayer') {
       dropRejoinToken(next.id, action.playerId);
       const victim = [...conns].find((x) => x.campaignId === next.id && x.playerId === action.playerId);
       if (victim) {
@@ -1676,6 +1717,23 @@ async function handleMessage(conn: Conn, raw: string): Promise<void> {
         victim.campaignId = undefined;
         victim.playerId = undefined;
         try { victim.ws.close(); } catch { /* già chiusa */ }
+      }
+      if (action.kind === 'blockPlayer') {
+        moderationLog(connActor(conn), 'block-player', `campaign=${next.id} target=${action.playerId} reason=${String(action.reason ?? '').slice(0, 200)}`, connIp(conn));
+      }
+    }
+    if (action.kind === 'unblockPlayer') {
+      moderationLog(connActor(conn), 'unblock-player', `campaign=${next.id} target=${action.playerId}`, connIp(conn));
+    }
+    if (action.kind === 'reportPlayer') {
+      // segnalazione: moderation log + notice immediato ai master online della campagna
+      moderationLog(connActor(conn), 'report-player', `campaign=${next.id} target=${action.playerId} reason=${String(action.reason ?? '').slice(0, 200)}`, connIp(conn));
+      const target = next.players.find((p) => p.id === action.playerId);
+      const notice: ServerMessage = { t: 'notice', message: `[moderazione] ${connActor(conn)} ha segnalato ${target?.name ?? action.playerId}${action.reason ? ': ' + String(action.reason).slice(0, 200) : ''}` };
+      for (const m of next.players) {
+        if (m.role !== 'master') continue;
+        const cc = [...conns].find((x) => x.campaignId === next.id && x.playerId === m.id);
+        if (cc) send(cc.ws, notice);
       }
     }
   }
