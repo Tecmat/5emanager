@@ -34,6 +34,8 @@ export interface PlayerInfo {
   name: string;
   role: 'master' | 'player';
   characterId?: string;
+  /** account del server (se il giocatore era loggato): usato dalla blocklist della campagna */
+  username?: string;
   /** false = disconnesso (in grace period, in attesa di riconnessione); undefined/true = online */
   online?: boolean;
 }
@@ -52,6 +54,15 @@ export interface ChatMessage {
   from: string;
   text: string;
   at: string;
+}
+
+/** giocatore bloccato dal master: non puo' rientrare in campagna (per id/token, username o nome) */
+export interface BlockedPlayer {
+  id: string;
+  name: string;
+  username?: string;
+  at: string;
+  reason?: string;
 }
 
 export interface Campaign {
@@ -74,6 +85,8 @@ export interface Campaign {
   chat: ChatMessage[];
   /** statistiche di campagna (aggiornate dalle azioni di combattimento) */
   stats: CampaignStats;
+  /** giocatori bloccati dal master (blockPlayer): il join li rifiuta */
+  blockedPlayers?: BlockedPlayer[];
   createdAt: string;
   updatedAt: string;
 }
@@ -110,7 +123,24 @@ export function migrateCampaign(c: Campaign): Campaign {
     notes: c.notes ?? '',
     chat: c.chat ?? [],
     stats: { ...DEFAULT_STATS, ...(c.stats ?? {}) },
+    blockedPlayers: c.blockedPlayers ?? [],
   };
+}
+
+/** true se il giocatore e' nella blocklist della campagna (per id via token di rientro, username o nome) */
+export function isPlayerBlocked(c: Campaign, opts: { playerId?: string; username?: string; name?: string }): BlockedPlayer | undefined {
+  const blocked = c.blockedPlayers ?? [];
+  if (opts.playerId && blocked.some((b) => b.id === opts.playerId)) return blocked.find((b) => b.id === opts.playerId);
+  if (opts.username) {
+    const u = opts.username.toLowerCase();
+    const byUser = blocked.find((b) => b.username && b.username.toLowerCase() === u);
+    if (byUser) return byUser;
+  }
+  if (!opts.username && opts.name) {
+    const n = opts.name.trim().toLowerCase();
+    if (n) return blocked.find((b) => b.name.trim().toLowerCase() === n);
+  }
+  return undefined;
 }
 
 /**
@@ -159,6 +189,9 @@ export type ClientAction =
   | { kind: 'addCustom'; data: Partial<SrdData> }
   | { kind: 'leave' }
   | { kind: 'kickPlayer'; playerId: string }
+  | { kind: 'blockPlayer'; playerId: string; reason?: string }
+  | { kind: 'unblockPlayer'; playerId: string }
+  | { kind: 'reportPlayer'; playerId: string; reason?: string }
   | { kind: 'saveP2PCampaign'; saved: SavedCampaignSnapshot }
   | { kind: 'deleteP2PCampaign'; id: string }
   | { kind: 'saveCharacter'; character: Character }
@@ -221,6 +254,34 @@ export function applyCampaignAction(c: Campaign, playerId: string, reg: Registry
       if (!c.players.some((p) => p.id === action.playerId)) return [c, 'Giocatore non trovato'];
       c.players = c.players.filter((x) => x.id !== action.playerId);
       delete c.characters[action.playerId];
+      return [c];
+    }
+
+    case 'blockPlayer': {
+      if (!isMaster) return [c, 'Solo il master può bloccare un giocatore'];
+      if (action.playerId === playerId) return [c, 'Non puoi bloccare te stesso (usa "Esci")'];
+      const target = c.players.find((p) => p.id === action.playerId);
+      if (!target) return [c, 'Giocatore non trovato'];
+      c.players = c.players.filter((x) => x.id !== action.playerId);
+      delete c.characters[action.playerId];
+      const reason = String(action.reason ?? '').trim().slice(0, 200);
+      c.blockedPlayers = [
+        ...(c.blockedPlayers ?? []).filter((b) => b.id !== target.id),
+        { id: target.id, name: target.name, username: target.username, at: new Date().toISOString(), reason: reason || undefined },
+      ];
+      return [c];
+    }
+
+    case 'unblockPlayer': {
+      if (!isMaster) return [c, 'Solo il master può sbloccare un giocatore'];
+      c.blockedPlayers = (c.blockedPlayers ?? []).filter((b) => b.id !== action.playerId);
+      return [c];
+    }
+
+    case 'reportPlayer': {
+      // la segnalazione non cambia lo stato di campagna: il server la scrive nel moderation log
+      if (action.playerId === playerId) return [c, 'Non puoi segnalare te stesso'];
+      if (!c.players.some((p) => p.id === action.playerId)) return [c, 'Giocatore non trovato'];
       return [c];
     }
 

@@ -1,4 +1,5 @@
 import type { Campaign, Character, ClientAction, PlayerInfo, SavedCampaignSnapshot, SrdData } from '@dnd5e/core';
+import type { ModerationEntry } from './moderation.js';
 
 export type { Campaign, PlayerInfo, ClientAction } from '@dnd5e/core';
 
@@ -46,6 +47,8 @@ export type ClientMessage =
   | { t: 'adminRevokeInvite'; inviteId: string }
   /** ultimi eventi dell'audit log del server (solo admin) */
   | { t: 'adminAudit'; limit?: number }
+  /** ultimi eventi del moderation log (solo admin; attivo con DND5E_MODERATION_LOG) */
+  | { t: 'adminModerationLog'; limit?: number }
   /** gestione sessioni/dispositivi di un account (solo admin) */
   | { t: 'adminRevokeDevice'; username: string; tokenId: string }
   | { t: 'adminRevokeAllDevices'; username: string }
@@ -86,10 +89,11 @@ export type ServerMessage =
       accounts: { username: string; role: 'admin' | 'user'; characters: number; createdAt: string; lastLoginAt?: string; loginCount?: number; totp: boolean; passkeys: number; p2p: number }[];
       pending: { username: string; requestedAt: string }[];
       invites: { id: string; createdAt: string; expiresAt: string; usedBy?: string; usedAt?: string }[];
-      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[]; requireAuth: boolean; registration: 'open' | 'approval' | 'invite' };
+      server: { startedAt: string; uptimeSec: number; campaigns: number; accounts: number; pending: number; characters: number; p2pCampaigns: number; lan: string[]; requireAuth: boolean; registration: 'open' | 'approval' | 'invite'; moderationLog: boolean };
     }
   | { t: 'inviteCreated'; token: string; id: string; expiresAt: string; url: string }
   | { t: 'auditLog'; entries: { at: string; actor: string; action: string; detail?: string; ip?: string }[] }
+  | { t: 'moderationLog'; entries: ModerationEntry[] }
   | { t: 'adminAccount'; username: string; characters: { id: string; name: string; level: number; updatedAt: string }[]; devices: { id: string; createdAt: string; lastUsedAt?: string }[]; activeSessions: number; sessionsRevokedAt?: string }
   | { t: 'adminCampaign'; id: string; name: string; players: PlayerInfo[]; characters: number; inCombat: boolean; createdAt: string; updatedAt: string }
   | { t: 'kicked' }

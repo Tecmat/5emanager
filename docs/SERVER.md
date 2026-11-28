@@ -257,6 +257,34 @@ con IP), `register` / `register-request`, `invite-create` / `invite-used` / `inv
 L'admin legge gli ultimi eventi via WS `adminAudit { limit? }` → `auditLog { entries }` (pannello `/admin` →
 card "Audit log"); `adminAudit` è come le altre azioni admin: solo sessione admin o token valido.
 
+card "Audit log"); `adminAudit` è come le altre azioni admin: solo sessione admin o token valido.
+
+### Moderation log (blocca/segnala giocatore)
+
+Il master di una campagna può **bloccare** (`blockPlayer { playerId, reason? }`) o **sbloccare**
+(`unblockPlayer { playerId }`) un giocatore: il bloccato viene espulso subito e il suo `join` viene
+rifiutato (per token di rientro, username dell'account o — se anonimo — nome). Chiunque può
+**segnalare** un giocatore (`reportPlayer { playerId, reason? }`): il server scrive l'evento nel
+moderation log e avvisa subito i master online con un `notice`.
+
+Gli eventi di moderazione (`block-player`, `unblock-player`, `report-player`, `admin-kick-player`,
+`blocked-join-attempt`, `portrait-sanitized`) vanno su **`moderation.log`** in `DND5E_DATA_DIR`
+(JSONL, ruotato su `moderation.log.1` oltre `DND5E_MODERATION_MAX_BYTES`, default 5 MB; mai password/token).
+Il log è **attivabile/disattivabile** con `DND5E_MODERATION_LOG` (default `1` = attivo; `0`/`false` = spento:
+in tal caso restano comunque nell'audit log generale). File custom: `DND5E_MODERATION_FILE`.
+L'admin legge gli ultimi eventi via WS `adminModerationLog { limit? }` → `moderationLog { entries }`;
+lo stato del flag è in `adminState.server.moderationLog`.
+
+### Validazione immagini (ritratto PG pubblicato sul server)
+
+Il ritratto (`character.portrait`, data URL) viene **sempre ricontrollato lato server** quando la scheda
+viene salvata (libreria account `saveCharacter` o campagna `setCharacter`): niente fiducia nel client.
+Sono ammessi solo `data:image/png|jpeg|webp|gif;base64,…` con base64 valido, magic bytes coerenti col mime,
+byte decodificati ≤ `DND5E_MAX_PORTRAIT_BYTES` (default 1 MiB) e dimensioni lette dall'header
+(PNG IHDR / JPEG SOF / GIF / WebP VP8X-VP8-VP8L) ≤ `DND5E_MAX_IMAGE_DIM` (default 4096 px, anti decompression
+bomb). SVG/HTML e tutto il resto vengono **stroncati** (`portrait` → `undefined`) e l'evento `portrait-sanitized`
+finisce in audit + moderation log.
+
 **Gate della pagina `/admin`** (la pagina non è mai pubblica):
 - con `DND5E_REQUIRE_AUTH=true`: senza sessione → 302 a `/login`; sessione di account **non admin** → 403;
   sessione di account **admin** → 200;

@@ -308,8 +308,8 @@ export class P2PHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
-    if (action.kind === 'kickPlayer') {
-      // avvisa e chiudi il canale del giocatore espulso
+    if (action.kind === 'kickPlayer' || action.kind === 'blockPlayer') {
+      // avvisa e chiudi il canale del giocatore espulso/bloccato
       const ch = this.peers.get(action.playerId);
       if (ch) {
         try { ch.send(JSON.stringify({ t: 'kicked' })); } catch { /* ignora */ }
@@ -317,6 +317,7 @@ export class P2PHost {
         try { ch.close(); } catch { /* ignora */ }
       }
     }
+    if (action.kind === 'reportPlayer') logP2PReport(this.campaign.id, playerId, action.playerId, action.reason);
     this.broadcastState();
   }
 
@@ -597,7 +598,8 @@ export class P2PRelayHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
-    if (action.kind === 'kickPlayer') this.sendTo(action.playerId, { t: 'kicked' });
+    if (action.kind === 'kickPlayer' || action.kind === 'blockPlayer') this.sendTo(action.playerId, { t: 'kicked' });
+    if (action.kind === 'reportPlayer') logP2PReport(this.campaign.id, playerId, action.playerId, action.reason);
     this.broadcastState();
   }
 
@@ -656,6 +658,17 @@ export class P2PRelayClient {
 // ---------------------------------------------------------------------------
 
 import { beaconBroadcast, beaconSend, beaconStop, onLanEvt } from './lanBeacon.js';
+
+/** log locale (localStorage) delle segnalazioni in campagne P2P: l'host P2P non ha il moderation log del server */
+function logP2PReport(campaignId: string, fromId: string, targetId: string, reason?: string): void {
+  try {
+    const key = 'dnd5e-p2p-reports';
+    const arr = JSON.parse(localStorage.getItem(key) ?? '[]') as unknown[];
+    arr.push({ at: new Date().toISOString(), campaignId, fromId, targetId, reason: String(reason ?? '').slice(0, 200) });
+    localStorage.setItem(key, JSON.stringify(arr.slice(-200)));
+  } catch { /* quota: ignora */ }
+}
+
 
 function makeP2PCampaign(opts: { campaignName: string; password: string; masterName: string; existing?: Campaign }): Campaign {
   return buildCampaign(opts).campaign;
@@ -813,7 +826,8 @@ export class P2PLanHost {
     }
     this.campaign = next;
     this.campaign.updatedAt = new Date().toISOString();
-    if (action.kind === 'kickPlayer') this.sendTo(action.playerId, { t: 'kicked' });
+    if (action.kind === 'kickPlayer' || action.kind === 'blockPlayer') this.sendTo(action.playerId, { t: 'kicked' });
+    if (action.kind === 'reportPlayer') logP2PReport(this.campaign.id, playerId, action.playerId, action.reason);
     this.broadcastState();
   }
 
