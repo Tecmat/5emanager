@@ -73,7 +73,7 @@ dispositivo, chiavetta di sicurezza o password manager) con `@simplewebauthn/ser
 
 - **Requisito**: WebAuthn funziona solo in **secure context** — HTTPS (o `localhost`).
   Su LAN in chiaro (`http://192.168.x.x`) il browser blocca la API: configura HTTPS
-  (il tuo reverse proxy HTTPS, vedi [docs/DOCKER.md](docs/DOCKER.md)). L'app nasconde i bottoni
+  (il proprio reverse proxy HTTPS, vedi [docs/DOCKER.md](docs/DOCKER.md)). L'app nasconde i bottoni
   passkey quando `window.isSecureContext` è falso e mostra un avviso.
 - **RP ID / origin**: derivati dall'header `Host` della connessione WS (in locale `http://localhost:3001`,
   dietro proxy `https://<dominio>`), con override da env:

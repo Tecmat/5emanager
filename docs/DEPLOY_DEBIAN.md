@@ -74,23 +74,23 @@ Crea il token su GitHub → Settings → Developer settings → Fine-grained tok
 `Tecmat/5emanager`, permission: Contents read-only). Poi `sudo systemctl restart 5emanager`.
 Verifica: `curl http://localhost:3001/api/update`. Dettagli in [UPDATE.md](UPDATE.md).
 
-## 4. (Opzionale) Dominio + HTTPS con il TUO reverse proxy
+## 4. (Opzionale) Dominio + HTTPS con il proprio reverse proxy
 
 Solo se vuoi esporlo fuori dalla LAN — **mai esporre la porta 3001 direttamente su Internet senza TLS**.
-Scegli tu il proxy (Caddy, Traefik, nginx, HAProxy, Cloudflare Tunnel...): basta che faccia TLS e passi
+Si sceglie il proxy (Caddy, Traefik, nginx, HAProxy, Cloudflare Tunnel…): basta che faccia TLS e passi
 a `127.0.0.1:3001` gli header WebSocket (`Upgrade`/`Connection`), `Host` e `X-Forwarded-Proto`, con
 timeout di lettura alto. Esempio con **Caddy** (certificato automatico):
 
 ```bash
 sudo apt install -y caddy
-sudo sh -c 'printf "dnd.tuo-dominio.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
+sudo sh -c 'printf "dnd.esempio.it {\n  reverse_proxy 127.0.0.1:3001\n}\n" > /etc/caddy/Caddyfile'
 sudo systemctl enable --now caddy
 ```
 
-Per le **passkey WebAuthn** imposta sull'app `DND5E_RP_ID=dnd.tuo-dominio.it` e
-`DND5E_RP_ORIGIN=https://dnd.tuo-dominio.it` (o lascia che le derivi dall'header `Host`).
+Per le **passkey WebAuthn** imposta sull'app `DND5E_RP_ID=dnd.esempio.it` e
+`DND5E_RP_ORIGIN=https://dnd.esempio.it` (o lascia che le derivi dall'header `Host`).
 
-Poi i giocatori usano `https://dnd.tuo-dominio.it/` e nell'app `wss://dnd.tuo-dominio.it`.
+Poi i giocatori usano `https://dnd.esempio.it/` e nell'app `wss://dnd.esempio.it`.
 
 ## 5. Aggiornare il codice
 

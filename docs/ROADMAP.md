@@ -230,7 +230,7 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** **Import/export dell'intera libreria** (tutte le schede + custom) in un file
 - **P1** **Sync cloud opzionale** (Supabase/Firebase) con login, multi-dispositivo, conflitto-last-write
 - **P1** Versionamento schede (snapshot automatici giornalieri)
-- **P2** Import da **D&D Beyond** (parsing del JSON esportato) — solo i tuoi dati, nel rispetto del copyright
+- **P2** Import da **D&D Beyond** (parsing del JSON esportato) — solo i propri dati, nel rispetto del copyright
 
 ## 8. Piattaforme e release
 

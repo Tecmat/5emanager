@@ -3,7 +3,7 @@
 ## Perché Play Protect segnala l'APK
 
 1. **Firma debug**: gli APK `assembleDebug` sono firmati con la chiave debug di Google → Play Protect
-   li segnala sempre in sideload. **Soluzione**: APK release-firmati con il tuo keystore (vedi sotto).
+   li segnala sempre in sideload. **Soluzione**: APK release-firmati con il proprio keystore (vedi sotto).
 2. **Permesso `REQUEST_INSTALL_PACKAGES`** (installa app sconosciute): è una permission "restricted" di Play.
    Nel nostro caso è giustificato: l'app si aggiorna da sola scaricando la nuova APK (gesture utente →
    download via plugin nativo → prompt di sistema). Il FileProvider è limitato alla sola cache
@@ -17,11 +17,11 @@
 
 ## Firma release in CI (consigliata)
 
-Crea un keystore una volta sola:
+Creare un keystore, una volta sola:
 
 ```bash
 keytool -genkeypair -keystore keystore.jks -alias 5e -keyalg RSA -keysize 2048 -validity 10000
-# poi nel repo GitHub: Settings → Secrets → Actions:
+# poi nel repository del progetto: GitHub → Settings → Secrets → Actions:
 #   ANDROID_KEYSTORE_B64      = base64 del file keystore.jks  (base64 -w0 keystore.jks)
 #   ANDROID_KEYSTORE_PASSWORD = store password
 #   ANDROID_KEY_ALIAS         = 5e
@@ -32,9 +32,9 @@ Con questi secret la release CI produce `app.apk` **release-signed**; senza secr
 
 ## Per il Play Store (più avanti)
 
-- APK/AAB release-signed con keystore tuo (come sopra, `bundleRelease`)
+- APK/AAB release-signed con il proprio keystore (come sopra, `bundleRelease`)
 - privacy policy pubblicata (URL nell'app listing) che dichiari: fotocamera (QR), install unknown apps (self-update), rete
-- Data Safety form: nessun dato raccolto/transmesso a server tuoi; le schede restano sul dispositivo o sul TUO server
+- Data Safety form: nessun dato raccolto/transmesso a server dell'operatore; le schede restano sul dispositivo o sul proprio server
 - `targetSdk 36` (requisito Play Store, già così dalla v0.1.92)
 
 ## Firma stabile degli APK debug in CI (v0.1.58+)

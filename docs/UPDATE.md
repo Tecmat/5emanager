@@ -77,7 +77,7 @@ Dal pannello **/admin → Strumenti admin** ci sono due pulsanti distinti:
   blocca l'update in-place \u2192 il plugin lo segnala con un messaggio chiaro ("Firma diversa..."):
   disinstalla 5e Manager, installa a mano l'APK della nuova release (esporta prima le schede locali,
   che vivent solo sul dispositivo) e da quel momento gli update in-app funzionano. Se il secret
-  `ANDROID_KEYSTORE_B64` \u00e8 configurato, la CI firma in release con il tuo keystore (stabile per
+  `ANDROID_KEYSTORE_B64` \u00e8 configurato, la CI firma in release con il keystore configurato nei secret (stabile per
   definizione) e vale la stessa regola: mai mescolare APK firmati con chiavi diverse.
 - Su Samsung One UI 6+ controlla anche **Impostazioni \u2192 Sicurezza \u2192 Auto Blocker**: se attivo,
   blocca gli update sideload; disattivalo o consenti l'app.

@@ -4,15 +4,15 @@ Prerequisiti già pronti nel repo: appId `com.tecmat.emanager`, `versionCode` au
 (`0.1.88` → `188`, monotono), `targetSdk 36` (requisito Play Store), icone adattive, CI che produce `app.apk` (sideload) e —
 con il keystore nei secret — **`app.aab` release-signed** (l'asset per Play).
 
-## 1) Secret GitHub (una volta sola)
-Crea l'upload keystore e mettilo nei secret Actions del repo (vedi `docs/PLAY_PROTECT.md`):
+## 1) Secret GitHub del repository (una volta sola)
+Crea l'upload keystore del progetto e salvalo nei secret Actions del repository (vedi `docs/PLAY_PROTECT.md`):
 `ANDROID_KEYSTORE_B64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`.
 Da quel momento ogni release allega `app.aab` (AAB release-signed) oltre a `app.apk`.
 
 ## 2) Play Console
 1. Crea l'app: nome **5e Manager**, package `com.tecmat.emanager`, lingua default IT, tipo "App".
-2. **Play App Signing**: carica il tuo upload keystore (`keystore.jks`) — Google firma con la sua app
-   signing key. (Conserva il keystore: serve per ogni upload futuro.)
+2. **Play App Signing**: carica l'upload keystore del progetto (`keystore.jks`) — Google firma con la sua app
+   signing key. (Conservare il keystore: serve per ogni upload futuro.)
 3. **Privacy policy**: incolla l'URL `https://github.com/Tecmat/5emanager/blob/main/PRIVACY.md`
    (vedi `PRIVACY.md`).
 4. **Data Safety** (risposte consigliate):
