@@ -87,6 +87,8 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     subrace = race?.subraces.find((s) => s.id === input.subraceId);
     if (race && !subrace) errors.push('Sottorazza non valida per questa razza');
   }
+  const bg = input.background ? reg.backgrounds.get(input.background) : undefined;
+  if (input.background && !bg) errors.push('Background non trovato: ' + input.background);
   for (const [ab, v] of Object.entries(input.abilityScores)) {
     if (typeof v !== 'number' || v < 1 || v > 20) errors.push(`Punteggio ${ab} non valido (1-20): ${v}`);
   }
@@ -112,6 +114,8 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
   if (subrace) for (const [ab, b] of Object.entries(subrace.abilityBonuses)) scores[ab as keyof AbilityScores] += b;
 
   const skills = (input.skillChoices ?? []).slice(0, cls!.skillChoices.choose);
+  // il background aggiunge le sue competenze (senza duplicati)
+  for (const s of bg?.skillProficiencies ?? []) if (!skills.includes(s)) skills.push(s);
 
   const now = new Date().toISOString();
   const char: Character = {

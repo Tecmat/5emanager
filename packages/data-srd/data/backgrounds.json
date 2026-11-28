@@ -1,0 +1,84 @@
+[
+  {
+    "id": "acolyte",
+    "name": "Accolito",
+    "skillProficiencies": ["insight", "religion"],
+    "languages": 2,
+    "feature": { "name": "Rifugio del tempio", "description": "Tu e i tuoi compagni di fede potete trovare rifugio in qualsiasi tempio del vostro ordine: vitto, alloggio e cure, a patto che non facciate nulla che vi metta contro la legge locale." }
+  },
+  {
+    "id": "charlatan",
+    "name": "Ciurmadore",
+    "skillProficiencies": ["deception", "sleightOfHand"],
+    "feature": { "name": "Identità falsa", "description": "Hai preparato un'identità alternativa completa di documenti, costumi e amicizie: puoi fingerti qualcun altro finché qualcuno non la scopre." }
+  },
+  {
+    "id": "criminal",
+    "name": "Criminale",
+    "skillProficiencies": ["deception", "stealth"],
+    "feature": { "name": "Contatto nella mala", "description": "Hai un contatto fidato nell'organizzazione criminale locale che ti passa informazioni e favori, a patto di non tradirlo." }
+  },
+  {
+    "id": "entertainer",
+    "name": "Intrattenitore",
+    "skillProficiencies": ["acrobatics", "performance"],
+    "feature": { "name": "Ammiratore", "description": "C'è sempre qualcuno che ti ha visto esibirsi e ti riconosce: vitto e alloggio gratis in cambio di uno spettacolo, dove ti trovi." }
+  },
+  {
+    "id": "folk-hero",
+    "name": "Eroe popolare",
+    "skillProficiencies": ["animalHandling", "survival"],
+    "feature": { "name": "Gente comune", "description": "La gente comune ti riconosce e ti aiuta: un contadino ti dà riparo, un oste ti paga da bere, quando ne hai bisogno." }
+  },
+  {
+    "id": "guild-artisan",
+    "name": "Artigiano di gilda",
+    "skillProficiencies": ["insight", "persuasion"],
+    "feature": { "name": "Privilegio della gilda", "description": "Appartieni a una gilda d'artigiani: hai accesso a laboratorio, materiali a prezzo di favore e informazioni del mestiere." }
+  },
+  {
+    "id": "hermit",
+    "name": "Eremita",
+    "skillProficiencies": ["medicine", "religion"],
+    "languages": 1,
+    "feature": { "name": "Scoperta", "description": "Durante la vita da eremita hai fatto una scoperta importante (medica, magica o storica): sai chi potrebbe essere interessato a comprarla." }
+  },
+  {
+    "id": "noble",
+    "name": "Nobile",
+    "skillProficiencies": ["history", "persuasion"],
+    "languages": 1,
+    "feature": { "name": "Posizione privilegiata", "description": "Sei abituato alla vita di corte: sai muoverti tra corti e salotti, e chi conta ti deve un minimo di rispetto per il tuo casato." }
+  },
+  {
+    "id": "outlander",
+    "name": "Forestiero",
+    "skillProficiencies": ["athletics", "survival"],
+    "feature": { "name": "Viaggiatore", "description": "Conosci i sentieri, i fiumi e i pericoli delle terre selvagge: trovi cibo e riparo all'aperto e sai quali strade evitare di notte." }
+  },
+  {
+    "id": "sage",
+    "name": "Saggio",
+    "skillProficiencies": ["arcana", "history"],
+    "languages": 2,
+    "feature": { "name": "Ricercatore", "description": "Hai accesso a biblioteche e archivi accademici: puoi trovare documenti rari e qualcuno che li interpreta, con il tempo e il prezzo giusti." }
+  },
+  {
+    "id": "sailor",
+    "name": "Marinaio",
+    "skillProficiencies": ["athletics", "perception"],
+    "feature": { "name": "Passaggio libero", "description": "Sai destreggiarti sui mari e nei porti: le navi ti fanno viaggiare gratis o a poco prezzo, a volte anche di notte." }
+  },
+  {
+    "id": "soldier",
+    "name": "Soldato",
+    "skillProficiencies": ["athletics", "intimidation"],
+    "feature": { "name": "Rango militare", "description": "Hai servito in un esercito: sai come muoverti in una caserma e a chi chiedere per passare i controlli." }
+  },
+  {
+    "id": "urchin",
+    "name": "Monello di strada",
+    "skillProficiencies": ["sleightOfHand", "stealth"],
+    "feature": { "name": "Tana segreta", "description": "Conosci i vicoli e i passaggi nascosti della città: hai un nascondiglio sicuro dove nessuno ti trova." }
+  }
+]

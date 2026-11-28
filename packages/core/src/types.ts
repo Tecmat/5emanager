@@ -280,6 +280,18 @@ export interface ClassLevel {
   subclassId?: string;
 }
 
+/** background SRD del PG: competenze, lingue e una feature narrativa (data-srd/data/backgrounds.json) */
+export interface BackgroundDef {
+  id: string;
+  name: string;
+  /** skill in cui il PG è competente grazie al background (id di SKILLS) */
+  skillProficiencies: string[];
+  /** lingue aggiuntive (numero) */
+  languages?: number;
+  feature: { name: string; description: string };
+  source?: 'srd' | 'custom';
+}
+
 export interface Proficiencies {
   skills: string[];
   expertise: string[];

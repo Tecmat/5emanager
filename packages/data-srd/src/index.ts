@@ -25,6 +25,8 @@ import feats from '../data/feats.json';
 import fightingStyles from '../data/fighting-styles.json';
 import enemies from '../data/enemies.json';
 import random from '../data/random.json';
+import flavor from '../data/flavor.json';
+import backgrounds from '../data/backgrounds.json';
 import dungeon from '../data/dungeon.json';
 import pregen from '../data/pregen.json';
 import shop from '../data/shop.json';
@@ -52,6 +54,7 @@ export const SRD_DATA: SrdData = {
   feats: feats as unknown as SrdData['feats'],
   fightingStyles: fightingStyles as unknown as SrdData['fightingStyles'],
   enemies: enemies as unknown as SrdData['enemies'],
+  backgrounds: backgrounds as unknown as SrdData['backgrounds'],
 };
 
 export function createSrdRegistry(): Registry {
@@ -60,8 +63,8 @@ export function createSrdRegistry(): Registry {
   return reg;
 }
 
-/** tabelle del generatore casuale (nomi, incontri, tesori) per il master */
-export const RANDOM_DATA = random as unknown as RandomData;
+/** tabelle del generatore casuale (nomi, incontri, tesori, anima del PG) per il master */
+export const RANDOM_DATA = { ...(random as object), flavor } as unknown as RandomData;
 
 /** tabelle del generatore di dungeon (stanze, trappole, tesori) */
 export const DUNGEON_DATA = dungeon as unknown as DungeonData;

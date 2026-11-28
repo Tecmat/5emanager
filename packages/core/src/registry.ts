@@ -1,5 +1,6 @@
 import type {
   ArmorDef,
+  BackgroundDef,
   ClassDef,
   EnemyDef,
   FeatDef,
@@ -25,6 +26,7 @@ export interface Registry {
   feats: Map<string, FeatDef>;
   fightingStyles: Map<string, FightingStyleDef>;
   enemies: Map<string, EnemyDef>;
+  backgrounds: Map<string, BackgroundDef>;
 }
 
 export function createRegistry(): Registry {
@@ -38,6 +40,7 @@ export function createRegistry(): Registry {
     feats: new Map(),
     fightingStyles: new Map(),
     enemies: new Map(),
+    backgrounds: new Map(),
   };
 }
 
@@ -51,6 +54,7 @@ export interface SrdData {
   feats: FeatDef[];
   fightingStyles: FightingStyleDef[];
   enemies: EnemyDef[];
+  backgrounds?: BackgroundDef[];
 }
 
 export function loadData(reg: Registry, data: SrdData): void {
@@ -63,6 +67,7 @@ export function loadData(reg: Registry, data: SrdData): void {
   for (const f of data.feats) reg.feats.set(f.id, f);
   for (const f of data.fightingStyles) reg.fightingStyles.set(f.id, f);
   for (const e of data.enemies ?? []) reg.enemies.set(e.id, e);
+  for (const b of data.backgrounds ?? []) reg.backgrounds.set(b.id, b);
 }
 
 /** esporta solo i contenuti custom (source === 'custom') per salvataggio/backup */
@@ -77,6 +82,7 @@ export function exportCustomContent(reg: Registry): SrdData {
     feats: [...reg.feats.values()].filter((f) => f.source === 'custom'),
     fightingStyles: [...reg.fightingStyles.values()],
     enemies: [...reg.enemies.values()].filter((e) => e.source === 'custom'),
+    backgrounds: [...reg.backgrounds.values()].filter((b) => b.source === 'custom'),
   };
 }
 

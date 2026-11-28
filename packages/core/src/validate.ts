@@ -1,4 +1,4 @@
-import { ABILITIES } from './types.js';
+import { ABILITIES, SKILLS, type BackgroundDef } from './types.js';
 import type { ArmorDef, ClassDef, EnemyDef, FeatDef, RaceDef, SpellDef, SubclassDef, WeaponDef } from './types.js';
 
 const DICE_RE = /^\d+d\d+(\s*[+-]\s*\d+)?$/;
@@ -78,6 +78,17 @@ export function validateFeature(f: unknown, level: number): string[] {
       if (et === 'effect' && typeof (e as Record<string, unknown>).text !== 'string') errors.push(`feature ${o.id}: effect richiede text (stringa)`);
     }
   }
+  return errors;
+}
+
+export function validateBackgroundDef(b: Partial<BackgroundDef>): string[] {
+  const errors: string[] = [];
+  const o = b as Record<string, unknown>;
+  if (!isId(b.id)) errors.push('id non valido');
+  req(o, 'name', errors);
+  const skillIds = new Set(SKILLS.map((s) => s.id));
+  for (const s of b.skillProficiencies ?? []) if (!skillIds.has(s)) errors.push(`skill non valida: ${s}`);
+  if (!b.feature || !b.feature.name || !b.feature.description) errors.push('feature (name + description) obbligatoria');
   return errors;
 }
 

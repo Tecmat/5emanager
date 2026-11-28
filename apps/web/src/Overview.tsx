@@ -18,6 +18,7 @@ import {
   migrateCharacter,
   passivePerception,
   proficiencyBonus,
+  randomFlavorField,
   recordDeathSave,
   savingThrowBonus,
   setExhaustion,
@@ -33,6 +34,7 @@ import {
   type CharacterFlavor,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
+import { RANDOM_DATA } from '@dnd5e/data-srd';
 import { CONDITIONS, DEFAULT_HOUSE_RULES, addCondition, removeCondition, unlockedMechanics, type HouseRules } from '@dnd5e/core';
 import { CUSTOM_KEY, useStore } from './store.js';
 import { loadJSON, saveJSON } from './storage.js';
@@ -171,6 +173,7 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
   const { ac, breakdown } = armorClass(char, reg);
   const cap = carryingCapacity(char);
   const race = reg.races.get(char.raceId);
+  const bgName = char.background ? (reg.backgrounds.get(char.background)?.name ?? char.background) : '';
   const subrace = race?.subraces.find((s) => s.id === char.subraceId);
   const classNames = char.classLevels.map((cl) => {
     const c = reg.classes.get(cl.classId);
@@ -298,7 +301,7 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
               </div>
             </div>
           )}
-          <div className="muted">{race?.name}{subrace ? ` (${subrace.name})` : ''} — {classNames.join(' / ')}</div>
+          <div className="muted">{[bgName, race?.name, subrace ? `(${subrace.name})` : '', classNames.join(' / ')].filter(Boolean).join(' · ')}</div>
           {editing && (
             <div style={{ marginTop: 6 }}>
               <label>{t('ov.notes', 'Note')}</label>
@@ -312,12 +315,18 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
                 {(['appearance', 'personalityTraits', 'ideals', 'bonds', 'flaws'] as const).map((k) => (
                   <div key={k}>
                     <label>{t(`ov.${k}`, k)}</label>
-                    <input value={char.flavor?.[k] ?? ''} onChange={(e) => editFlavor(k, e.target.value)} style={{ width: '100%' }} />
+                    <div className="row" style={{ gap: 4 }}>
+                      <input value={char.flavor?.[k] ?? ''} onChange={(e) => editFlavor(k, e.target.value)} style={{ width: '100%' }} />
+                      <button type="button" title={t('ov.flavorGen', 'Genera un valore casuale')} onClick={() => { const v = randomFlavorField(RANDOM_DATA, k); if (v) editFlavor(k, v); }}>🎲</button>
+                    </div>
                   </div>
                 ))}
               </div>
               <label style={{ marginTop: 6 }}>{t('ov.backstory', 'Storia del personaggio')}</label>
-              <textarea rows={4} value={char.flavor?.backstory ?? ''} onChange={(e) => editFlavor('backstory', e.target.value)} style={{ width: '100%' }} />
+              <div className="row" style={{ gap: 4, alignItems: 'flex-start' }}>
+                <textarea rows={4} value={char.flavor?.backstory ?? ''} onChange={(e) => editFlavor('backstory', e.target.value)} style={{ width: '100%' }} />
+                <button type="button" title={t('ov.flavorGenHook', 'Suggerisci uno spunto di storia')} onClick={() => { const v = randomFlavorField(RANDOM_DATA, 'backstoryHooks'); if (v) editFlavor('backstory', (char.flavor?.backstory ? char.flavor.backstory + '\n' : '') + v); }}>🎲</button>
+              </div>
             </div>
           )}
           {!editing && char.flavor && Object.values(char.flavor).some(Boolean) && (

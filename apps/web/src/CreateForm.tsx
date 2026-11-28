@@ -14,6 +14,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
   const [raceId, setRaceId] = useState('human');
   const [subraceId, setSubraceId] = useState<string>('');
   const [classId, setClassId] = useState('fighter');
+  const [backgroundId, setBackgroundId] = useState('');
   const [scores, setScores] = useState<AbilityScores>(DEFAULT_SCORES);
   const [mode, setMode] = useState<StatGenMode>('standard');
   const [skills, setSkills] = useState<string[]>([]);
@@ -67,7 +68,7 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
       return;
     }
     const res = createCharacter(
-      { name: name.trim() || 'Senza nome', raceId, subraceId: subraceId || undefined, classId, abilityScores: scores, skillChoices: skills, fightingStyleId: styleOptions.length ? styleChoice : undefined },
+      { name: name.trim() || 'Senza nome', raceId, subraceId: subraceId || undefined, classId, background: backgroundId || undefined, abilityScores: scores, skillChoices: skills, fightingStyleId: styleOptions.length ? styleChoice : undefined },
       reg,
     );
     if (res.errors.length > 0 || !res.character) {
@@ -113,6 +114,15 @@ export default function CreateForm({ onCancel }: { onCancel?: () => void }) {
             <select value={classId} onChange={(e) => { setClassId(e.target.value); setFightingStyleId(''); }}>
               {classes.map((c) => (
                 <option key={c.id} value={c.id}>{c.name} (d{c.hitDie})</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label>{t('cf.background', 'Background')}</label>
+            <select value={backgroundId} onChange={(e) => setBackgroundId(e.target.value)}>
+              <option value="">{t('cf.none', '(nessuno)')}</option>
+              {[...reg.backgrounds.values()].map((b) => (
+                <option key={b.id} value={b.id}>{b.name}</option>
               ))}
             </select>
           </div>

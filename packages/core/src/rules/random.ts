@@ -29,9 +29,21 @@ export interface RandomTier {
   treasure: RandomTreasureEntry[];
 }
 
+/** tabelle per il generatore dell'anima del PG (data-srd/data/flavor.json) */
+export interface FlavorTables {
+  appearance: string[];
+  personalityTraits: string[];
+  ideals: string[];
+  bonds: string[];
+  flaws: string[];
+  backstoryHooks: string[];
+}
+export type FlavorField = keyof FlavorTables;
+
 export interface RandomData {
   names: { first: string[]; last: string[]; epithet: string[] };
   tiers: RandomTier[];
+  flavor?: FlavorTables;
 }
 
 export type Rng = () => number;
@@ -40,6 +52,13 @@ const defaultRng: Rng = () => Math.random();
 
 function pick<T>(arr: T[], rng: Rng): T {
   return arr[Math.floor(rng() * arr.length)];
+}
+
+/** un valore casuale dalla tabella flavor richiesta (stringa vuota se la tabella manca) */
+export function randomFlavorField(data: RandomData, field: FlavorField, rng: Rng = defaultRng): string {
+  const t = data.flavor?.[field] ?? [];
+  if (t.length === 0) return '';
+  return pick(t, rng);
 }
 
 /** nome fantasy casuale (nome + cognome + eventualmente epiteto) */
