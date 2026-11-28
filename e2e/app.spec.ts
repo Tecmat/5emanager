@@ -85,11 +85,17 @@ test('flusso PG: crea un mago, assegna XP, sali di livello e lancia un incantesi
   await xpRow.getByRole('button', { name: 'Aggiungi XP' }).click();
   await expect(page.getByText('Livello da XP: 2')).toBeVisible();
   await page.getByRole('button', { name: 'Sali di livello' }).click();
-  await page.getByRole('button', { name: 'Conferma level-up' }).click();
+  // il mago al liv 2 deve scegliere un archetipo: seconda select del dialog (dopo la classe)
+  const modal = page.locator('.modal').first();
+  await modal.locator('select').nth(1).selectOption({ index: 1 });
+  await modal.getByRole('button', { name: 'Conferma level-up' }).click();
   await expect(page.getByText(/livello 2 \/ 900 XP/)).toBeVisible();
 
-  // lancia il primo incantesimo a slot disponibile dalla tab Incantesimi
+  // tab Incantesimi: impara un incantesimo di 1° livello dal grimorio, poi lancialo
   await page.getByRole('button', { name: /Incantesimi/ }).click();
+  const grimoire = page.locator('.card', { hasText: 'Grimorio' }).first();
+  await grimoire.getByPlaceholder('Cerca incantesimo...').fill('affascina');
+  await grimoire.locator('tr', { hasText: 'Affascinare Persona' }).first().getByRole('button', { name: 'Impara' }).click();
   await page.getByRole('button', { name: 'Lancia', exact: true }).first().click();
 
   // il lancio finisce nel diario di sessione in Panoramica
