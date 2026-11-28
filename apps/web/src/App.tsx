@@ -13,6 +13,8 @@ import { MAIN_PAGES, SHEET_TABS, type Page, type SheetTabId } from './tabs.js';
 import { orderTabs, resolvedTheme, updateUISettings, useUISettings } from './uiSettings.js';
 import { dueReminder, fireNotification, markNotified, type Reminder } from './reminder.js';
 import { requestResume } from './p2pSaved.js';
+import { getCurrentVersion } from './update.js';
+import { NEWS_SEEN_KEY, newsFor, type NewsEntry } from './news.js';
 
 // code-splitting: ogni tab è un chunk separato (P2 performance)
 const HomeTab = lazy(() => import('./HomeTab.js'));
@@ -43,7 +45,7 @@ function loadLock(): LockRec {
 }
 
 export default function App() {
-  const { char, sheets, ready, selectSheet, lang, setLang, t, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
+  const { char, sheets, ready, selectSheet, lang, setLang, t, tf, viewChar, viewLabel, setViewChar, undo, canUndo, campaignMeta } = useStore();
   const { conn } = useNet();
   // page null = auto: pagina scheda se c'è una scheda attiva, altrimenti home
   const [page, setPage] = useState<Page | null>(null);
@@ -156,6 +158,28 @@ export default function App() {
     const iv = setInterval(check, 20000);
     return () => clearInterval(iv);
   }, []);
+
+  // novità della versione corrente: dialog una volta per versione (news.ts rispecchia CHANGELOG.md)
+  const [news, setNews] = useState<NewsEntry | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    getCurrentVersion()
+      .then((v) => {
+        if (cancelled || !v || v === '0.0.0') return;
+        let seen = '';
+        try { seen = localStorage.getItem(NEWS_SEEN_KEY) ?? ''; } catch { /* ignora */ }
+        if (seen === v) return;
+        const entry = newsFor(v);
+        if (entry) setNews(entry);
+        else { try { localStorage.setItem(NEWS_SEEN_KEY, v); } catch { /* quota */ } }
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, []);
+  const dismissNews = () => {
+    if (news) { try { localStorage.setItem(NEWS_SEEN_KEY, news.version); } catch { /* quota */ } }
+    setNews(null);
+  };
 
   const toggleTheme = () => {
     updateUISettings({ theme: effTheme === 'dark' ? 'light' : 'dark' });
@@ -289,6 +313,17 @@ export default function App() {
             🔔 <b>{reminderBanner.text}</b>
             <span className="muted"> — {new Date(reminderBanner.at).toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' })}</span>
             <button style={{ marginLeft: 8 }} onClick={() => setReminderBanner(null)}>{t('app.dismiss', 'Ok')}</button>
+          </div>
+        )}
+        {news && (
+          <div className="modal-bg" onClick={dismissNews}>
+            <div className="modal" onClick={(e) => e.stopPropagation()}>
+              <h2>✨ {tf('app.newsTitle', 'Novità della v{version}', { version: news.version })}</h2>
+              <ul style={{ paddingLeft: 18, lineHeight: 1.6 }}>
+                {(lang === 'it' ? news.it : news.en).map((item, i) => <li key={i}>{item}</li>)}
+              </ul>
+              <button className="primary" onClick={dismissNews}>{t('app.newsClose', 'Ho capito')}</button>
+            </div>
           </div>
         )}
         {viewChar && (

@@ -27,7 +27,7 @@ export function validateSpellDef(s: Partial<SpellDef>): string[] {
   if (typeof s.school !== 'string' || s.school.length === 0) errors.push('school mancante');
   for (const f of ['castingTime', 'range', 'components', 'duration', 'description'] as const) req(o, f, errors);
   if (s.damage !== undefined && !isValidDice(s.damage)) errors.push(`dado danno non valido: ${s.damage}`);
-  if (s.higherLevel !== undefined && !/\+\s*\d+\s*d\s*\d+/i.test(s.higherLevel)) errors.push(`upcast non valido: deve contenere "+NdM" (es. "+1d6 per slot superiore"): ${s.higherLevel}`);
+  if (s.higherLevel !== undefined && s.higherLevel.trim() === '') errors.push('upcast non può essere vuoto (usa "+NdM per slot superiore" per il danno extra)');
   return errors;
 }
 
@@ -38,7 +38,7 @@ export function validateWeaponDef(w: Partial<WeaponDef>): string[] {
   req(o, 'name', errors);
   if (w.category !== 'simple' && w.category !== 'martial') errors.push('category deve essere simple o martial');
   if (w.type !== 'melee' && w.type !== 'ranged') errors.push('type deve essere melee o ranged');
-  if (typeof w.damage !== 'string' || !isValidDice(w.damage)) errors.push(`dado danno non valido: ${w.damage}`);
+  if (typeof w.damage !== 'string' || (!isValidDice(w.damage) && w.damage !== '-')) errors.push(`dado danno non valido: ${w.damage}`);
   req(o, 'damageType', errors);
   if (typeof w.weight !== 'number' || w.weight < 0) errors.push('weight deve essere >= 0');
   if (!w.cost || typeof w.cost.value !== 'number' || w.cost.value < 0) errors.push('cost non valido');

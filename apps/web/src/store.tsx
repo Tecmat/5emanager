@@ -10,6 +10,7 @@ import {
 import { SRD_DATA, createSrdRegistry } from '@dnd5e/data-srd';
 import { applyOverridesToRegistry, countOverrides, loadOverrides } from './srdOverrides.js';
 import { loadJSON, saveJSON } from './storage.js';
+import { clearVersions, saveVersion } from './versions.js';
 import { getLang, storeLang, t as translate, tf as translateF, type Lang } from './i18n.js';
 
 const SHEETS_KEY = 'dnd5e.sheets.v2';
@@ -91,6 +92,8 @@ interface Store {
   /** annulla l'ultima modifica alla scheda attiva (snapshot in memoria, max 30) */
   undo: () => void;
   canUndo: boolean;
+  /** salva uno snapshot persistente della scheda attiva (versionamento) */
+  snapshotActive: (label: string) => void;
   lang: Lang;
   setLang: (l: Lang) => void;
   t: (key: string, fallback?: string) => string;
@@ -163,6 +166,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [viewChar, setViewCharState] = useState<Character | null>(null);
   const [viewLabel, setViewLabel] = useState<string | null>(null);
   const histRef = useRef<Character[]>([]);
+  const lastAutoVersionRef = useRef<Record<string, number>>({});
   const [canUndo, setCanUndo] = useState(false);
   const setViewChar = (c: Character | null, label?: string | null) => {
     setViewCharState(c);
@@ -185,8 +189,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     if (prev && prev !== c) {
       histRef.current = [...histRef.current.slice(-29), prev];
       setCanUndo(true);
+      // snapshot automatico persistente al massimo una volta ogni ora di modifiche
+      const now = Date.now();
+      if (now - (lastAutoVersionRef.current[data.activeId] ?? 0) > 60 * 60 * 1000) {
+        lastAutoVersionRef.current[data.activeId] = now;
+        void saveVersion(data.activeId, prev, 'auto');
+      }
     }
     persist({ ...data, sheets: { ...data.sheets, [data.activeId]: c } });
+  };
+
+  const snapshotActive = (label: string) => {
+    const cur = data.activeId ? data.sheets[data.activeId] : undefined;
+    if (cur) void saveVersion(data.activeId!, cur, label);
   };
 
   const undo = () => {
@@ -227,6 +242,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteSheet = (id: string) => {
+    void clearVersions(id);
     const nextSheets = { ...data.sheets };
     delete nextSheets[id];
     let activeId = data.activeId;
@@ -261,6 +277,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     reloadSrdOverrides,
     undo,
     canUndo,
+    snapshotActive,
     lang,
     setLang: (l: Lang) => { storeLang(l); setLangState(l); },
     t: (key: string, fallback?: string) => translate(lang, key, fallback),

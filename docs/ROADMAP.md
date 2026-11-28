@@ -50,6 +50,10 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **Coerenza UI/UX: niente più form account duplicati** (v0.1.88): la card "Server" in Home ora è compatta (picker server + stato: tag utente/ruolo/libreria/modalità + Vai a Campagna / Il mio account / Pannello admin; se non loggato, solo hint + pulsante Account) — login/registrazione/2FA/passkey/esci vivono solo nella tab Account
 - ✅ **Rifiniture estetiche** (v0.1.88): icone allineate nei titoli card, striscia dorata della card che si accende on-hover, hover righe tabella più leggibile, ::selection e scrollbar tematizzate, bordo inferiore delle sezioni Home
 
+- ✅ **Versionamento delle schede** (v0.2.0): snapshot persistenti per scheda (auto max 1/ora, manuali con etichetta, automatico prima del level-up) + ripristino/elimina — `versions.ts`, `VersionsCard.tsx`, hook in `store.tsx`
+- ✅ **E2E multiplayer** (v0.2.0): server di gioco in CI (porta 3999) + host via UI e player via WS: join, scheda, XP del master — `e2e/multiplayer.spec.ts`, `playwright.config.ts`
+- ✅ **Audit dati SRD in CI** (v0.2.0): validazione completa + conteggi (12 classi, ≥3 archetipi/classe, ≥100 incantesimi) — `packages/data-srd/test/audit.test.ts`
+- ✅ **CHANGELOG pubblico + novità in-app** (v0.2.0): `CHANGELOG.md` + dialog "Novità della vX" al cambio versione — `news.ts`, `App.tsx`
 - ✅ **Tira dado animato + suono opzionale** (v0.1.98): il totale "rotola" con valori casuali durante il tiro (rispetta `data-animations=off`) e click WebAudio opzionale con toggle 🔊/🔕 persistente — `DiceRoller.tsx`, `styles.css`
 - ✅ **E2E Playwright: flusso PG completo** (v0.1.98): crea mago → +300 XP → level-up → lancia incantesimo → voce nel diario — `e2e/app.spec.ts`
 - ✅ **Pronto per il Play Store** (v0.1.89): AAB release-signed `app.aab` in release (con keystore nei secret) oltre all'APK; self-update via APK **disabilitato su install Play** (`isPlayInstall` nel plugin → pulsante apre il Play Store, policy Google rispettata); `PRIVACY.md` + runbook Play (Data Safety, listing IT/EN, track — privato, non versionato); test `update-playstore.test.ts`

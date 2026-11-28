@@ -1,0 +1,90 @@
+import { expect, test, type Page } from '@playwright/test';
+import WebSocket from 'ws';
+import { createCharacter } from '@dnd5e/core';
+import { createSrdRegistry } from '@dnd5e/data-srd';
+
+/**
+ * E2E multiplayer (v0.1.98): il server di gioco gira su 127.0.0.1:3999 (webServer in playwright.config).
+ * L'host crea la campagna dall'app (UI), un giocatore entra via WebSocket diretto (protocollo del server)
+ * e carica la scheda: il master dà XP a tutta la party e il player lo vede nello stato.
+ */
+
+const SERVER = 'ws://127.0.0.1:3999';
+
+async function dismissIntro(page: Page) {
+  const start = page.getByRole('button', { name: 'Inizia' });
+  if (await start.isVisible().catch(() => false)) await start.click();
+  const skip = page.getByRole('button', { name: 'Salta' });
+  if (await skip.isVisible().catch(() => false)) await skip.click();
+}
+
+test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli XP dal master', async ({ page }) => {
+  test.setTimeout(120_000);
+
+  // ---- host: crea una scheda e poi la campagna sul server 127.0.0.1:3999 ----
+  await page.goto('/');
+  await dismissIntro(page);
+  await page.getByRole('button', { name: 'Nuova scheda' }).first().click();
+  await page.getByPlaceholder('Aldric il Coraggioso').fill('Host E2E');
+  await page.getByRole('button', { name: 'Crea personaggio' }).click();
+  await expect(page.locator('header h1')).toContainText('Host E2E');
+
+  await page.getByRole('button', { name: 'Campagna' }).first().click();
+  await page.getByPlaceholder('ws://localhost:3001').fill(SERVER);
+  await page.getByPlaceholder('Eroe').fill('Host');
+  await page.getByPlaceholder('La tomba perduta').fill('E2E Multiplayer');
+  await page.getByRole('button', { name: 'Crea e entra' }).click();
+
+  // attende l'ingresso in campagna e legge l'id (8 caratteri) dall'header
+  const campHeader = page.locator('h3', { hasText: 'E2E Multiplayer' }).first();
+  await expect(campHeader).toBeVisible();
+  const m = /id\s+([A-Za-z0-9-]{6,12})/.exec((await campHeader.textContent()) ?? '');
+  expect(m, `id campagna non trovato in: ${await campHeader.textContent()}`).toBeTruthy();
+  const campaignId = m![1];
+
+  // ---- player: entra via WS e carica la sua scheda ----
+  const reg = createSrdRegistry();
+  const ch = createCharacter(
+    { name: 'PlayerWS', raceId: 'human', classId: 'fighter', abilityScores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } },
+    reg,
+  ).character!;
+
+  const ws = new WebSocket(SERVER);
+  const received: Record<string, unknown>[] = [];
+  const waitFor = (pred: (m: Record<string, unknown>) => boolean, ms = 15_000) =>
+    new Promise<Record<string, unknown>>((resolve, reject) => {
+      const hit = received.find(pred);
+      if (hit) return resolve(hit);
+      const timer = setTimeout(() => reject(new Error('timeout in attesa del messaggio WS')), ms);
+      const onMsg = (data: WebSocket.RawData) => {
+        const msg = JSON.parse(data.toString()) as Record<string, unknown>;
+        received.push(msg);
+        if (pred(msg)) {
+          clearTimeout(timer);
+          ws.off('message', onMsg);
+          resolve(msg);
+        }
+      };
+      ws.on('message', onMsg);
+    });
+  await new Promise<void>((res, rej) => { ws.on('open', () => res()); ws.on('error', rej); });
+
+  ws.send(JSON.stringify({ t: 'join', campaignId, password: '', name: 'PlayerWS' }));
+  const welcome = (await waitFor((x) => x.t === 'welcome')) as { you: { id: string } };
+  const playerId = welcome.you.id;
+
+  ws.send(JSON.stringify({ t: 'action', action: { kind: 'setCharacter', character: ch } }));
+  await waitFor((x) => x.t === 'state' && !!(x.campaign as { characters: Record<string, unknown> }).characters[playerId]);
+
+  // ---- l'host vede il player nella UI della campagna ----
+  await expect(page.getByText('PlayerWS').first()).toBeVisible();
+
+  // ---- il master dà +300 XP a tutta la party: il player lo riceve nello stato ----
+  await page.getByRole('button', { name: /XP a tutta la party/ }).click();
+  const st = (await waitFor(
+    (x) => x.t === 'state' && ((x.campaign as { characters: Record<string, { xp?: number }> }).characters[playerId]?.xp ?? 0) >= 300,
+  )) as { campaign: { characters: Record<string, { xp: number }> } };
+  expect(st.campaign.characters[playerId].xp).toBe(300);
+
+  ws.close();
+});

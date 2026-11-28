@@ -37,6 +37,7 @@ import { CUSTOM_KEY, useStore } from './store.js';
 import { loadJSON, saveJSON } from './storage.js';
 import { sha256Hex } from './netStore.js';
 import LevelUpDialog from './LevelUpDialog.js';
+import VersionsCard from './VersionsCard.js';
 import DiceRoller from './DiceRoller.js';
 import { printSheet } from './pdf.js';
 import { detectPlatform } from './update.js';
@@ -82,7 +83,7 @@ function loadLock(): LockRec {
 }
 
 export default function Overview({ editing = false }: { editing?: boolean }) {
-  const { reg, char, setChar, createSheet, importSheets, sheets, resetChar, reloadCustom, t, tf } = useStore();
+  const { reg, char, setChar, createSheet, importSheets, sheets, resetChar, reloadCustom, snapshotActive, t, tf } = useStore();
   const [lock, setLock] = useState<LockRec>(loadLock);
 
   const editField = <K extends keyof Character>(key: K, value: Character[K]) => {
@@ -410,7 +411,7 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
           <div className="row" style={{ marginTop: 8 }}>
             <input type="number" style={{ width: 90 }} value={xpAmt} onChange={(e) => setXpAmt(Number(e.target.value))} />
             <button onClick={() => setChar(addXp(char, xpAmt))}>{t('ov.addXp', 'Aggiungi XP')}</button>
-            <button className="primary" disabled={!canLevelUp(char)} onClick={() => setShowLevelUp(true)}>
+            <button className="primary" disabled={!canLevelUp(char)} onClick={() => { snapshotActive(t('ov.beforeLevelUp', 'prima del level-up')); setShowLevelUp(true); }}>
               {t('ov.levelUp', 'Sali di livello')}
             </button>
           </div>
@@ -604,6 +605,10 @@ export default function Overview({ editing = false }: { editing?: boolean }) {
             </div>
           ))}
         </div>
+      </div>
+
+      <div style={{ marginTop: 12 }}>
+        <VersionsCard />
       </div>
 
       {showLevelUp && <LevelUpDialog onClose={() => setShowLevelUp(false)} />}
