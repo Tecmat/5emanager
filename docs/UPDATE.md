@@ -1,8 +1,10 @@
 # Aggiornamenti in-app (check update)
 
 L'app controlla da sola se esiste una release più recente su GitHub (`Tecmat/5emanager/releases/latest`)
-e permette di aggiornare **senza sair dall'app**, con il bottone 🔄 in alto a destra (cerca automaticamente
-all'avvio; il pallino arancione segnala che c'è una nuova versione).
+e permette di aggiornare **senza uscire dall'app** (web/PWA e desktop), con il bottone 🔔 in alto a destra
+(cerca automaticamente all'avvio; il pallino arancione segnala che c'è una nuova versione). Su **Android non
+c'è self-update in-app**: il pannello segnala solo la nuova versione (su Play si aggiorna dallo Store, in
+sideload si scarica la nuova APK dalla pagina della release).
 
 ## Web app / PWA (server self-hosted) — si aggiorna da sola, senza terminale
 
@@ -58,29 +60,25 @@ Dal pannello **/admin → Strumenti admin** ci sono due pulsanti distinti:
     staccato: `mv` del vecchio bundle, `mv` del nuovo al suo posto, `open`, pulizia.
 - Se la cartella dell'eseguibile non e' scrivibile, il download ripiega sulla cache con messaggio chiaro.
 
-## Android (APK, Capacitor) — installa dentro l'app
+## Android (APK/AAB, Capacitor) — niente self-update in-app
 
-- Il check confronta l'ultima release GitHub (o `/api/update` del server LAN) con la versione del bundle.
-- **⬇️ Scarica e installa APK**: il plugin nativo `UpdateInstaller` (in `apps/web/android-overlay`,
-  patchato in CI nel progetto generato da Capacitor) scarica l'APK in cache con barra di progresso
-  e apre **subito il prompt di installazione di Android** (FileProvider + `ACTION_VIEW`).
-  Se manca il permesso "installa app sconosciute", apre le impostazioni dell'app.
-- Fallback se il plugin manca: apre il browser sull'APK (`@capacitor/browser`).
-- L'asset APK si scarica via `browser_download_url` (repo pubblico) o via proxy
-  `/api/update/asset?name=app.apk` del server (repo privato).
-- **Firma stabile degli APK (v0.1.58+)**: la CI patcha il progetto generato con
-  `signingConfigs.debug` che punta al keystore committato `apps/web/android-overlay/debug.keystore`
-  (chiave pubblica, solo sideload): tutte le build debug hanno cos\u00ec la **stessa firma**, quindi
-  gli aggiornamenti in-app non falliscono pi\u00f9 con `INSTALL_FAILED_UPDATE_INCOMPATIBLE`
-  ("app non installata" su Samsung/One UI). Prima di v0.1.58 ogni runner CI generava una debug key
-  diversa a ogni build. **Migrazione una tantum**: se l'app installata ha una firma diversa, Android
-  blocca l'update in-place \u2192 il plugin lo segnala con un messaggio chiaro ("Firma diversa..."):
-  disinstalla 5e Manager, installa a mano l'APK della nuova release (esporta prima le schede locali,
-  che vivent solo sul dispositivo) e da quel momento gli update in-app funzionano. Se il secret
-  `ANDROID_KEYSTORE_B64` \u00e8 configurato, la CI firma in release con il tuo keystore (stabile per
-  definizione) e vale la stessa regola: mai mescolare APK firmati con chiavi diverse.
-- Su Samsung One UI 6+ controlla anche **Impostazioni \u2192 Sicurezza \u2192 Auto Blocker**: se attivo,
-  blocca gli update sideload; disattivalo o consenti l'app.
+- Il check confronta l'ultima release GitHub (o `/api/update` del server LAN) con la versione del bundle e
+  segnala la nuova versione nel pannello 🔔 (con il link della release copiabile).
+- **Nessun download/installazione in-app**: il permesso `REQUEST_INSTALL_PACKAGES` è rimosso dal manifest
+  (permission "restricted" di Play) e il plugin `UpdateInstaller` + FileProvider non sono più nel progetto
+  Android (restano `AppSettings`, che apre le impostazioni dell'app, e `LanBeacon` per il P2P LAN).
+  - build da **Google Play (AAB)**: aggiorna da Play Store (⋮ → Gestisci app → 5e Manager → Aggiorna);
+  - build **sideload (APK da GitHub)**: scarica la nuova `app.apk` dalla pagina della release e installala
+    a mano — deve avere la **stessa firma** di quella installata, altrimenti Android blocca con
+    `INSTALL_FAILED_UPDATE_INCOMPATIBLE` (“app non installata” su Samsung/One UI).
+- **Firma stabile degli APK (v0.1.58+)**: la CI patcha il progetto con `signingConfigs.debug` sul keystore
+  committato `apps/web/android-overlay/debug.keystore` (chiave pubblica, solo sideload): tutte le build CI
+  hanno la stessa firma, quindi la nuova APK sideload si installa sopra quella vecchia. Se il secret
+  `ANDROID_KEYSTORE_B64` è configurato, la CI firma in release con il tuo keystore. **Mai mescolare APK
+  firmati con chiavi diverse**: in quel caso disinstalla 5e Manager e installa a mano la nuova APK (esporta
+  prima le schede locali, che vivono solo sul dispositivo).
+- Su Samsung One UI 6+ controlla anche **Impostazioni → Sicurezza → Auto Blocker**: se attivo blocca le
+  installazioni sideload; disattivalo o consenti l'app.
 
 ## iOS (IPA per sideload)
 

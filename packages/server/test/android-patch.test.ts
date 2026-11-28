@@ -116,6 +116,25 @@ describe('patch_android.py su progetto Capacitor finto', () => {
     expect(info.stderr).toContain('Shrouded Keybag');
   });
 
+  it('manifest: niente REQUEST_INSTALL_PACKAGES (permission restrittiva Play) né FileProvider; permessi rete + camera presenti', () => {
+    const root = makeFakeProject();
+    roots.push(root);
+    execFileSync('python3', [PATCH_ANDROID, root]);
+    const m = readFileSync(join(root, 'app/src/main/AndroidManifest.xml'), 'utf8');
+    expect(m).not.toContain('REQUEST_INSTALL_PACKAGES');
+    expect(m).not.toContain('FileProvider');
+    expect(m).not.toContain('file_paths');
+    expect(m).toContain('android.permission.CAMERA');
+    expect(m).toContain('android.permission.INTERNET');
+    expect(m).toContain('android.permission.ACCESS_NETWORK_STATE');
+    expect(m).toContain('android.permission.ACCESS_WIFI_STATE');
+    // plugin copiati: AppSettings + LanBeacon (niente UpdateInstaller), niente file_paths.xml
+    expect(existsSync(join(root, 'app/src/main/java/com/tecmat/emanager/AppSettingsPlugin.java'))).toBe(true);
+    expect(existsSync(join(root, 'app/src/main/java/com/tecmat/emanager/LanBeaconPlugin.java'))).toBe(true);
+    expect(existsSync(join(root, 'app/src/main/java/com/tecmat/emanager/UpdateInstallerPlugin.java'))).toBe(false);
+    expect(existsSync(join(root, 'app/src/main/res/xml/file_paths.xml'))).toBe(false);
+  });
+
   it('registra i plugin PRIMA di super.onCreate e imposta versionName dalla web app', () => {
     const root = makeFakeProject();
     roots.push(root);
@@ -125,7 +144,8 @@ describe('patch_android.py su progetto Capacitor finto', () => {
     for (const m of ma.matchAll(/registerPlugin\(/g)) {
       expect(m.index! < iSuper).toBe(true);
     }
-    expect(ma).toContain('UpdateInstallerPlugin');
+    expect(ma).toContain('AppSettingsPlugin');
+    expect(ma).not.toContain('UpdateInstallerPlugin');
     expect(ma).toContain('LanBeaconPlugin');
     const webPkg = JSON.parse(readFileSync(resolve(OVERLAY, '../package.json'), 'utf8'));
     const g = readFileSync(join(root, 'app/build.gradle'), 'utf8');
@@ -141,7 +161,7 @@ describe('patch_android.py su progetto Capacitor finto', () => {
     expect(g.match(/signingConfigs/g)?.length).toBe(1);
     expect(g.match(/storeFile file\('\.\.\/debug\.keystore'\)/g)?.length).toBe(1);
     const ma = readFileSync(join(root, 'app/src/main/java/com/tecmat/emanager/MainActivity.java'), 'utf8');
-    expect(ma.match(/registerPlugin\(/g)?.length).toBe(2); // UpdateInstaller + LanBeacon, una volta sola
+    expect(ma.match(/registerPlugin\(/g)?.length).toBe(2); // AppSettings + LanBeacon, una volta sola
     const v = readFileSync(join(root, 'variables.gradle'), 'utf8');
     expect(v.match(/compileSdkVersion = 36/g)?.length).toBe(1);
   });
