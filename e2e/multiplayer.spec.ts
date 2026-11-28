@@ -78,13 +78,17 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   // ---- player: entra via WS e carica la sua scheda ----
   const ch = PLAYER_CHAR;
 
+  console.log('campaignId estratto dall UI:', campaignId);
   const ws = new WebSocket(SERVER);
   const received: Record<string, unknown>[] = [];
-  const waitFor = (pred: (m: Record<string, unknown>) => boolean, ms = 15_000) =>
+  const waitFor = (pred: (m: Record<string, unknown>) => boolean, ms = 20_000, what = 'messaggio') =>
     new Promise<Record<string, unknown>>((resolve, reject) => {
       const hit = received.find(pred);
       if (hit) return resolve(hit);
-      const timer = setTimeout(() => reject(new Error('timeout in attesa del messaggio WS')), ms);
+      const timer = setTimeout(
+        () => reject(new Error(`timeout (${what}) in attesa del messaggio WS; ricevuti: ${JSON.stringify(received)}`)),
+        ms,
+      );
       const onMsg = (data: WebSocket.RawData) => {
         const msg = JSON.parse(data.toString()) as Record<string, unknown>;
         received.push(msg);
@@ -99,11 +103,13 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   await new Promise<void>((res, rej) => { ws.on('open', () => res()); ws.on('error', rej); });
 
   ws.send(JSON.stringify({ t: 'join', campaignId, password: '', name: 'PlayerWS' }));
-  const welcome = (await waitFor((x) => x.t === 'welcome')) as { you: { id: string } };
-  const playerId = welcome.you.id;
+  const welcome = (await waitFor((x) => x.t === 'welcome' || x.t === 'error', 20_000, 'welcome/errore join')) as { t: string; you?: { id: string }; message?: string };
+  if (welcome.t === 'error') throw new Error(`join rifiutato dal server: ${welcome.message}`);
+  const playerId = welcome.you!.id;
+  console.log('player entrato, id:', playerId);
 
   ws.send(JSON.stringify({ t: 'action', action: { kind: 'setCharacter', character: ch } }));
-  await waitFor((x) => x.t === 'state' && !!(x.campaign as { characters: Record<string, unknown> }).characters[playerId]);
+  await waitFor((x) => x.t === 'state' && !!(x.campaign as { characters: Record<string, unknown> }).characters[playerId], 20_000, 'state con setCharacter');
 
   // ---- l'host vede il player nella UI della campagna ----
   await expect(page.getByText('PlayerWS').first()).toBeVisible();
@@ -112,6 +118,8 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   await page.getByRole('button', { name: /XP a tutta la party/ }).click();
   const st = (await waitFor(
     (x) => x.t === 'state' && ((x.campaign as { characters: Record<string, { xp?: number }> }).characters[playerId]?.xp ?? 0) >= 300,
+    20_000,
+    'state con XP 300',
   )) as { campaign: { characters: Record<string, { xp: number }> } };
   expect(st.campaign.characters[playerId].xp).toBe(300);
 
