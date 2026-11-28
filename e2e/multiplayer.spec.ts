@@ -1,7 +1,38 @@
 import { expect, test, type Page } from '@playwright/test';
 import WebSocket from 'ws';
-import { createCharacter } from '@dnd5e/core';
-import { createSrdRegistry } from '@dnd5e/data-srd';
+import type { Character } from '@dnd5e/core';
+
+// nota: niente import di @dnd5e/data-srd qui (i suoi JSON non si caricano sotto il loader Node di Playwright):
+// la scheda del player è un oggetto Character completo costruito a mano
+const PLAYER_CHAR: Character = {
+  id: 'player-ws-1',
+  houseRules: {},
+  name: 'PlayerWS',
+  raceId: 'human',
+  xp: 0,
+  inspiration: false,
+  abilityScores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 },
+  classLevels: [{ classId: 'fighter', level: 1, hitDiceRolled: [10] }],
+  proficiency: { skills: ['athletics', 'perception'], expertise: [], weapons: ['simple', 'martial'], armors: ['light', 'medium', 'heavy', 'shield'], tools: [], languages: ['comune'] },
+  fightingStyles: [],
+  feats: [],
+  features: ['second-wind'],
+  spellsKnown: [],
+  spellsPrepared: [],
+  spellSlots: {},
+  inventory: [],
+  currency: { cp: 0, sp: 0, ep: 0, gp: 10, pp: 0 },
+  hp: { current: 11, temp: 0 },
+  deathSaves: { successes: 0, failures: 0 },
+  conditions: [],
+  journal: [],
+  favoriteSpells: [],
+  exhaustion: 0,
+  spellsPreparedByClass: {},
+  notes: '',
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
 
 /**
  * E2E multiplayer (v0.1.98): il server di gioco gira su 127.0.0.1:3999 (webServer in playwright.config).
@@ -43,11 +74,7 @@ test('multiplayer: host crea campagna via UI, player entra via WS e riceve gli X
   const campaignId = m![1];
 
   // ---- player: entra via WS e carica la sua scheda ----
-  const reg = createSrdRegistry();
-  const ch = createCharacter(
-    { name: 'PlayerWS', raceId: 'human', classId: 'fighter', abilityScores: { str: 15, dex: 14, con: 13, int: 12, wis: 10, cha: 8 } },
-    reg,
-  ).character!;
+  const ch = PLAYER_CHAR;
 
   const ws = new WebSocket(SERVER);
   const received: Record<string, unknown>[] = [];
