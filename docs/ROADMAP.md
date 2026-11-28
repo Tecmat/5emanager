@@ -171,11 +171,9 @@ Priorità: **P0** = subito, alto valore/basso costo · **P1** = medio termine ·
 - **P0** Livelli di **esaurimento** (1–6) al posto della singola condizione — scala effetti automatici
 - **P0** Multiclasse con **prerequisiti** (es. 13 Int per il mago): warning in `applyLevelUp`
 - **P1** Ritratto/immagine del PG (upload → IndexedDB, non localStorage)
-- ✅ **P1** **Anima del PG** — aspetto, tratti di personalità, ideali, legami, difetti e storia (campo `flavor` in core + editor in Panoramica; retrocompatibile con le schede vecchie)
 - ✅ **P1** **Diario di sessione / note con timestamp** (log automatico: XP, level-up, danni subiti)
 - ✅ **P1** Esportazione scheda in **PDF stampabile** (CSS print + `window.print()`)
 - ✅ **P1** **Background come entità SRD** — `backgrounds.json` (13 background, skill + feature), selettore in creazione che applica le competenze, nome risolto in Panoramica
-- ✅ **P1** **Generatore random dell'anima del PG** — tabelle IT in `flavor.json` (aspetto/tratti/ideali/legami/difetti/spunti di storia) + bottoni 🎲 in Panoramica; talenti già con selettore in level-up
 - ✅ **P2** Cronologia con **undo** (snapshot dello stato prima di ogni azione)
 
 ## 2. Incantesimi (core/spells + web)

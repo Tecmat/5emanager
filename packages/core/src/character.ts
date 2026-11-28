@@ -122,7 +122,6 @@ export function createCharacter(input: CreateCharacterInput, reg: Registry): { c
     id: `char-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
     name: input.name,
     portrait: undefined,
-    flavor: {},
     houseRules: { ...DEFAULT_HOUSE_RULES },
     raceId: race!.id,
     subraceId: subrace?.id,

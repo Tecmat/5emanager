@@ -10,7 +10,6 @@ import {
   speedOf,
   totalLevel,
   type Character,
-  type CharacterFlavor,
   type Registry,
 } from '@dnd5e/core';
 import { SKILLS } from '@dnd5e/core';
@@ -40,10 +39,6 @@ export function buildSheetHtml(char: Character, reg: Registry): string {
   const known = char.spellsKnown.map((id) => reg.spells.get(id)).filter(Boolean);
   const prepared = char.spellsPrepared.map((id) => reg.spells.get(id)?.name ?? id);
 
-  const FLAVOR_IT: Record<string, string> = { appearance: 'Aspetto', personalityTraits: 'Tratti di personalità', ideals: 'Ideali', bonds: 'Legami', flaws: 'Difetti', backstory: 'Storia' };
-  const flavorHtml = char.flavor
-    ? Object.entries(FLAVOR_IT).map(([k, label]) => (char.flavor?.[k as keyof CharacterFlavor] ? `<p><b>${label}:</b> ${esc(char.flavor[k as keyof CharacterFlavor] as string)}</p>` : '')).join('')
-    : '';
 
   const abilities = ABILITIES.map((ab) => {
     const v = char.abilityScores[ab];
@@ -87,7 +82,6 @@ export function buildSheetHtml(char: Character, reg: Registry): string {
   .muted { color: #7a6a4a; font-size: 11px; }
   .stats { display: flex; flex-wrap: wrap; gap: 5px; margin: 9px 0; }
   .stats span { display: inline-block; border: 1px solid #a8842c; background: #fff8e1; border-radius: 5px; padding: 2px 9px; font-size: 12px; font-weight: bold; color: #4a3510; }
-  .flavor p { margin: 3px 0; }
   .footer { margin-top: 18px; padding-top: 6px; border-top: 1px solid #c9a94e; color: #7a6a4a; font-size: 10.5px; text-align: center; }
   @media print { body { background: #fff; padding: 0; max-width: none; margin: 0; } }
 </style></head><body>
@@ -120,7 +114,6 @@ ${known.length > 0 ? `<h2>Incantesimi conosciuti (${known.length})${prepared.len
 <div class="muted">Valuta: ${char.currency.gp} mo, ${char.currency.sp} ma, ${char.currency.ep} me, ${char.currency.cp} mr, ${char.currency.pp} mp</div>
 ${char.feats.length ? `<h2>Talenti</h2><div>${char.feats.map((f) => esc(reg.feats.get(f)?.name ?? f)).join(', ')}</div>` : ''}
 ${char.conditions.length ? `<h2>Condizioni</h2><div>${char.conditions.join(', ')}</div>` : ''}
-${flavorHtml ? `<h2>Anima del PG</h2><div class="flavor">${flavorHtml}</div>` : ''}
 ${char.notes ? `<h2>Note</h2><p>${esc(char.notes)}</p>` : ''}
 ${journal ? `<h2>Diario di sessione</h2><table>${journal}</table>` : ''}
 <div class="footer">5e Manager · scheda di ${esc(char.name)} · generata il ${new Date().toLocaleString('it-IT')}</div>
