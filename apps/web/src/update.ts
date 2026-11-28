@@ -1,4 +1,4 @@
-import { Capacitor, registerPlugin } from '@capacitor/core';
+import { Capacitor } from '@capacitor/core';
 import { isNewerVersion, parseAssetUrlsFromExpandedAssets, parseLatestTagFromAtom } from '@dnd5e/core';
 
 /**
@@ -155,7 +155,7 @@ async function checkViaApi(): Promise<UpdateInfo> {
 }
 
 /** 2b) fallback jsDelivr (CORS *): la versione di main == ultima release (bump a ogni release).
- * L'asset viene poi scaricato DIRETTO da GitHub (plugin/Rust, niente CORS). */
+ * L'asset viene poi scaricato DIRETTO da GitHub (Rust sul desktop, niente CORS). */
 async function checkViaJsdelivr(): Promise<UpdateInfo> {
   const r = await fetchWithTimeout(`https://cdn.jsdelivr.net/gh/${REPO}@main/package.json`);
   if (!r.ok) throw new Error(`cdn.jsdelivr.net: HTTP ${r.status}`);
@@ -266,93 +266,6 @@ export async function applyWebUpdate(): Promise<void> {
   }
   // fallback: reload dopo un attimo (se il nuovo SW è già attivo, carica la build nuova)
   setTimeout(() => window.location.reload(), 1200);
-}
-
-/** URL candidats per l'APK di una release: le release fino a v0.1.38 pubblicavano app-debug.apk, poi app.apk */
-export function apkDownloadUrls(info: UpdateInfo): string[] {
-  const base = `https://github.com/${REPO}/releases/download/v${info.latest}`;
-  const urls = [info.assetUrl, `${base}/app.apk`, `${base}/app-debug.apk`].filter((u): u is string => !!u);
-  return [...new Set(urls)];
-}
-
-interface UpdateInstallerPlugin {
-  isPlayInstall(): Promise<{ value: boolean }>;
-  downloadAndInstall(opts: { url: string }): Promise<void>;
-  addListener(eventName: 'update-progress' | 'needsInstallPermission', cb: (p: any) => void): Promise<{ remove: () => Promise<void> }>;
-}
-// plugin nativo custom (patchato in CI in apps/web/android-overlay)
-const UpdateInstaller = registerPlugin<UpdateInstallerPlugin>('UpdateInstaller');
-
-function withTimeout<T>(p: Promise<T>, ms: number): Promise<T> {
-  return new Promise((resolve, reject) => {
-    const t = setTimeout(() => reject(new Error(`tempo scaduto (${Math.round(ms / 1000)}s): riprova`)), ms);
-    p.then((v) => { clearTimeout(t); resolve(v); }, (e) => { clearTimeout(t); reject(e); });
-  });
-}
-
-/**
- * android: scarica l'APK e apre SUBITO il prompt di installazione dentro l'app
- * (plugin UpdateInstaller via FileProvider) — NIENTE browser/popup esterni.
- * - prova tutti gli URL candidats (app.apk, app-debug.apk): su HTTP 404 passa al successivo;
- * - se manca il permesso "installa app sconosciute" il plugin apre le impostazioni e resta
- *   in sospeso: onNeedsPermission avvisa subito e un watchdog sblocca l'UI dopo 180 s;
- * - se il plugin manca (build vecchia) ritorna un errore col link diretto, mai un pop-up.
- */
-/** true se l'APK è installato da Google Play: lì il self-update via APK è vietato dalle policy Play
- *  (gli aggiornamenti passano solo da Play Store) -> niente download, si manda l'utente allo Store */
-export async function isPlayStoreInstall(): Promise<boolean> {
-  try {
-    if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return false;
-    const r = await UpdateInstaller.isPlayInstall();
-    return !!r?.value;
-  } catch { return false; }
-}
-
-export async function applyAndroidUpdate(info: UpdateInfo, onProgress?: (p: DownloadProgress) => void, onNeedsPermission?: () => void): Promise<void> {
-  if (!Capacitor.isNativePlatform() || Capacitor.getPlatform() !== 'android') return;
-  if (await isPlayStoreInstall()) {
-    throw new Error('Versione da Google Play: gli aggiornamenti arrivano da Play Store (Profilo → Gestisci app → 5e Manager → Aggiorna)');
-  }
-  const urls = apkDownloadUrls(info);
-  if (urls.length === 0) throw new Error('Nessun URL APK disponibile per la v' + info.latest);
-  // nota: NON usare isPluginAvailable come pre-check (falso negativo sui plugin custom senza
-  // implementazione web): si prova la chiamata e si interpreta l'errore
-  let removeProg: (() => void) | undefined;
-  let removePerm: (() => void) | undefined;
-  try {
-    if (onProgress) {
-      try {
-        const l = await UpdateInstaller.addListener('update-progress', onProgress);
-        removeProg = () => void l.remove();
-      } catch { /* listener non supportato: si continua senza progresso */ }
-    }
-    try {
-      const lp = await UpdateInstaller.addListener('needsInstallPermission', () => onNeedsPermission?.());
-      removePerm = () => void lp.remove();
-    } catch { /* evento non supportato da build vecchie */ }
-    let lastErr = '';
-    for (const url of urls) {
-      try {
-        await withTimeout(UpdateInstaller.downloadAndInstall({ url }), 180_000);
-        return; // prompt di installazione di Android aperto dentro l'app
-      } catch (e) {
-        const m = errMsg(e);
-        if (/installa app|permesso/i.test(m)) {
-          throw new Error('Permesso "Installa app sconosciute" mancante: abilitalo per 5e Manager nelle impostazioni che si sono aperte, poi premi di nuovo "Scarica e installa".');
-        }
-        if (/not implemented|not available|plugin/i.test(m)) {
-          // build vecchia senza plugin nativo: messaggio chiaro + link diretto (no pop-up)
-          throw new Error('Auto-installazione non disponibile in questa build (plugin UpdateInstaller mancante): scarica e installa a mano l\'APK da ' + urls[0]);
-        }
-        lastErr = m;
-        if (!/HTTP 404|\b404\b|not found/i.test(m)) throw new Error(m); // rete/permessi: non ha senso ritentare
-      }
-    }
-    throw new Error(lastErr || 'download APK fallito');
-  } finally {
-    removeProg?.();
-    removePerm?.();
-  }
 }
 
 /**

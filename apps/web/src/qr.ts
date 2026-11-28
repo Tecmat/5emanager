@@ -331,8 +331,8 @@ async function ensureCameraPermission(): Promise<void> {
       if (r.camera !== 'granted') {
         // negato (anche "non chiedere più"): apri le impostazioni dell'app e spiega
         try {
-          const installer = registerPlugin<{ openAppSettings(): Promise<void> }>('UpdateInstaller');
-          await installer.openAppSettings();
+          const appSettings = registerPlugin<{ openAppSettings(): Promise<void> }>('AppSettings');
+          await appSettings.openAppSettings();
         } catch { /* ignora */ }
         throw new Error('Permesso fotocamera negato: è stato aperto Impostazioni → App → 5e Manager → Autorizzazioni → Fotocamera, concedilo e riprova');
       }

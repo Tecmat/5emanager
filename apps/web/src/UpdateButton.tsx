@@ -1,10 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useStore } from './store.js';
-import { installPermissionGranted, openInstallPermissionSettings } from './permissions.js';
 import Icon from './icons.js';
 import {
-  applyAndroidUpdate,
-  isPlayStoreInstall,
   applyDesktopUpdate,
   applyServerUpdate,
   applyWebUpdate,
@@ -13,7 +10,6 @@ import {
   detectPlatform,
   downloadDesktopUpdate,
   errMsg,
-  REPO,
   type DownloadProgress,
   type UpdateInfo,
 } from './update.js';
@@ -33,14 +29,7 @@ export default function UpdateButton() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [downloaded, setDownloaded] = useState(false);
   const [msg, setMsg] = useState('');
-  const [installPerm, setInstallPerm] = useState<boolean | null>(null);
   const platform = detectPlatform();
-
-  // Android: il permesso "installa app sconosciute" serve per installare l'APK dall'app
-  useEffect(() => {
-    if (platform === 'android') void installPermissionGranted().then(setInstallPerm);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [platform]);
 
   const run = async () => {
     setStatus('checking');
@@ -50,11 +39,6 @@ export default function UpdateButton() {
     try {
       const [api, sw] = await Promise.all([checkUpdate(), platform === 'web' ? checkSwUpdate() : Promise.resolve(false)]);
       setSwAvail(sw);
-      if (platform === 'android' && api.available && !api.assetUrl) {
-        // il pulsante "Scarica e installa" deve esserci SEMPRE quando c'è un update: URL diretto della release
-        api.assetUrl = `https://github.com/${REPO}/releases/download/v${api.latest}/app.apk`;
-        api.assetName = api.assetName ?? 'app.apk';
-      }
       setInfo({ ...api, available: api.available || sw });
       setStatus('ready');
     } catch (e) {
@@ -86,21 +70,6 @@ export default function UpdateButton() {
           setStatus('ready');
           await applyWebUpdate();
         }
-      } else if (platform === 'android') {
-        // install da Google Play: niente self-update via APK (policy Play) -> si manda allo Store
-        if (await isPlayStoreInstall()) {
-          window.open('market://details?id=com.tecmat.emanager', '_blank');
-          setMsg(t('up.playStore', 'Apro il Play Store: aggiorna 5e Manager da lì (su Play gli update passano solo da Play).'));
-          setStatus('ready');
-          return;
-        }
-        // APK scaricato e prompt di installazione aperto direttamente dentro l'app (niente browser/pop-up)
-        setStatus('downloading');
-        setProgress(null);
-        await applyAndroidUpdate(info, setProgress, () =>
-          setMsg(t('up.needsPermNow', 'Aperte le Impostazioni: concedi "Installa app sconosciute" a 5e Manager — al ritorno l\'installazione riparte da sola.')));
-        setMsg(t('up.apkInstalling', 'APK scaricato: conferma il prompt di installazione di Android.'));
-        setStatus('ready');
       } else {
         if (!info.assetUrl) {
           setMsg(t('up.noAsset', 'Nessun AppImage in questa release: apri la pagina della release.'));
@@ -180,6 +149,11 @@ export default function UpdateButton() {
                   {t('up.webHint', 'La web app si aggiorna con il redeploy del server (git pull + npm run build). Subito puoi usare la nuova AppImage/APK dalla release.')}
                 </div>
               )}
+              {platform === 'android' && info.available && (
+                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
+                  {t('up.androidUpdateHint', 'Su Android l\'app si aggiorna da Google Play (⋮ → Gestisci app → 5e Manager → Aggiorna); le build sideload (APK da GitHub) si aggiornano scaricando la nuova APK dalla pagina della release.')}
+                </div>
+              )}
             </div>
           )}
           {status === 'downloading' && (
@@ -188,11 +162,6 @@ export default function UpdateButton() {
               <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
                 {pct !== null ? `${pct}%` : '…'} {progress ? `(${fmtBytes(progress.received)}${progress.total ? ` / ${fmtBytes(progress.total)}` : ''})` : ''}
               </div>
-              {platform === 'android' && (
-                <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
-                  {t('up.androidSettingsHint', 'Se si sono aperte le Impostazioni: concedi "Installa app sconosciute" a 5e Manager — al ritorno il download e l\'installazione ripartono da soli.')}
-                </div>
-              )}
             </div>
           )}
           {msg && <div className={status === 'error' ? 'error' : 'ok'} style={{ marginTop: 8, fontSize: 12, whiteSpace: 'pre-line' }}>{msg}</div>}
@@ -201,16 +170,9 @@ export default function UpdateButton() {
               {t('up.privateHint', 'Sembra che il repo sia privato: sul server imposta GITHUB_TOKEN (vedi docs/UPDATE.md e docs/DEPLOY_DEBIAN.md); sul desktop basta `gh auth login` o la env GITHUB_TOKEN. La web app usa /api/update del server.')}
             </div>
           )}
-          {platform === 'android' && info?.available && installPerm === false && (
-            <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-              {t('up.installPermHint', 'Per installare l\'APK dentro l\'app serve il permesso speciale "Installa app sconosciute" (una volta sola):')}{' '}
-              <button onClick={() => void openInstallPermissionSettings()}>{t('up.enableInstallPerm', '🔓 Abilita ora')}</button>
-            </div>
-          )}
           {status === 'ready' && info?.available && (
             <div className="row" style={{ marginTop: 8 }}>
               {platform === 'web' && <button className="primary" onClick={apply} disabled={busy}>{t('up.updateNow', '🔄 Aggiorna ora')}</button>}
-              {platform === 'android' && <button className="primary" onClick={apply} disabled={busy || !info.assetUrl}>{t('up.downloadInstallApk', '⬇️ Scarica e installa APK')}</button>}
               {platform === 'desktop' && (
                 <>
                   <button className="primary" onClick={apply} disabled={busy}>
