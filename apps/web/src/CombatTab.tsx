@@ -23,6 +23,7 @@ import {
 import { useStore } from './store.js';
 import TemplateView from './TemplateView.js';
 import TacticalMap from './TacticalMap.js';
+import CombatLog from './CombatLog.js';
 
 export default function CombatTab() {
   const { char, setChar, reg, t, tf } = useStore();
@@ -195,6 +196,7 @@ export default function CombatTab() {
           </tbody>
         </table>
       </div>
+      {combat && <CombatLog combat={combat} />}
     </div>
   );
 }

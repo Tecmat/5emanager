@@ -97,22 +97,22 @@ Prossimo blocco di lavoro, in ordine di valore/costo. Ogni voce indica dove si i
 - ✅ **P2 Generatore casuale master**: `rules/random.ts` + `data-srd/data/random.json` (nomi, incontri e tesori per tier di livello) — card 🎲 in Campagna con "aggiungi nemici al combattimento" e "metti nel gruppo/tesoreria"
 - ✅ **P2 Rarità/valore + vendita**: `rarity`/`valueGp` sugli oggetti, filtro per rarità, colonna valore, bottone 💰 vendi (+MO), "Tesoro totale" in Panoramica-inventario (`totalTreasureGp`)
 - ✅ **P2 Undo**: snapshot in memoria (max 30) in `store.tsx`, bottone ↩ in header + **Ctrl/Cmd+Z**; shortcuts **1-6** cambiano tab, **E** edit on/off
-- **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello (CustomTab)
+- ✅ **P2 Editor incantesimi con preview danno medio** vs baseline SRD per livello + campo **upcast** con anteprima `+NdM per slot` (v0.1.98) — `CustomTab.tsx`, `validate.ts`
 - ✅ **P2 Macro tira-dado salvate** (localStorage, chip cliccabili in Tira dado)
-- **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab)
-- **P2 Accessibilità**: `:focus-visible`, `prefers-reduced-motion`, aria-label su bottoni icona e tab
+- ✅ **P2 Code-splitting**: tab in `React.lazy` + Suspense (chunk separati per tab) — `App.tsx`
+- ✅ **P2 Accessibilità** (v0.1.98): `:focus-visible`, `prefers-reduced-motion`, `role=tablist/tab` + `aria-selected` sulle nav, aria-label sui bottoni solo-icona — `styles.css`, `App.tsx`
 - ✅ **P2 Esporta log combattimento** (bottone 💾 in Campagna → .txt)
 - i18n esteso a tutte le nuove UI (IT/EN)
 
 ## 💡 Idee nuove (P3 — proposte, da valutare insieme)
 
-- Log dei tiri del combattimento persistente per round (estendere `combat.log` con storico separato)
+- ✅ **Log dei tiri del combattimento persistente** (v0.1.98): `rollHistory` in `CombatState` (cap 200, tiri di attacco/danno/initiative) + card 🎲 Tiri in `CombatLog.tsx` (locale e online) — test `roll-history.test.ts`
 - ✅ Mappa tattica minimale con token trascinabili (griglia 5 ft, drag&drop)
 - ✅ Beep/avviso sonoro opzionale al cambio turno (il timer c'è già)
 - ✅ Crafting/ricette e compravendita con calcolo del resto
 - ✅ Import base da D&D Beyond (parsing del JSON esportato dall'utente — solo dati propri)
 - ✅ PWA offline completa (service worker che cachea anche i dati SRD)
-- Notifiche push promemoria sessione (Android/desktop)
+- ✅ Notifiche promemoria sessione (v0.1.7x): notifica locale via Notification API su PWA installata (Android/desktop), permesso richiesto dalla card 🔔 — `reminder.ts`, `ReminderCard.tsx` (push server rimandato)
 - iOS via Capacitor (stesso codice) — momentaneamente in pausa
 - Sync cloud opzionale (login multi-dispositivo, conflitto last-write)
 - ✅ Generatore di dungeon/stanze casuali (tabelle JSON, come il generatore incontri)

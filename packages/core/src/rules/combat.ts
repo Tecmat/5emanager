@@ -57,11 +57,35 @@ export interface TacticalMap {
 export const DEFAULT_MAP_COLS = 16;
 export const DEFAULT_MAP_ROWS = 12;
 
+/** un tiro registrato nello storico del combattimento (persistente per tutta la durata del combattimento) */
+export interface CombatRoll {
+  round: number;
+  actor: string;
+  target?: string;
+  kind: 'attack' | 'damage' | 'initiative';
+  expr: string;
+  rolls: number[];
+  total: number;
+  hit?: boolean;
+  crit?: boolean;
+  at: string;
+}
+
+const MAX_ROLL_HISTORY = 200;
+
+/** aggiunge un tiro allo storico (cap 200: i più vecchi vengono scartati) */
+function pushRoll(state: CombatState, entry: CombatRoll): CombatState {
+  const rollHistory = [...(state.rollHistory ?? []), entry];
+  return { ...state, rollHistory: rollHistory.length > MAX_ROLL_HISTORY ? rollHistory.slice(-MAX_ROLL_HISTORY) : rollHistory };
+}
+
 export interface CombatState {
   combatants: Combatant[];
   round: number;
   turnIndex: number;
   log: string[];
+  /** storico dei tiri (attacchi, danni, initiative) del combattimento */
+  rollHistory?: CombatRoll[];
   /** template area correntemente mostrato (cono/sfera/linea/cubo) */
   template?: CombatTemplate;
   /** mappa tattica con i token dei combattenti (sincronizzata via state) */
@@ -258,8 +282,16 @@ function sortByInitiative(list: Combatant[]): Combatant[] {
 }
 
 export function rerollInitiatives(state: CombatState): CombatState {
-  const combatants = sortByInitiative(state.combatants.map((c) => ({ ...c, initiative: rollDice('1d20')?.total ?? 10 })));
-  return { ...state, combatants, turnIndex: 0, log: [...state.log, '🎲 Initiative rilanciate.'] };
+  const at = new Date().toISOString();
+  let next: CombatState = { ...state, turnIndex: 0, log: [...state.log, '🎲 Initiative rilanciate.'] };
+  const combatants = sortByInitiative(
+    state.combatants.map((c) => {
+      const total = rollDice('1d20')?.total ?? 10;
+      next = pushRoll(next, { round: state.round, actor: c.name, kind: 'initiative', expr: '1d20', rolls: [total], total, at });
+      return { ...c, initiative: total };
+    }),
+  );
+  return { ...next, combatants };
 }
 
 /**
@@ -477,7 +509,15 @@ export function attack(state: CombatState, attackerId: string, targetId: string,
     log.push(`🗡️ ${attacker.name} attacca ${target.name} con ${atk.name}: d20=${outcome.roll} +${atk.bonus} = ${outcome.total} vs CA ${target.ac} — mancato.`);
   }
   combatants = combatants.map((c) => (c.id === attackerId ? { ...c, actionUsed: true } : c));
-  return { ...state, combatants, log };
+  let next: CombatState = { ...state, combatants, log };
+  const at = new Date().toISOString();
+  const atkExpr = `d20${atk.bonus >= 0 ? '+' : ''}${atk.bonus}${mode !== 'none' ? ` (${mode === 'advantage' ? 'vantaggio' : 'svantaggio'})` : ''}`;
+  next = pushRoll(next, { round: state.round, actor: attacker.name, target: target.name, kind: 'attack', expr: atkExpr, rolls: [outcome.roll], total: outcome.total, hit: outcome.hit, crit: outcome.crit, at });
+  if (outcome.hit && outcome.damage > 0) {
+    const dmgExpr = [atk.dice, ...(mods?.extraDamageDice ?? [])].join('+');
+    next = pushRoll(next, { round: state.round, actor: attacker.name, target: target.name, kind: 'damage', expr: dmgExpr, rolls: outcome.damageRolls, total: outcome.damage, at });
+  }
+  return next;
 }
 
 /** velocità effettiva: razza + bonus effetti, dimezzata a esaurimento 2, 0 a esaurimento 5 */

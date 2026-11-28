@@ -14,9 +14,11 @@ import {
   loadData,
   simulateTo20,
   totalLevel,
+  upcastExtraDice,
   type Ability,
   type AttackDef,
   type School,
+  type SpellDef,
 } from '@dnd5e/core';
 import { parseDice } from '@dnd5e/core';
 import { useStore, persistCustom } from './store.js';
@@ -64,7 +66,7 @@ export default function CustomTab() {
     }
   };
 
-  const [spell, setSpell] = useState({ id: '', name: '', level: 0, school: 'evocation' as School, castingTime: '1 azione', range: '9 m', components: 'V, S', duration: 'Istantanea', description: '', damage: '', classes: 'wizard', ritual: false, concentration: false });
+  const [spell, setSpell] = useState({ id: '', name: '', level: 0, school: 'evocation' as School, castingTime: '1 azione', range: '9 m', components: 'V, S', duration: 'Istantanea', description: '', damage: '', higherLevel: '', classes: 'wizard', ritual: false, concentration: false });
   const [weapon, setWeapon] = useState({ id: '', name: '', category: 'martial' as 'simple' | 'martial', type: 'melee' as 'melee' | 'ranged', damage: '1d8', damageType: 'taglio', properties: '', weight: 3, costGp: 15, bonus: 0 });
   const [armor, setArmor] = useState({ id: '', name: '', category: 'light' as 'light' | 'medium' | 'heavy' | 'shield', ac: 12, maxDex: '', weight: 10, costGp: 10 });
   const [enemy, setEnemy] = useState({ id: '', name: '', hp: 10, ac: 12, speed: 30, cr: '', str: '', dex: '', con: '', int: '', wis: '', cha: '' });
@@ -94,7 +96,7 @@ export default function CustomTab() {
         id: spell.id, name: spell.name, level: spell.level, school: spell.school,
         castingTime: spell.castingTime, range: spell.range, components: spell.components,
         duration: spell.duration, description: spell.description,
-        damage: spell.damage || undefined, ritual: spell.ritual || undefined, concentration: spell.concentration || undefined,
+        damage: spell.damage || undefined, higherLevel: spell.higherLevel || undefined, ritual: spell.ritual || undefined, concentration: spell.concentration || undefined,
         classes: splitList(spell.classes), source: 'custom',
       }));
     } else if (kind === 'weapon') {
@@ -251,6 +253,17 @@ export default function CustomTab() {
                   const avg = p.dice.reduce((sum, d) => sum + d.sign * d.count * ((d.faces + 1) / 2), 0) + p.mod;
                   const baseline = [5.5, 10.5, 14, 18, 21, 24.5, 28, 31.5, 35, 38.5][spell.level] ?? 0;
                   return <div className="muted" style={{ fontSize: 11 }}>{tf('cu.dmgAvg', 'danno medio {avg} · baseline liv {lvl}: {base}', { avg: Math.round(avg * 10) / 10, lvl: spell.level, base: baseline })}</div>;
+                })()}
+              </div>
+              <div><label>{t('cu.higherLevel', 'Upcast (opz.)')}</label><input value={spell.higherLevel} onChange={(e) => setSpell({ ...spell, higherLevel: e.target.value })} placeholder={t('cu.higherLevelPh', '+1d6 per ogni slot superiore')} />
+                {spell.higherLevel && spell.level > 0 && (() => {
+                  const fake = { level: spell.level, higherLevel: spell.higherLevel } as unknown as SpellDef;
+                  const slots: string[] = [];
+                  for (let l = spell.level + 1; l <= Math.min(9, spell.level + 3); l++) {
+                    const extra = upcastExtraDice(fake, l);
+                    if (extra) slots.push(`${l}°: ${extra}`);
+                  }
+                  return slots.length ? <div className="muted" style={{ fontSize: 11 }}>{tf('cu.upcastPreview', 'upcast: {list}', { list: slots.join(' · ') })}</div> : null;
                 })()}
               </div>
               <div><label>{t('cu.classes', 'Classi (virgola)')}</label><input value={spell.classes} onChange={(e) => setSpell({ ...spell, classes: e.target.value })} /></div>

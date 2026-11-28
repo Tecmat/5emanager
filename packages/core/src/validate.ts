@@ -27,6 +27,7 @@ export function validateSpellDef(s: Partial<SpellDef>): string[] {
   if (typeof s.school !== 'string' || s.school.length === 0) errors.push('school mancante');
   for (const f of ['castingTime', 'range', 'components', 'duration', 'description'] as const) req(o, f, errors);
   if (s.damage !== undefined && !isValidDice(s.damage)) errors.push(`dado danno non valido: ${s.damage}`);
+  if (s.higherLevel !== undefined && !/\+\s*\d+\s*d\s*\d+/i.test(s.higherLevel)) errors.push(`upcast non valido: deve contenere "+NdM" (es. "+1d6 per slot superiore"): ${s.higherLevel}`);
   return errors;
 }
 

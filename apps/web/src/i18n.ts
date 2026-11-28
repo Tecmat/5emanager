@@ -793,6 +793,11 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.reaction': '🛡️reazione',
     'cg.addCondTurn': '+ condizione al turno corrente...',
     'cg.log': '📜 Log',
+    'cl.rolls': '🎲 Tiri',
+    'cl.roundN': 'round {n}',
+    'cl.roundShort': 'r{n}',
+    'cl.miss': 'mancato',
+    'cl.crit': 'critico',
     'cg.waiting': '⏳ In attesa...',
     'cg.waitingHint': 'Il master avvierà il combattimento. Assicurati di aver caricato la tua scheda.',
     'cg.action': 'azione',
@@ -970,6 +975,9 @@ const STR: Record<Lang, Record<string, string>> = {
     'dr.soundOn': 'Attiva il suono del dado',
     'dr.soundOff': 'Disattiva il suono del dado',
     'cu.dmgAvg': 'danno medio {avg} · baseline liv {lvl}: {base}',
+    'cu.higherLevel': 'Upcast (opz.)',
+    'cu.higherLevelPh': '+1d6 per ogni slot superiore',
+    'cu.upcastPreview': 'upcast: {list}',
   },
   en: {
     // ---- app / header ----
@@ -1748,6 +1756,11 @@ const STR: Record<Lang, Record<string, string>> = {
     'cg.reaction': '🛡️reaction',
     'cg.addCondTurn': '+ condition on current turn...',
     'cg.log': '📜 Log',
+    'cl.rolls': '🎲 Rolls',
+    'cl.roundN': 'round {n}',
+    'cl.roundShort': 'r{n}',
+    'cl.miss': 'miss',
+    'cl.crit': 'crit',
     'cg.waiting': '⏳ Waiting...',
     'cg.waitingHint': 'The master will start combat. Make sure you have loaded your sheet.',
     'cg.action': 'action',
@@ -1925,6 +1938,9 @@ const STR: Record<Lang, Record<string, string>> = {
     'dr.soundOn': 'Enable dice sound',
     'dr.soundOff': 'Disable dice sound',
     'cu.dmgAvg': 'avg damage {avg} · baseline lvl {lvl}: {base}',
+    'cu.higherLevel': 'Upcast (opt.)',
+    'cu.higherLevelPh': '+1d6 per higher slot',
+    'cu.upcastPreview': 'upcast: {list}',
   },
 };
 

@@ -104,7 +104,7 @@ export default function DiceRoller() {
           <option value="disadvantage">{t('dr.disadvantage', 'Svantaggio')}</option>
         </select>
         <button className={`primary ${rolling ? 'rolling' : ''}`} onClick={roll}>🎲 {t('dr.roll', 'Tira')}</button>
-        <button onClick={toggleSound} title={soundOn ? t('dr.soundOff', 'Disattiva il suono del dado') : t('dr.soundOn', 'Attiva il suono del dado')}>
+        <button onClick={toggleSound} title={soundOn ? t('dr.soundOff', 'Disattiva il suono del dado') : t('dr.soundOn', 'Attiva il suono del dado')} aria-label={soundOn ? t('dr.soundOff', 'Disattiva il suono del dado') : t('dr.soundOn', 'Attiva il suono del dado')}>
           {soundOn ? '🔊' : '🔇'}
         </button>
         <button

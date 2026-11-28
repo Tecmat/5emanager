@@ -298,7 +298,7 @@ export default function App() {
         )}
         {effPage === 'scheda' && char ? (
           <>
-            <nav className="tabs" aria-label={t('app.sheetTabs', 'Scheda')}>
+            <nav className="tabs" aria-label={t('app.sheetTabs', 'Scheda')} role="tablist">
               <button className="back" onClick={() => setPage('home')} title={t('nav.allSheetsTitle', 'Torna a tutte le schede (Home)')}>
                 <Icon name="back" size={15} /> {t('tab.home', 'Home')}
               </button>
@@ -306,6 +306,8 @@ export default function App() {
               {visibleSheet.map((tb, i) => (
                 <button
                   key={tb.id}
+                  role="tab"
+                  aria-selected={sheetTab === tb.id}
                   className={sheetTab === tb.id ? 'active' : ''}
                   onClick={() => setSheetTab(tb.id)}
                   aria-label={`${i + 1} — ${t(tb.key, tb.fb)}`}
@@ -323,10 +325,12 @@ export default function App() {
           </>
         ) : (
           <>
-            <nav className="tabs" aria-label={t('app.tabs', 'Menu principale')}>
+            <nav className="tabs" aria-label={t('app.tabs', 'Menu principale')} role="tablist">
               {visibleMain.map((p, i) => (
                 <button
                   key={p.id}
+                  role="tab"
+                  aria-selected={effPage === p.id}
                   className={effPage === p.id ? 'active' : ''}
                   onClick={() => setPage(p.id)}
                   aria-label={`${i + 1} — ${t(p.key, p.fb)}`}

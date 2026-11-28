@@ -40,6 +40,7 @@ import Icon from './icons.js';
 import { campaignSheetId, isCampaignSheetId } from './store.js';
 import TemplateView from './TemplateView.js';
 import TacticalMap from './TacticalMap.js';
+import CombatLog from './CombatLog.js';
 
 /** QR del testo (per condividere il codice invito) */
 function QrBox({ text }: { text: string }) {
@@ -2050,14 +2051,7 @@ export default function CampaignTab({ onGoAccount = () => {} }: { onGoAccount?: 
         </div>
       )}
 
-      {combat && (
-        <div className="card">
-          <h3>{t('cg.log', '📜 Log')}</h3>
-          <div style={{ maxHeight: 220, overflow: 'auto', fontSize: 12 }}>
-            {[...combat.log].reverse().slice(0, 30).map((l, i) => <div key={i} className="muted">{l}</div>)}
-          </div>
-        </div>
-      )}
+      {combat && <CombatLog combat={combat} />}
 
       <div className="card">
         <h3>💬 {t('cg.chatTitle', 'Chat di campagna')}</h3>
